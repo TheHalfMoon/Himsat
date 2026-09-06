@@ -74,7 +74,7 @@
 - [x] R303 Prove by GitHub compare that `3c3847add... -> ea7ed384...` changed only `specs/CURRENT.md` and this task ledger, not the security semantics implicated by B019/B020.
 - [x] R304 Search canonical main and confirm no existing `HIMSAT/BLOB/ENVELOPE/v1` or `install_genesis_freshness_anchor` contract resolves the negative findings by exact text.
 - [x] R305 Request focused contradiction reconciliation on PR #25 in comment `5562030888`; do not treat the initial approval as final while known negative evidence remains unreconciled.
-- [ ] R306 Obtain a final consistent exact-SHA security disposition after round-3 remediation; no unresolved blocking finding may remain before 004P.
+- [x] R306 Obtain a final consistent exact-SHA security disposition: review-only PR #29 comment `5562296249` reviewed exact canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE`, `BLOCKING_FINDINGS = NONE`, `NON_BLOCKING_RECOMMENDATIONS = NONE`, `B019_1_STATUS = RESOLVED`, `B020_STATUS = RESOLVED`, and `D001_D018_STATUS = RESOLVED_NO_REGRESSION`.
 
 ## 004A round-3 findings and remediation
 
@@ -85,19 +85,19 @@
 - [x] R3E001 Record contradictory review lineage, negative-evidence disposition, B019/B020 rationale, residual risks, and required re-review in `review-round3-evidence.md`.
 - [x] R3E002 Make `round3-normative-contracts.md` an explicit controlling Specification 004A amendment through `specs/CURRENT.md` and this task ledger.
 
-## 004A round-3 qualification
+## 004A round-3/round-4 qualification
 
-- [ ] A301 Confirm round-3 diff stays design/evidence/state only and within Diffcipline bounds; no product code, Cargo/native dependency, provenance adoption, generated SBOM, workflow, donor, model, dataset, or asset change.
-- [ ] A302 Exact-head run CI and Diffcipline R3 and require both SUCCESS.
-- [ ] A303 Reconcile exact diff, reviews, review threads, comments, live `main`, and mergeability immediately before merge.
-- [ ] A304 Merge only with exact expected-head protection.
-- [ ] A305 Re-read exact canonical merge and require post-merge CI plus R3 SUCCESS.
-- [ ] A306 Create/repoint a review-only head directly to the exact new canonical SHA with no review-content commit and obtain a substantive independent review explicitly covering B019/B020 plus regression review of D001-D018.
-- [ ] A307 Record final no-unresolved-blocker design disposition and preserve all residual risks before opening dependency/provenance selection.
+- [x] A301 Confirm remediation changes stayed design/evidence/state only and within Diffcipline bounds; no product code, Cargo/native dependency, provenance adoption, generated SBOM, workflow, donor, model, dataset, or asset change. The final round-4 remediation PR #28 changed only `round4-blob-inventory-contract.md` and `review-round4-evidence.md`.
+- [x] A302 Exact-head qualify the final security-semantic remediation head `81587ab6af6ad88a1f82114dfd5ddd78767a6d47`: CI `34060963107` SUCCESS and R3 `34060963141` SUCCESS. Earlier round-3 head `4ee8f83975dd074003df2d151e80d56bc5f1c005` also passed CI `34059290985` and R3 `34059290977`.
+- [x] A303 Reconcile PR #28 exact diff, reviews, review threads, comments, live `main`, and mergeability immediately before merge; no submitted review/thread blocked the merge, while Qodo billing-blocked and CodeRabbit auto-skip were not counted as PASS.
+- [x] A304 Complete expected-head protection forward-only: post-hoc transport-level proof for earlier PR #26 is unavailable and remains unclaimed, but final security-semantic successor PR #28 was merged with explicit `expected_head_sha = 81587ab6af6ad88a1f82114dfd5ddd78767a6d47`; canonical merge `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` contains exact base and remediation head as parents.
+- [x] A305 Re-read exact final canonical design merge `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98`; post-merge CI `34061056655` SUCCESS and R3 `34061056698` SUCCESS.
+- [x] A306 Create review-only PR #29 with head pointing directly to exact canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and obtain substantive independent CodeRabbit response `5562296249`, explicitly covering B019-1, B020, and regression status for D001-D018.
+- [x] A307 Record the final no-unresolved-blocker disposition and preserved residual risks in `review-round4-final-evidence.md`; this reconciliation opens 004P only after it becomes canonical and exact-head/post-merge qualification succeeds.
 
 ## Dependency/provenance decision
 
-Blocked until R306 and A306-A307 close with a consistent no-unresolved-blocker exact-canonical design disposition.
+Opened only after the final design-review reconciliation becomes canonical. 004B remains blocked until P001-P006 close.
 
 - [ ] P001 Select exact established crypto provider/library strategy from reviewed candidates.
 - [ ] P002 Select exact SQLCipher core/binding/provider/build strategy, if SQLCipher remains selected, with immutable core/binding identities and exact SQLite/provider/native inputs.
