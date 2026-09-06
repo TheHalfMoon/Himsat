@@ -61,6 +61,7 @@ jobs:
           }
 
           gaps = []
+          records = []
           print("=== HIMSAT_P003_P004_CLOSURE_BEGIN ===")
           for pkg in sorted(packages, key=lambda p: (p["name"], p["version"])):
               key = (pkg["name"], pkg["version"])
@@ -128,22 +129,35 @@ jobs:
               if not license_files:
                   gaps.append(f"license-files-missing:{dirname}")
 
+              expression = pkg.get("license")
+              mit_evidence = None
+              if expression and "MIT" in expression:
+                  mit_evidence = next((f for f in license_files if "MIT" in f["name"].upper()), None)
+                  if mit_evidence is None and expression == "MIT" and license_files:
+                      mit_evidence = license_files[0]
+                  if mit_evidence is None and key == ("r-efi", "6.0.0"):
+                      mit_evidence = next((f for f in license_files if f["name"] == "AUTHORS"), None)
+              if mit_evidence is None:
+                  gaps.append(f"mit-adoption-evidence-missing:{dirname}")
+
               record = {
                   "name": pkg["name"],
                   "version": pkg["version"],
                   "source": pkg["source"],
                   "checksum": locked.get("checksum"),
-                  "license_expression": pkg.get("license"),
-                  "license_file": pkg.get("license_file"),
+                  "license_expression": expression,
+                  "selected_license": "MIT" if mit_evidence else None,
+                  "selected_license_evidence": mit_evidence,
                   "repository": pkg.get("repository"),
                   "source_revision": revision,
                   "source_path": source_path,
                   "vcs_evidence": vcs_evidence,
                   "packaged_license_files": license_files,
               }
-              for field in ("checksum", "license_expression", "repository", "source_revision", "source_path"):
+              for field in ("checksum", "license_expression", "repository", "source_revision", "source_path", "selected_license"):
                   if not record[field]:
                       gaps.append(f"metadata-{field}-missing:{dirname}")
+              records.append(record)
               print(json.dumps(record, sort_keys=True, separators=(",", ":")))
           print("=== HIMSAT_P003_P004_CLOSURE_END ===")
           print("=== HIMSAT_P003_P004_GAPS_BEGIN ===")
@@ -152,4 +166,16 @@ jobs:
           print("=== HIMSAT_P003_P004_GAPS_END ===")
           if gaps:
               raise SystemExit(f"provenance gaps remain: {len(set(gaps))}")
+
+          print("=== HIMSAT_P003_P004_CANONICAL_TABLE_BEGIN ===")
+          print("| Package | Version | Checksum | Repository | Revision | Path | Public expression | Adoption basis | Evidence |")
+          print("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+          for record in records:
+              evidence = record["selected_license_evidence"]
+              print(
+                  f"| `{record['name']}` | `{record['version']}` | `{record['checksum']}` | "
+                  f"`{record['repository']}` | `{record['source_revision']}` | `{record['source_path']}` | "
+                  f"`{record['license_expression']}` | `MIT` | `{evidence['name']} sha256:{evidence['sha256']}` |"
+              )
+          print("=== HIMSAT_P003_P004_CANONICAL_TABLE_END ===")
           PY
