@@ -3,32 +3,37 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_001_SHAPING
+PROGRAM_STATE = SPEC_001_IMPLEMENTATION
 ACTIVE_SPECIFICATION = 001-repository-foundation
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_000_MERGE = 3f6687b34530e55098f7854042b12adfa607f394
-NATIVE_SPEC_GRAIN_STATE = NOT_YET_ESTABLISHED
-PRODUCT_IMPLEMENTATION_AUTHORITY = NONE_DURING_SHAPING
+SPEC_001_SHAPING_DISPOSITION = CLOSED_CANONICAL
+SPEC_001_SHAPING_MERGE = c7fadaebfc44a60f982763bfc20e3a7d41551f4e
+NATIVE_SPEC_GRAIN_STATE = TRACKED_REPORT_MODE_PENDING_EXACT_VALIDATION
+IMPLEMENTATION_AUTHORITY = SPEC_001_FOUNDATION_ONLY
+PRODUCT_FEATURE_AUTHORITY = NONE
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
 ```
 
-Specification 000 established the canonical planning foundation and was merged to `main` as signed GitHub merge `3f6687b34530e55098f7854042b12adfa607f394` with exact planning head `970ddab1de876afd2a3d88c851783f9087d1efe8` as its second parent.
+Specification 000 established the canonical planning foundation and merged as `3f6687b34530e55098f7854042b12adfa607f394`.
 
-The active frontier is now **shaping Specification 001 only**. No implementation authority is implied until the Specification 001 shaping change itself is reconciled and canonical.
+Specification 001 shaping then merged canonically as signed GitHub merge `c7fadaebfc44a60f982763bfc20e3a7d41551f4e`. Live GitHub state therefore closes the shaping gate and authorizes only the bounded Specification 001 repository/delivery-control implementation defined by its canonical `spec.md`, `plan.md`, and `tasks.md`.
 
-This file records repository governance state. It does not assert that native SpecGrain tooling has promoted Specification 001 to `GRAIN`.
+This file does not claim that native SpecGrain has promoted any work item to `GRAIN`. The tracked `.specgrain` store introduced by the implementation candidate starts in `report` mode and must be validated by the exact pinned SpecGrain revision before any native lifecycle claim is made.
 
 ## Active objective
 
-Shape the smallest repository/delivery-control implementation unit required before Himsat can safely accept product code or donor adoption:
+Implement and qualify the smallest reproducible engineering foundation required before Himsat can safely accept later product work:
 
-- pinned Rust toolchain;
-- minimal dependency-free Rust workspace/core crate;
-- native SpecGrain local state/check integration;
-- Diffcipline policy/proof integration;
-- least-privilege multi-platform CI;
-- open-source license and minimal contribution/security surfaces.
+- Rust `1.98.1` pinned explicitly;
+- dependency-free Rust 2024 workspace/core crate;
+- tracked native SpecGrain report-mode state;
+- bounded Diffcipline R2 policy/proof;
+- least-privilege Linux/macOS/Windows CI;
+- negative controls proving the verification path detects failures;
+- Apache-2.0 for Himsat-owned source;
+- minimal contribution and security guidance.
 
 The active specification is:
 
@@ -44,38 +49,49 @@ Toolchain research:
 docs/research/2026-09-06-spec001-toolchain-baseline.md
 ```
 
-## Why product implementation remains intentionally unauthorized during shaping
+## Exact authority boundary
 
-The current canonical repository contains planning/governance documents but no executable workspace or delivery-control configuration. Starting donor or product work now would bypass the predecessor gate established by the execution master plan.
+The current implementation authority permits only Specification 001 foundation work. It does **not** authorize:
 
-Specification 001 shaping therefore selects and bounds the repository foundation first. Its implementation tasks remain explicitly unauthorized until the shaping PR closes canonically.
+- Meetily, Anarlog, Xberg, or any other donor adoption;
+- audio capture, STT, diarization, models, or media processing;
+- Tauri/React/Node, Swift/Kotlin, mobile/desktop product shells;
+- vault/crypto/storage product implementation;
+- documents, memory, search, agents, plugins, connectors, or sync;
+- release publication or platform-support/superiority claims.
 
-## Specification 001 shaping closeout conditions
+The initial implementation may create Cargo manifests and the lockfile because they are intrinsic to the authorized Rust workspace. The core crate must remain dependency-free. The bootstrap Diffcipline policy may explicitly allow these initial manifest/lockfile additions so the exact foundation diff can be proven; after the foundation is canonical, dependency-manifest handling must be tightened before successor dependency adoption.
 
-The shaping change can authorize implementation only when:
+## Specification 001 implementation closeout conditions
 
-1. live canonical base remains `3f6687b34530e55098f7854042b12adfa607f394` or any intervening change is explicitly reconciled;
-2. scope-in and scope-out are explicit;
-3. Rust/toolchain decision is bound to current official evidence;
-4. Node/Tauri/mobile dependencies are explicitly deferred as unnecessary to this bounded unit;
-5. exact SpecGrain and Diffcipline revisions/contracts are identified;
-6. risk, recovery, context budget, expected change surface, acceptance, evidence, minimality, and safety requirements are explicit;
-7. no product implementation, donor code, workflow, dependency manifest, model, or release artifact is smuggled into the shaping diff;
-8. exact changed paths and PR state are reviewed before merge;
-9. absent/unavailable verification remains `NOT RUN`/absent rather than PASS;
-10. shaping merges with expected-head protection and canonical `main` is re-read.
+Specification 001 can close only when:
+
+1. implementation base is the canonical shaping merge `c7fadaebfc44a60f982763bfc20e3a7d41551f4e` or any intervening live change is reconciled;
+2. exact changed paths remain within the bounded Specification 001 surface;
+3. Rust `1.98.1` is observed on every configured Rust CI host;
+4. format, clippy with warnings denied, and locked workspace tests succeed on Linux, macOS, and Windows;
+5. the core crate remains dependency-free;
+6. tracked SpecGrain state validates using `TheHalfMoon/SpecGrain@faddebccb4f4b1dd71bf06b1ce7e3d7b367178ed`;
+7. Diffcipline R2 proof executes against the exact base/head rather than reporting configured-but-not-run verification;
+8. negative controls demonstrate that formatting, lint/test, malformed SpecGrain state, missing verification, and out-of-scope changes are rejected;
+9. workflow permissions remain read-only unless a separately justified need appears;
+10. no donor source, model, telemetry, product feature, app-shell dependency, binary, or release artifact is introduced;
+11. exact PR head/base, checks, reviews, threads, mergeability, and rulesets are reverified immediately before merge;
+12. merge uses expected-head protection;
+13. canonical `main` is re-read after merge and applicable post-merge verification is observed;
+14. dependency-manifest policy is tightened for successor work before any third-party dependency adoption is authorized.
 
 ## Successor rule
 
-Once Specification 001 shaping is canonical, only the bounded Specification 001 implementation defined by its exact spec/plan/tasks becomes authorized.
+Specification 002 — provenance/license/SBOM machinery — remains blocked until Specification 001 closes canonically. Even after Specification 002 is shaped, donor material remains blocked until its exact provenance/license mechanism provides explicit path/revision authority.
 
-Specification 002 donor/provenance machinery does **not** become implementation-authorized merely because Specification 001 exists. Donor adoption remains blocked until Specification 002 later establishes machine-readable provenance/license controls.
+Specification 003 and all product implementation remain blocked by their dependency gates.
 
 ## Program dependency summary
 
 ```text
 000 Foundation planning                    CLOSED_CANONICAL
-  -> 001 Repository/delivery control       SHAPING
+  -> 001 Repository/delivery control       IMPLEMENTATION_ACTIVE
       -> 002 Provenance/license/SBOM        BLOCKED
       -> 003 Core event/schema foundation  BLOCKED
           -> 004 Vault/key architecture    BLOCKED
