@@ -10,34 +10,36 @@
 - [x] S004 Define the smallest dependency-free contract for typed IDs, schema version, evidence locators, producer identity, and foundational events.
 - [x] S005 Keep persistence, serialization, timestamps, ID generation, encryption, capture, domain intelligence, sync, donor adoption, and release work out of scope.
 - [x] S006 Define implementation sequence, adversarial cases, evidence requirements, risk, recovery, and closeout rule.
-- [ ] S007 Qualify and merge this shaping candidate before implementation authority exists.
+- [x] S007 Qualify and merge shaping. Exact-head CI `34045966688` succeeded; shaping merge `f0cc839cbe908cd7c4bb4623c668a01db3bbbb07`; post-shaping CI `34046036952` succeeded.
 
 ## Implementation — crate and identities
 
-Not authorized until S007 closes.
+Authorized only by canonical shaping merge `f0cc839cbe908cd7c4bb4623c668a01db3bbbb07`.
 
-- [ ] I001 Add exactly one dependency-free `himsat-events` workspace crate.
-- [ ] I002 Define strongly typed `SessionId`, `SourceId`, `EventId`, and `ArtifactId` newtypes.
-- [ ] I003 Implement canonical lowercase 32-hex display and strict 32-hex parsing.
-- [ ] I004 Define `SchemaVersion`, `CORE_SCHEMA_VERSION`, and explicit compatibility semantics.
-- [ ] I005 Define non-negative per-session `EventSequence` as a `u64` value type.
+- [x] I001 Add exactly one dependency-free `himsat-events` workspace crate.
+- [x] I002 Define strongly typed `SessionId`, `SourceId`, `EventId`, and `ArtifactId` newtypes.
+- [x] I003 Implement canonical lowercase 32-hex display and strict 32-hex parsing.
+- [x] I004 Define `SchemaVersion`, `CORE_SCHEMA_VERSION`, and explicit compatibility semantics.
+- [x] I005 Define non-negative per-session `EventSequence` as a `u64` value type.
 
 ## Implementation — logical records and evidence
 
-- [ ] I006 Define minimal `Session`, `Source`, and `Artifact` records.
-- [ ] I007 Define bounded Himsat-owned `ArtifactKind` categories without storage semantics.
-- [ ] I008 Define checked time and ordinal range value types.
-- [ ] I009 Define checked integer-millionth `NormalizedRegion` values.
-- [ ] I010 Define source-aware `EvidenceRef` variants for whole artifact, audio, transcript, document page, screen frame, and manual note evidence.
+- [x] I006 Define minimal `Session`, `Source`, and `Artifact` records.
+- [x] I007 Define bounded Himsat-owned `ArtifactKind` categories without storage semantics.
+- [x] I008 Define checked time and ordinal range value types.
+- [x] I009 Define checked integer-millionth `NormalizedRegion` values.
+- [x] I010 Define source-aware `EvidenceRef` variants for whole artifact, audio, transcript, document page, screen frame, and manual note evidence.
 
 ## Implementation — producer and event contracts
 
-- [ ] I011 Define validated `ModelIdentity` and `ParserIdentity` records.
-- [ ] I012 Define foundational `CoreEvent` variants only.
-- [ ] I013 Define versioned `EventEnvelope` with event/session/sequence relationships.
-- [ ] I014 Keep constructors/helpers deterministic, side-effect free, and independent of storage/network/global registries.
+- [x] I011 Define validated `ModelIdentity` and `ParserIdentity` records.
+- [x] I012 Define foundational `CoreEvent` variants only.
+- [x] I013 Define versioned `EventEnvelope` with event/session/sequence relationships.
+- [x] I014 Keep constructors/helpers deterministic, side-effect free, and independent of storage/network/global registries.
 
 ## Positive and adversarial evidence
+
+Pending exact-head execution.
 
 - [ ] N001 Identity parse/display round trips pass for each ID class.
 - [ ] N002 Short, long, and non-hex identity strings fail deterministically.
@@ -52,7 +54,7 @@ Not authorized until S007 closes.
 
 ## Qualification
 
-- [ ] Q001 Extend Diffcipline expected paths for Specification 003 and `himsat-events` without weakening forbidden surfaces or R2 commands.
+- [x] Q001 Extend Diffcipline expected paths for Specification 003 and `himsat-events` without weakening forbidden surfaces or R2 commands.
 - [ ] Q002 Push exact bounded implementation candidate and record head/base compare.
 - [ ] Q003 Confirm Cargo manifest/lockfile changes add only the local workspace crate and no external package.
 - [ ] Q004 Require provenance validate/check-generated/self-test success.
