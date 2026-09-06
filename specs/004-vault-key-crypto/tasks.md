@@ -20,11 +20,13 @@
 - [x] R001 Prepare review-only PR #12 with base `1f14bbe004962dd164402e6e6c7f9c046cf5b489` and head pointing directly to exact canonical design `384608c8fc13531c399f3726caa5022eb3612aa2`.
 - [x] R002 Obtain substantive independent CodeRabbit review `PRR_kwDOUQPwRs8AAAABMYy3gw` on the exact canonical design; GitHub state `COMMENTED`, submitted 2026-09-06T18:47:41Z, 16 actionable findings.
 - [x] R003 Classify all 16 actionable findings as blocking 004B implementation; record exact SHA, reviewer identity, review state, evidence limitations, and Himsat governance disposition `CHANGES_REQUIRED` in `review-evidence.md`.
-- [ ] R004 Merge forward remediation of D001-D016 after exact-head CI/R3 and pre-merge reconciliation.
-- [ ] R005 Repoint/create review-only head at the remediated exact canonical SHA and obtain new substantive independent crypto/security review.
-- [ ] R006 Record final design-review disposition, blocking/non-blocking findings, recommendations, and residual risks for the remediated exact SHA. Old review of `384608c8...`, self-review, CI, billing-blocked/skipped/neutral output are not substitutes.
+- [x] R004 Merge forward remediation D001-D016 in PR #16 with expected-head protection; canonical merge `6d1bbc9b55690939833917eebd447c361627f48a` contains exact remediation head `befb5026a778491f20dce456fdb9b855d4a6377a`.
+- [x] R005 Obtain second substantive independent CodeRabbit review on review-only PR #18 for exact canonical SHA `6d1bbc9b55690939833917eebd447c361627f48a`.
+- [x] R006 Record second-review `CHANGES_REQUIRED` disposition, two blockers D017-D018, non-blocking recommendations, and residual risks in `review-round2-evidence.md`; old review/self-review/CI/skipped/billing-blocked output are not substitutes.
+- [ ] R007 Reconcile/canonicalize the round-2 ledger-only state and point a successor review-only PR directly at the resulting exact canonical SHA.
+- [ ] R008 Obtain a new substantive independent crypto/security disposition on that exact canonical SHA with no unresolved blocking finding before provider/dependency selection.
 
-## 004A remediation findings
+## 004A first-remediation findings
 
 - [x] D001 Specify OS-CSPRNG-only production randomness, exact lengths, fail-closed errors, and prohibited fallback.
 - [x] D002 Define protector ownership/access scope and user-presence policy with fail-closed unsupported-policy behavior.
@@ -43,18 +45,33 @@
 - [x] D015 Create durable `review-evidence.md` with exact first reviewed SHA, reviewer identity, state, findings, and Himsat disposition.
 - [x] D016 Define revocable keyed-handle lease, post-lock/revocation rejection, secret release/zeroization behavior, tests, and runtime residual risk.
 
-## 004A remediation qualification
+## 004A first-remediation qualification
 
-- [ ] A001 Confirm remediation diff changes only Specification 004 docs/state and stays within Diffcipline bounds; no product code, Cargo dependency, provenance adoption, or generated SBOM change.
-- [ ] A002 Exact-head run existing CI and Diffcipline R3 and require both SUCCESS.
-- [ ] A003 Reconcile PR reviews, review threads, comments, exact diff, canonical `main`, and mergeability immediately before merge.
-- [ ] A004 Merge with exact expected-head protection.
-- [ ] A005 Re-read canonical remediation merge and require post-merge CI plus R3 SUCCESS.
-- [ ] A006 Re-review the exact canonical remediation SHA; security-semantic changes make the first CodeRabbit review stale as final approval evidence.
+- [x] A001 Confirm PR #16 remediation diff changes only Specification 004 docs/state and stays within Diffcipline bounds; no product code, Cargo dependency, provenance adoption, or generated SBOM change.
+- [x] A002 Exact-head qualify `befb5026a778491f20dce456fdb9b855d4a6377a`: CI `34054646684` SUCCESS and R3 `34054646643` SUCCESS.
+- [x] A003 Reconcile PR #16 reviews, review threads, comments, exact diff, canonical `main`, and mergeability immediately before merge.
+- [x] A004 Merge PR #16 with exact expected-head protection.
+- [x] A005 Re-read canonical remediation merge `6d1bbc9b55690939833917eebd447c361627f48a`; post-merge CI `34055180993` SUCCESS and R3 `34055180810` SUCCESS.
+- [x] A006 Re-review exact canonical remediation SHA on PR #18; disposition `CHANGES_REQUIRED`, with D017-D018 remaining blocking.
+
+## 004A second-remediation findings
+
+- [x] D017 Freeze Apple Keychain non-synchronizable/device-only/access-group/passcode/presence/migration/invalidation behavior and per-target evidence requirements.
+- [x] D018 Freeze distinct manifest-purpose HKDF domain, canonical authenticated manifest envelope/plaintext/AAD/nonce/hash/parser bounds, and fail-closed atomic freshness-anchor contract.
+
+## 004A second-remediation qualification
+
+- [x] A201 Confirm PR #21 exact diff is limited to `specs/004-vault-key-crypto/spec.md` and `review-round2-evidence.md`; no implementation, dependency, provenance-adoption, SBOM, workflow, donor, model, dataset, or asset change.
+- [x] A202 Exact-head qualify `4357102d388248400116eeab45cf83de71e35051`: CI `34057694827` SUCCESS and R3 `34057694832` SUCCESS.
+- [x] A203 Reconcile PR #21 exact diff, comments, reviews, review threads, canonical `main`, and mergeability immediately before merge; Qodo billing block and CodeRabbit auto-skip were not counted as PASS.
+- [x] A204 Merge PR #21 with `expected_head_sha = 4357102d388248400116eeab45cf83de71e35051`; canonical merge `cb8511c1b420c58f714768c3561e74f04f026b3a` has parents `6d1bbc9b55690939833917eebd447c361627f48a` and `4357102d388248400116eeab45cf83de71e35051`.
+- [x] A205 Require post-merge qualification on exact canonical `cb8511c1b420c58f714768c3561e74f04f026b3a`: CI `34057861438` SUCCESS and R3 `34057861447` SUCCESS.
+- [ ] A206 Exact-head qualify and merge the ledger-only reconciliation without changing security semantics.
+- [ ] A207 Obtain a substantive independent crypto/security review on the resulting exact canonical SHA; any blocking finding requires forward remediation and another exact-SHA review.
 
 ## Dependency/provenance decision
 
-Blocked until R005-R006/A006 close with no unresolved blocking design finding.
+Blocked until R008/A207 close with no unresolved blocking design finding.
 
 - [ ] P001 Select exact established crypto provider/library strategy from reviewed candidates.
 - [ ] P002 Select exact SQLCipher core/binding/provider/build strategy, if SQLCipher remains selected, with immutable core/binding identities and exact SQLite/provider/native inputs.
