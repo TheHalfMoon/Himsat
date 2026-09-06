@@ -1,0 +1,64 @@
+name: P003 Research Resolver
+
+on:
+  push:
+    branches: [research/004p-cargo-resolution]
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    env:
+      OPENSSL_RUST_USE_NASM: "0"
+    steps:
+      - name: Checkout exact research revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Assert research-only revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          rustc --version
+          cargo --version
+      - name: Resolve exact Cargo closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo generate-lockfile --manifest-path research/004p/Cargo.toml
+          cargo metadata --manifest-path research/004p/Cargo.toml --locked --format-version 1 > "$RUNNER_TEMP/metadata.json"
+          echo '=== HIMSAT_P003_LOCK_BEGIN ==='
+          cat research/004p/Cargo.lock
+          echo '=== HIMSAT_P003_LOCK_END ==='
+          echo '=== HIMSAT_P003_RESOLUTION_BEGIN ==='
+          python - "$RUNNER_TEMP/metadata.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          metadata = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          packages = {pkg["id"]: pkg for pkg in metadata["packages"]}
+          nodes = {node["id"]: node for node in metadata["resolve"]["nodes"]}
+          for package_id in sorted(packages, key=lambda item: (packages[item]["name"], packages[item]["version"], item)):
+              pkg = packages[package_id]
+              node = nodes.get(package_id, {})
+              print(json.dumps({
+                  "name": pkg["name"],
+                  "version": pkg["version"],
+                  "source": pkg.get("source"),
+                  "license": pkg.get("license"),
+                  "repository": pkg.get("repository"),
+                  "features": sorted(node.get("features", [])),
+              }, sort_keys=True, separators=(",", ":")))
+          PY
+          echo '=== HIMSAT_P003_RESOLUTION_END ==='
+          echo '=== HIMSAT_P003_TREE_BEGIN ==='
+          cargo tree --manifest-path research/004p/Cargo.toml --locked --edges normal,build --all-targets
+          echo '=== HIMSAT_P003_TREE_END ==='
