@@ -51,7 +51,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo tree --workspace --locked --depth 1
+          tree="$(cargo tree --workspace --locked --depth 1)"
+          printf '%s\n' "$tree"
+          test "$(printf '%s\n' "$tree" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')" = "2"
           packages="$(grep -c '^\[\[package\]\]$' Cargo.lock)"
           test "$packages" = "2"
           test "$(grep -c '^name = "himsat-core"$' Cargo.lock)" = "1"
