@@ -3,95 +3,79 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_001_IMPLEMENTATION
+PROGRAM_STATE = SPEC_001_CLOSEOUT
 ACTIVE_SPECIFICATION = 001-repository-foundation
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_000_MERGE = 3f6687b34530e55098f7854042b12adfa607f394
 SPEC_001_SHAPING_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_SHAPING_MERGE = c7fadaebfc44a60f982763bfc20e3a7d41551f4e
-NATIVE_SPEC_GRAIN_STATE = TRACKED_REPORT_MODE_PENDING_EXACT_VALIDATION
-IMPLEMENTATION_AUTHORITY = SPEC_001_FOUNDATION_ONLY
+SPEC_001_IMPLEMENTATION_PR = 3
+SPEC_001_IMPLEMENTATION_HEAD = 34a0b1a4b7a5f4873a6de7141f160de45fd37740
+SPEC_001_IMPLEMENTATION_MERGE = 4d1f8843577059d5cfa0cfeeb97df05feb2da8be
+SPEC_001_PR_CI = 34042429773_SUCCESS
+SPEC_001_POST_MERGE_CI = 34042553778_SUCCESS
+NATIVE_SPEC_GRAIN_STATE = TRACKED_REPORT_MODE_VALIDATED
+IMPLEMENTATION_AUTHORITY = SPEC_001_CLOSEOUT_ONLY
 PRODUCT_FEATURE_AUTHORITY = NONE
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
 ```
 
-Specification 000 established the canonical planning foundation and merged as `3f6687b34530e55098f7854042b12adfa607f394`.
+Specification 001 implementation is merged and executable verification has succeeded both on the exact PR head and on the exact merge commit. The remaining active work is **closeout only**: preserve durable evidence and tighten the bootstrap Cargo manifest/lockfile Diffcipline posture before successor shaping begins.
 
-Specification 001 shaping then merged canonically as signed GitHub merge `c7fadaebfc44a60f982763bfc20e3a7d41551f4e`. Live GitHub state therefore closes the shaping gate and authorizes only the bounded Specification 001 repository/delivery-control implementation defined by its canonical `spec.md`, `plan.md`, and `tasks.md`.
+This file does not claim a native SpecGrain `GRAIN` state. The tracked `.specgrain` store validates in report mode using the pinned SpecGrain revision; that is the exact lifecycle claim supported by evidence.
 
-This file does not claim that native SpecGrain has promoted any work item to `GRAIN`. The tracked `.specgrain` store introduced by the implementation candidate starts in `report` mode and must be validated by the exact pinned SpecGrain revision before any native lifecycle claim is made.
+## Executed evidence
 
-## Active objective
-
-Implement and qualify the smallest reproducible engineering foundation required before Himsat can safely accept later product work:
-
-- Rust `1.98.1` pinned explicitly;
-- dependency-free Rust 2024 workspace/core crate;
-- tracked native SpecGrain report-mode state;
-- bounded Diffcipline R2 policy/proof;
-- least-privilege Linux/macOS/Windows CI;
-- negative controls proving the verification path detects failures;
-- Apache-2.0 for Himsat-owned source;
-- minimal contribution and security guidance.
-
-The active specification is:
+Durable evidence is recorded in:
 
 ```text
-specs/001-repository-foundation/spec.md
-specs/001-repository-foundation/plan.md
-specs/001-repository-foundation/tasks.md
+specs/001-repository-foundation/evidence.md
 ```
 
-Toolchain research:
+Key facts:
 
-```text
-docs/research/2026-09-06-spec001-toolchain-baseline.md
-```
+- exact qualified implementation head: `34a0b1a4b7a5f4873a6de7141f160de45fd37740`;
+- exact-head PR CI run `34042429773`: SUCCESS across Rust Ubuntu/macOS/Windows, pinned SpecGrain, Diffcipline R2, and negative controls;
+- expected-head merge: `4d1f8843577059d5cfa0cfeeb97df05feb2da8be`;
+- post-merge push CI run `34042553778`: SUCCESS across the same configured job groups;
+- no donor source, model, product feature, app shell, telemetry, binary, release artifact, or third-party Rust dependency was introduced;
+- no submitted PR reviews or inline review threads existed; unavailable/skipped third-party review services were not treated as substantive PASS evidence.
+
+## Active closeout objective
+
+1. change Diffcipline `dependency_manifest_changes` from bootstrap `allow` to `review`;
+2. change `lockfile_changes` from bootstrap `allow` to `review`;
+3. preserve the exact implementation and post-merge evidence in the repository;
+4. merge the closeout change only after its own exact-head CI succeeds;
+5. re-read canonical `main` after closeout merge;
+6. only then transition Specification 001 to `CLOSED_CANONICAL` and permit Specification 002 shaping.
 
 ## Exact authority boundary
 
-The current implementation authority permits only Specification 001 foundation work. It does **not** authorize:
+Current authority is restricted to Specification 001 closeout. It does **not** authorize:
 
-- Meetily, Anarlog, Xberg, or any other donor adoption;
+- donor adoption or donor dependencies;
 - audio capture, STT, diarization, models, or media processing;
-- Tauri/React/Node, Swift/Kotlin, mobile/desktop product shells;
-- vault/crypto/storage product implementation;
+- Tauri/React/Node, Swift/Kotlin, or product app shells;
+- vault/crypto/product storage;
 - documents, memory, search, agents, plugins, connectors, or sync;
-- release publication or platform-support/superiority claims.
-
-The initial implementation may create Cargo manifests and the lockfile because they are intrinsic to the authorized Rust workspace. The core crate must remain dependency-free. The bootstrap Diffcipline policy may explicitly allow these initial manifest/lockfile additions so the exact foundation diff can be proven; after the foundation is canonical, dependency-manifest handling must be tightened before successor dependency adoption.
-
-## Specification 001 implementation closeout conditions
-
-Specification 001 can close only when:
-
-1. implementation base is the canonical shaping merge `c7fadaebfc44a60f982763bfc20e3a7d41551f4e` or any intervening live change is reconciled;
-2. exact changed paths remain within the bounded Specification 001 surface;
-3. Rust `1.98.1` is observed on every configured Rust CI host;
-4. format, clippy with warnings denied, and locked workspace tests succeed on Linux, macOS, and Windows;
-5. the core crate remains dependency-free;
-6. tracked SpecGrain state validates using `TheHalfMoon/SpecGrain@faddebccb4f4b1dd71bf06b1ce7e3d7b367178ed`;
-7. Diffcipline R2 proof executes against the exact base/head rather than reporting configured-but-not-run verification;
-8. negative controls demonstrate that formatting, lint/test, malformed SpecGrain state, missing verification, and out-of-scope changes are rejected;
-9. workflow permissions remain read-only unless a separately justified need appears;
-10. no donor source, model, telemetry, product feature, app-shell dependency, binary, or release artifact is introduced;
-11. exact PR head/base, checks, reviews, threads, mergeability, and rulesets are reverified immediately before merge;
-12. merge uses expected-head protection;
-13. canonical `main` is re-read after merge and applicable post-merge verification is observed;
-14. dependency-manifest policy is tightened for successor work before any third-party dependency adoption is authorized.
+- release publication;
+- platform-support or superiority claims.
 
 ## Successor rule
 
-Specification 002 — provenance/license/SBOM machinery — remains blocked until Specification 001 closes canonically. Even after Specification 002 is shaped, donor material remains blocked until its exact provenance/license mechanism provides explicit path/revision authority.
+Specification 002 — provenance/license/SBOM machinery — remains blocked until the Specification 001 closeout change merges and canonical `main` is re-read.
 
-Specification 003 and all product implementation remain blocked by their dependency gates.
+After Specification 001 closes, Specification 002 may be **shaped**. Donor material remains blocked until Specification 002 itself creates and proves explicit provenance/license authority for exact source revisions and paths.
+
+Specification 003 and all later product implementation remain blocked by their dependency gates.
 
 ## Program dependency summary
 
 ```text
 000 Foundation planning                    CLOSED_CANONICAL
-  -> 001 Repository/delivery control       IMPLEMENTATION_ACTIVE
+  -> 001 Repository/delivery control       CLOSEOUT_ACTIVE
       -> 002 Provenance/license/SBOM        BLOCKED
       -> 003 Core event/schema foundation  BLOCKED
           -> 004 Vault/key architecture    BLOCKED
