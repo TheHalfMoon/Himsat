@@ -138,8 +138,8 @@ This is a research registry, not adoption authority. Exact immutable revisions m
 | `tokimo-lab/tokimo-package-fileparser` | EXPERIMENT/DEPEND/COPY candidate | pure-Rust PDF/Office to Markdown/assets | MIT OR Apache-2.0; maturity/security fuzzing required |
 | `microsoft/markitdown` | REFERENCE/COPY selective | conversion UX/Markdown normalization/security guidance | MIT; Python runtime not preferred for core |
 | `docling-project/docling` / `DS4SD/docling-core` | REFERENCE/optional worker | document IR/layout/table/formula quality | MIT code, individual models separate; Python-heavy |
-| `kreuzberg-dev/kreuzberg` current | REFERENCE_ONLY | broad Rust document architecture inspiration | current ELv2; do not copy into permissive core |
-| `kreuzberg-dev/kreuzberg-lts` | HISTORICAL_CANDIDATE | legacy MIT document extraction research | old line/security horizon; exact snapshot only after review |
+| `xberg-io/xberg` (formerly `kreuzberg-dev/kreuzberg`) | EXPERIMENT/DEPEND/COPY candidate | broad Rust-first document extraction/IR/parser architecture | Xberg v1 workspace declares MIT; exact third-party, vendored, model, asset, and plugin-path licenses still control |
+| `kreuzberg-dev/kreuzberg-lts` | HISTORICAL_CANDIDATE | legacy v4 document extraction research | current LTS line is MIT; earlier Kreuzberg 4.8/4.9 releases used ELv2; exact snapshot/security horizon required |
 | `opendatalab/MinerU` | REFERENCE_ONLY by default | document quality/IR/benchmark ideas | custom license with additional conditions |
 | Marker variants | REFERENCE_ONLY by default | document parsing quality ideas | model/commercial/copyleft restrictions |
 | current Screenpipe | REFERENCE_ONLY by default | screen/context architecture ideas | current licensing restricts competing-product reuse; historical snapshots require exact review |
@@ -208,6 +208,14 @@ Rules:
 - prefer extracting behavior/contracts instead of importing the entire monorepo;
 - compare equivalent Meetily/Anarlog implementations and choose the smaller/better-tested Himsat fit instead of maintaining duplicate subsystems.
 
+## Xberg / historical Kreuzberg boundary
+
+Live GitHub truth on 2026-09-06 resolves the former `kreuzberg-dev/kreuzberg` repository to `xberg-io/xberg`. The current Xberg v1 workspace declares `license = "MIT"`; its changelog explicitly distinguishes this from the Kreuzberg 4.8/4.9 ELv2 line.
+
+This makes current Xberg a permissive donor/dependency candidate rather than `REFERENCE_ONLY` solely because of the historical Kreuzberg license. It does **not** grant blanket adoption authority: Himsat must still inspect the exact Xberg revision and source path, including bundled third-party code, plugins, models, fonts, test corpora, native libraries, generated artifacts, and other assets.
+
+The separate `kreuzberg-dev/kreuzberg-lts` v4 line is also a historical candidate; exact release-era licensing and security support must be pinned before use.
+
 ## Historical-license projects
 
 When a project changed from permissive to restrictive licensing, Himsat may only consider an older permissive snapshot if all of the following hold:
@@ -219,7 +227,7 @@ When a project changed from permissive to restrictive licensing, Himsat may only
 5. notices and trademarks are handled;
 6. a native current alternative is not lower risk.
 
-This applies especially to Screenpipe and potentially legacy document stacks.
+This applies especially to Screenpipe and other projects whose current license is more restrictive than an older permissive snapshot. Historical Kreuzberg releases require exact per-release treatment because the licensing lineage includes both ELv2 and MIT eras; current Xberg v1 must be evaluated separately under its present MIT workspace license.
 
 ## Model and dataset policy
 
