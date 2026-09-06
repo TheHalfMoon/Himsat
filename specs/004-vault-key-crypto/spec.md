@@ -3,15 +3,17 @@
 ## Status
 
 ```text
-LIFECYCLE = DESIGN_REVIEW_REMEDIATION
+LIFECYCLE = DESIGN_REVIEW_REMEDIATION_ROUND_2
 RISK = R3
 SHAPING_MERGE = 384608c8fc13531c399f3726caa5022eb3612aa2
-INDEPENDENT_REVIEW_PR = 12
-INDEPENDENT_REVIEW_FINDINGS = 16_ACTIONABLE
+FIRST_REMEDIATION_MERGE = 6d1bbc9b55690939833917eebd447c361627f48a
+INDEPENDENT_REVIEW_PRS = 12,18
+CURRENT_REVIEWED_CANONICAL_SHA = 6d1bbc9b55690939833917eebd447c361627f48a
+CURRENT_REVIEW_FINDINGS = 2_BLOCKING
 HIMSAT_REVIEW_DISPOSITION = CHANGES_REQUIRED
 IMPLEMENTATION_AUTHORITY = NONE
 DEPENDENCY_ADOPTION_AUTHORITY = NONE
-FINAL_INDEPENDENT_CRYPTO_SECURITY_REVIEW = REQUIRED_AFTER_REMEDIATION
+FINAL_INDEPENDENT_CRYPTO_SECURITY_REVIEW = REQUIRED_AFTER_ROUND_2_REMEDIATION
 ```
 
 ## Problem
@@ -26,7 +28,9 @@ Specification 003 is `CLOSED_CANONICAL` at closeout merge `1f14bbe004962dd164402
 
 Specification 004 shaping merged at `384608c8fc13531c399f3726caa5022eb3612aa2` after exact-head CI `34048208674` and R3 run `34048208667` succeeded; post-merge CI `34048394581` and R3 run `34048394550` also succeeded.
 
-Independent CodeRabbit review on review-only PR #12 examined exact canonical SHA `384608c8fc13531c399f3726caa5022eb3612aa2` and posted 16 actionable findings. The GitHub review state was `COMMENTED`; Himsat's governance disposition is `CHANGES_REQUIRED`. Exact review evidence and finding classification are in `review-evidence.md`.
+Independent CodeRabbit review on review-only PR #12 examined exact canonical SHA `384608c8fc13531c399f3726caa5022eb3612aa2` and posted 16 actionable findings. Himsat remediated D001-D016 and merged that remediation canonically at `6d1bbc9b55690939833917eebd447c361627f48a`; exact post-merge CI `34055180993` and R3 `34055180810` succeeded.
+
+A second substantive CodeRabbit review on review-only PR #18 examined exact canonical SHA `6d1bbc9b55690939833917eebd447c361627f48a` and returned `CHANGES_REQUIRED` with two blocking findings: the Apple Keychain baseline remained underspecified, and the freshness manifest lacked a normative authenticated-envelope construction. Exact review evidence and classification are in `review-evidence.md`.
 
 ## Scope in
 
@@ -38,6 +42,7 @@ Independent CodeRabbit review on review-only PR #12 examined exact canonical SHA
 - OS secret-protector boundaries for Apple, Android, Windows, and Linux;
 - normative recovery KDF/envelope policy;
 - normative bounded-blob AEAD envelope, associated-data, nonce, and size policy;
+- normative authenticated freshness-manifest envelope and hash construction;
 - structured-store encryption requirements and exact-provider provenance gate;
 - lock/unlock and key/handle lifecycle semantics;
 - rollback/replay freshness anchor;
@@ -50,9 +55,9 @@ Independent CodeRabbit review on review-only PR #12 examined exact canonical SHA
 
 004B remains **blocked** until all of the following are proven:
 
-1. D001-D016 from the first independent design review are remediated canonically;
-2. the remediated exact canonical 004A design passes CI and Diffcipline R3;
-3. the remediated exact canonical design receives a new independent substantive crypto/security review;
+1. D001-D016 from the first independent design review and D017-D018 from the second review are remediated canonically;
+2. the resulting exact canonical 004A design passes CI and Diffcipline R3;
+3. that exact canonical design receives a new independent substantive crypto/security review;
 4. all blocking findings from that re-review are resolved or explicitly dispositioned under repository governance;
 5. every proposed third-party dependency/native library has exact provenance/license/package/checksum/build closure and bounded adoption authority;
 6. the first implementation leaf is re-bounded against then-live canonical truth.
@@ -97,7 +102,7 @@ At minimum:
 5. compromised backup/storage provider that sees stored ciphertext and the explicitly allowed metadata surface;
 6. brute-force attack against an opt-in recovery passphrase envelope;
 7. OS secret store unavailable, locked, reset, revoked, invalidated, or returning an unexpected error;
-8. crash/power loss during rekey, VRK rotation, restore, deletion, or manifest publication;
+8. crash/power loss during rekey, VRK rotation, restore, deletion, manifest publication, or freshness-anchor advancement;
 9. accidental plaintext spill to logs, crash reports, SQLite temp files, caches, or export staging;
 10. implementation/configuration error that opens a database without encryption;
 11. stale keyed handles used after lock/revocation/failure;
@@ -156,9 +161,10 @@ Candidate provider selection remains provenance-gated, but the v1 construction t
 - HKDF salt = the 16 raw bytes of `VaultId`;
 - output length = 32 bytes;
 - structured-store `info` = ASCII bytes `HIMSAT/004/STRUCTURED/v1` followed by `key_generation` as `u64be`;
-- bounded-blob `info` = ASCII bytes `HIMSAT/004/BLOB/v1` followed by `key_generation` as `u64be`.
+- bounded-blob `info` = ASCII bytes `HIMSAT/004/BLOB/v1` followed by `key_generation` as `u64be`;
+- freshness-manifest `info` = ASCII bytes `HIMSAT/004/MANIFEST/v1` followed by `key_generation` as `u64be`.
 
-Purpose keys are never reused across purposes. A future purpose requires a new unique `info` domain and review; it must not reuse either v1 label.
+Purpose keys are never reused across purposes. A future purpose requires a new unique `info` domain and review; it must not reuse any v1 label.
 
 ## OS secret-protector contract
 
@@ -202,14 +208,17 @@ A process restart never restores a plaintext VRK from Himsat-managed disk. The n
 
 Revoking/removing a protector prevents future successful Himsat unlock through that protector. It cannot erase a VRK already copied from an unlocked process by a process compromise; that remains residual risk and may require full VRK rotation.
 
-Typed protector failures include: `Unavailable`, `Locked`, `Denied`, `ItemMissing`, `Invalidated`, `OwnerMismatch`, `PolicyMismatch`, `CorruptOrTampered`, and `UnsupportedPolicy`.
+Typed protector failures include: `Unavailable`, `Locked`, `Denied`, `ItemMissing`, `Invalidated`, `OwnerMismatch`, `PolicyMismatch`, `CorruptOrTampered`, `AnchorConflict`, `AnchorUpdateFailed`, and `UnsupportedPolicy`.
 
 ### Platform-specific baseline
 
-- **Apple:** Keychain is the baseline. The item is application/access-group scoped and may use Keychain access-control flags to require user presence when requested. Secure Enclave is used only for native operations it actually supports; Himsat does not claim arbitrary symmetric VRK bytes universally remain inside the enclave. Baseline reported scope is `APP_EXCLUSIVE` when the configured access group proves it.
+- **Apple — iOS/iPadOS data-protection Keychain:** a VRK protector item MUST use `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly`, MUST set `kSecAttrSynchronizable = kCFBooleanFalse`, MUST use only the Himsat application/access group authorized for that target, and MUST NOT opt into iCloud Keychain synchronization or a migratable/backup-restorable accessibility class. When `REQUIRED_EACH_HIMSAT_UNLOCK` is requested, the item MUST be created with `SecAccessControl` using the same `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly` protection and the `userPresence` flag (or a separately reviewed stronger flag with identical fail-closed semantics). A device without a passcode cannot create this baseline protector. Passcode removal, Keychain reset/loss, restore to another device, access-group mismatch, or an item that no longer satisfies the required attributes MUST return `Invalidated`, `ItemMissing`, `OwnerMismatch`, or `PolicyMismatch` as applicable and MUST NOT fall back to a weaker Keychain item or plaintext. A restored backup that lacks this `ThisDeviceOnly` item may recover only through another still-valid explicitly authorized protector or the opt-in recovery envelope.
+- **Apple — macOS data-protection Keychain:** the adapter MUST set `kSecUseDataProtectionKeychain = true`, MUST set `kSecAttrSynchronizable = kCFBooleanFalse`, MUST use a `ThisDeviceOnly` accessibility class accepted by the target, and MUST use the Himsat application/access group. The preferred baseline is `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly` when the target proves that policy is supported and enforces the required unlock/passcode semantics. If the target cannot prove those semantics, the adapter MUST select a separately reviewed non-synchronizable `ThisDeviceOnly` policy with an accurately reported weaker presence/access capability or return `UnsupportedPolicy`; it MUST NOT claim `APP_EXCLUSIVE` or `REQUIRED_EACH_HIMSAT_UNLOCK` without platform evidence. Cross-device migration/synchronization of VRK material is prohibited. Keychain item loss or migration is `ItemMissing`/`Invalidated`, never an implicit recovery path.
 - **Android:** Android Keystore uses an application-owned alias/non-exportable protector key. User authentication is required when the requested policy is `REQUIRED_EACH_HIMSAT_UNLOCK`; invalidation fails closed. TEE/StrongBox state is reported as capability evidence, not assumed. Baseline scope is `APP_EXCLUSIVE` when package/UID isolation is in force.
 - **Windows:** current-user DPAPI/CNG-class protection is `SAME_USER_ACCOUNT`, not app-exclusive isolation from every process running as that user. Protector ciphertext must remain in Himsat-owned ACL-restricted storage. If `APP_EXCLUSIVE` or `REQUIRED_EACH_HIMSAT_UNLOCK` is requested and no separately reviewed Windows Hello/CNG mechanism proves it, return `UnsupportedPolicy`.
 - **Linux:** Secret Service is treated as `SAME_USER_SESSION` unless the exact service proves stronger semantics. Lookup attributes contain only fixed application/service identifiers and an opaque random protector ID; they contain no `VaultId`, logical object ID, filename, key generation, content, or secret. If per-Himsat-unlock user presence or app-exclusive scope cannot be proven, return `UnsupportedPolicy`. There is no plaintext fallback.
+
+Apple implementation evidence MUST verify the exact stored attributes and negative paths for every supported Apple target, including synchronization disabled, non-migration behavior, access-group mismatch, user-presence enforcement when requested, passcode removal/invalidation where the selected accessibility class specifies it, item loss, and cross-device restore behavior. This evidence is required before any stronger Apple scope/presence claim becomes qualified.
 
 ## Normative v1 recovery policy
 
@@ -249,14 +258,18 @@ If recovery is disabled and all valid device protectors are lost, permanent data
 
 ## Canonical v1 associated-data encoding
 
-Himsat cryptographic AAD uses only the following primitive encodings:
+Himsat cryptographic AAD and manifest canonical encodings use only the following primitive encodings:
 
 - `domain(s)`: `u16be(byte_length(s)) || ASCII(s)`;
 - `u16`: unsigned 16-bit big-endian;
+- `u32`: unsigned 32-bit big-endian;
 - `u64`: unsigned 64-bit big-endian;
-- `id128`: exactly 16 raw bytes.
+- `id128`: exactly 16 raw bytes;
+- `bytes24`: exactly 24 raw bytes;
+- `bytes32`: exactly 32 raw bytes;
+- `opaque16`: exactly 16 raw bytes generated independently of logical/user identity.
 
-No JSON, locale-dependent string, platform-native integer encoding, filesystem path encoding, or unspecified serialization is permitted in v1 AAD.
+No JSON, locale-dependent string, platform-native integer encoding, filesystem path encoding, implicit padding, map/dictionary iteration order, duplicate field, optional unknown field, or unspecified serialization is permitted in v1 cryptographic context. Parsers MUST reject trailing bytes, duplicate semantic entries, unknown enum values, unsorted collections, out-of-bound counts/lengths, and non-canonical alternative encodings before authenticated state is used.
 
 ### Bounded blob AAD v1
 
@@ -346,6 +359,101 @@ Nonce rules:
 
 Ciphertext is authenticated with the exact bounded-blob AAD v1 bytes above before plaintext is released.
 
+## Normative v1 freshness-manifest envelope
+
+The freshness manifest uses the distinct 32-byte HKDF manifest-purpose key defined above and XChaCha20-Poly1305. It MUST NOT reuse the structured-store or bounded-blob purpose key.
+
+### Manifest public envelope bytes
+
+The exact canonical v1 envelope is the concatenation below, with no omitted, reordered, duplicated, or trailing fields:
+
+```text
+domain("HIMSAT/MANIFEST/ENVELOPE/v1")
+u16(1)                         # envelope version
+u16(1)                         # cipher suite: XChaCha20-Poly1305
+id128(VaultId)
+u64(key_generation)              # generation deriving the manifest-purpose key
+u64(freshness_epoch)
+bytes24(nonce)
+u32(ciphertext_and_tag_length)
+bytes(ciphertext_and_tag)
+```
+
+`ciphertext_and_tag_length` MUST be between 16 and `16_777_232` bytes inclusive (16 MiB plaintext plus the 16-byte Poly1305 tag). The complete envelope MUST fit within `16_777_306` bytes. Any other version/suite, zero generation/epoch, invalid length, truncation, or trailing bytes is rejected before state use.
+
+### Manifest AAD v1
+
+The exact AAD is:
+
+```text
+domain("HIMSAT/MANIFEST/AAD/v1")
+u16(1)                         # AAD schema
+id128(VaultId)
+u64(key_generation)
+u64(freshness_epoch)
+u16(1)                         # envelope version
+u16(1)                         # cipher suite: XChaCha20-Poly1305
+u32(ciphertext_and_tag_length)
+```
+
+The public `VaultId`, generation, epoch, version, suite, and length therefore cannot be transplanted or rewritten without authentication failure.
+
+### Manifest plaintext v1
+
+After successful AEAD authentication, plaintext MUST parse as exactly:
+
+```text
+domain("HIMSAT/MANIFEST/PLAINTEXT/v1")
+u16(1)                         # plaintext schema
+id128(VaultId)
+u64(freshness_epoch)
+bytes32(previous_manifest_hash) # all-zero only for epoch 1
+u64(active_key_generation)
+u16(rotation_phase)            # 0=NONE, 1=PREPARE, 2=STAGE, 3=VERIFY,
+                               # 4=PUBLISH, 5=ANCHOR, 6=ACTIVATE, 7=RETIRE
+u64(rotation_target_generation) # 0 iff rotation_phase == NONE
+u16(key_generation_count)       # 1..64
+repeat key_generation_count times, sorted by generation ascending:
+    u64(generation)             # non-zero, unique
+    u16(state)                  # 1=ACTIVE, 2=RETAINED, 3=STAGED
+u32(object_count)               # 0..262144
+repeat object_count times, sorted lexicographically by (object_kind, logical_id):
+    u16(object_kind)            # 1=GENERIC_ARTIFACT_BLOB, 2=STRUCTURED_STORE
+    id128(logical_id)           # ArtifactId for kind 1; fixed all-zero ID for kind 2
+    opaque16(storage_id)        # random public storage identifier, not a logical ID
+    u64(object_key_generation)  # non-zero and present in generation table
+    u64(ciphertext_length)      # <= implementation format limit for object kind
+    bytes32(ciphertext_sha256)  # SHA-256 of exact canonical stored ciphertext/envelope bytes
+    u16(auth_metadata_length)   # 0..64
+    bytes(auth_metadata)        # kind-specific canonical bytes below
+```
+
+Kind-specific `auth_metadata` is:
+
+```text
+GENERIC_ARTIFACT_BLOB:
+    u16(1)                      # blob envelope version
+    u16(1)                      # XChaCha20-Poly1305
+    bytes24(blob_nonce)
+    # auth_metadata_length MUST equal 28
+
+STRUCTURED_STORE:
+    # empty in manifest v1; SQLCipher authenticates/qualifies its own format
+    # auth_metadata_length MUST equal 0
+```
+
+The manifest plaintext maximum is 16 MiB. `key_generation_count` and `object_count` are validated before allocation. Generation records MUST be unique and sorted. Inventory records MUST be unique and sorted. `active_key_generation` MUST appear exactly once with state `ACTIVE`. Unknown `rotation_phase`, generation state, object kind, non-zero structured-store `logical_id`, duplicate logical IDs, duplicate `(object_key_generation, blob_nonce)` pairs for blob entries, unknown/auth-metadata bytes, non-canonical sort order, inconsistent generation references, and trailing plaintext bytes are `CorruptOrTampered` and fail closed.
+
+### Manifest nonce and hash rules
+
+1. every manifest encryption attempt generates a fresh 24-byte nonce from the approved OS CSPRNG;
+2. retry after failed/ambiguous publication generates a new nonce and MUST NOT reuse the abandoned candidate nonce;
+3. uniqueness domain is `(VaultId, key_generation, manifest-purpose key, nonce)`;
+4. before publication, a candidate nonce is compared with all retained authenticated manifest envelopes for the same key generation; a detected collision is discarded and regenerated;
+5. a duplicate manifest nonce discovered in retained canonical history for the same generation is `CorruptOrTampered` and blocks writes pending recovery;
+6. `manifest_hash = SHA-256(exact canonical manifest envelope bytes)` beginning with the first byte of `domain("HIMSAT/MANIFEST/ENVELOPE/v1")` and ending with the final AEAD tag byte; no filesystem metadata, filename, transport framing, or decoded plaintext is included in that hash;
+7. a manifest is never used to select canonical objects, generations, or rotation state until its envelope parser, AAD authentication, plaintext parser, canonical-order checks, and object/inventory consistency checks all succeed.
+
 ## Freshness, rollback, and replay protection
 
 Each vault has a `FreshnessAnchor` stored through the OS protector boundary and outside rollbackable Himsat vault files:
@@ -353,32 +461,41 @@ Each vault has a `FreshnessAnchor` stored through the OS protector boundary and 
 ```text
 VaultId
 highest_epoch: u64
-manifest_hash: 32 bytes SHA-256
+manifest_hash: 32 bytes SHA-256 of exact canonical manifest envelope bytes
 ```
 
-Each authenticated encrypted vault manifest contains:
+The anchor `VaultId`, epoch, and hash MUST match the manifest rules above. An anchor with zero epoch, wrong vault identity, invalid length, or otherwise malformed encoding is `CorruptOrTampered`.
 
-```text
-VaultId
-freshness_epoch
-previous_manifest_hash
-active_key_generation
-key-generation state
-opaque object inventory and authentication metadata
-rotation state when active
-```
+### Atomic compare-and-advance contract
+
+`advance_freshness_anchor(vault_id, expected_old, new_anchor)` has compare-and-swap semantics:
+
+- it succeeds only if the currently protected anchor is byte-for-byte equal to `expected_old` and `new_anchor.highest_epoch == expected_old.highest_epoch + 1`;
+- mismatch returns `AnchorConflict` and performs no mutation;
+- provider/storage error returns `AnchorUpdateFailed` and MUST NOT be reported as success;
+- after a reported success, an immediate protected reread MUST return exactly `new_anchor`; otherwise the operation returns `AnchorUpdateFailed` and the vault remains closed pending recovery;
+- crash/power loss at the protected-record replacement boundary MUST leave either the complete old anchor or the complete new anchor, never a torn/mixed record; a target that cannot prove this property MUST return `UnsupportedPolicy` for freshness-protected operation.
+
+Platform mapping is normative at the contract level:
+
+- **Apple:** anchor and VRK protector records use the same non-synchronizable data-protection Keychain boundary. The adapter serializes Himsat writers for the vault, compares the current item to `expected_old`, performs one protected item replacement/update, and rereads it. Any `SecItem` failure, unexpected replacement semantics, item loss, migration, or inability to prove old-or-new atomic record behavior returns `AnchorUpdateFailed` or `UnsupportedPolicy`; no filesystem-only fallback is allowed.
+- **Android:** the adapter MUST use a Keystore-backed protected state construction whose exact persistence/atomic-update mechanism is selected and independently qualified before B501. A plain rollbackable app file protected only by a stable Keystore key does not by itself satisfy the freshness-anchor contract. If exact compare-and-advance plus old-or-new crash atomicity cannot be proven, freshness-protected vault operation returns `UnsupportedPolicy`.
+- **Windows:** DPAPI/CNG protects key material but does not by itself prove a rollback-resistant mutable anchor store. The adapter MUST select and qualify a protected state mechanism that meets the abstract compare-and-advance/old-or-new contract before B501. ACL-restricted rollbackable ciphertext alone is insufficient. Otherwise return `UnsupportedPolicy`.
+- **Linux:** a Secret Service implementation may use a single protected item only if the exact service/provider is shown to provide the required serialized replacement and durable old-or-new behavior for that item. If the service or session cannot prove the contract, return `UnsupportedPolicy`; no plaintext or rollbackable-file fallback is allowed.
+
+These platform clauses intentionally do not claim universal hardware rollback resistance. Exact provider capability evidence is mandatory; targets that cannot satisfy the anchor contract remain unqualified rather than silently weakening rollback detection.
 
 Normal open rules:
 
 - manifest epoch `< anchor.highest_epoch` => `RollbackDetected`, fail closed;
 - equal epoch + hash mismatch => `CorruptOrTampered`, fail closed;
 - equal epoch + matching hash => normal open;
-- exactly `anchor.highest_epoch + 1` with `previous_manifest_hash == anchor.manifest_hash` is a recoverable interrupted-publication state: verify every referenced canonical object, then atomically advance the anchor;
+- exactly `anchor.highest_epoch + 1` with `previous_manifest_hash == anchor.manifest_hash` is a recoverable interrupted-publication state: authenticate and canonically parse the candidate manifest, verify every referenced canonical object, then atomically advance the anchor;
 - larger unexplained gaps => `FreshnessGap`, fail closed and require explicit recovery.
 
-Normal commit ordering is: write/flush new encrypted data → write and fsync authenticated manifest `N+1` → verify the manifest/object set → atomically compare-and-advance the OS freshness anchor from `N` to `N+1` → retire superseded data only when no valid recovery path needs it.
+Normal commit ordering is: write/flush new encrypted data → write and fsync authenticated manifest `N+1` → reread/authenticate/canonically parse the exact manifest envelope and verify its object set → atomically compare-and-advance the OS freshness anchor from `N` to `N+1` → retire superseded data only when no valid recovery path needs it.
 
-An intentional restore of an older authenticated backup on a device with a higher anchor must never decrement the anchor. After explicit user-confirmed recovery, Himsat restores verified backup content into a **new epoch greater than the existing anchor** and republishes it as current state.
+An intentional restore of an older authenticated backup on a device with a higher anchor must never decrement the anchor. After explicit user-confirmed recovery, Himsat restores verified backup content into a **new epoch greater than the existing anchor** and republishes it as current state with a fresh manifest nonce and hash.
 
 On a fresh device with no trusted prior anchor, Himsat can authenticate a backup but cannot prove that it was globally the newest backup. The first accepted authenticated restore establishes the local anchor; this limitation is residual risk and must be user-visible in restore evidence.
 
@@ -392,7 +509,7 @@ Durable phases:
 2. **STAGE:** produce separately named structured-store/blob copies under `G+1`; never mutate the only `G` canonical copy in place.
 3. **VERIFY:** authenticate/integrity-check the complete staged database/blob inventory and verify that every required logical object is represented.
 4. **PUBLISH:** write/fsync authenticated manifest epoch `E+1` that references only the verified `G+1` canonical set and links to the previous manifest hash.
-5. **ANCHOR:** compare-and-advance the OS freshness anchor to `E+1`.
+5. **ANCHOR:** compare-and-advance the OS freshness anchor to `E+1` using the atomic contract above.
 6. **ACTIVATE:** reopen the published state using `G+1`, rerun required integrity checks, then mark rotation stable.
 7. **RETIRE:** only after successful activation remove old `G` protector/recovery wraps and encrypted copies according to retention policy.
 
@@ -412,7 +529,7 @@ Provider-visible metadata is restricted to the following v1 allowlist:
 - opaque random backup-set identifier unrelated to `VaultId`;
 - opaque random storage object names unrelated to logical object IDs or user filenames;
 - ciphertext object count and ciphertext byte sizes;
-- public cryptographic envelope fields required to parse/decrypt: envelope version, cipher-suite ID, key generation, nonce, recovery policy identifier, recovery salt, and Argon2id public parameters;
+- public cryptographic envelope fields required to parse/decrypt: envelope version, cipher-suite ID, key generation, freshness epoch for the manifest, nonce, recovery policy identifier, recovery salt, and Argon2id public parameters;
 - provider-generated upload/modify timing and transport/account metadata outside Himsat's control.
 
 The following must **not** be deliberately exposed in backup filenames/keys or unencrypted provider metadata:
@@ -430,6 +547,7 @@ The encrypted manifest maps opaque backup object names to logical identities. Ba
 
 - local filesystem: fixed vault database filenames, opaque blob filenames, ciphertext sizes/counts, file timestamps, and directory existence may be visible; logical IDs/titles/content are not permitted in filenames;
 - locked SQLCipher store: database/WAL/journal existence, sizes, timestamps, and unavoidable public database-format bytes may be visible; semantic fixture markers must not be visible;
+- Apple Keychain: only fixed Himsat service/application/access-group identifiers and opaque protector/anchor identifiers may be deliberately exposed; no logical content, title, filename, or user-derived identifier;
 - Linux Secret Service lookup attributes: only fixed Himsat service/application identity and opaque protector ID; no vault/logical IDs, key generation, path, filename, or content.
 
 Residual metadata risk includes ciphertext size distributions, object counts, operation timing, backup timing, and key-rotation cadence. Closeout evidence must record measured provider/filesystem/secret-store visibility rather than claim perfect metadata secrecy.
@@ -462,7 +580,7 @@ Before any 004B implementation:
 
 - reviewer must be substantively independent from the authoring agent;
 - review must identify the exact canonical Git revision of the design packet;
-- scope must cover threat model, key hierarchy/domain separation, randomness, candidate providers, OS secure-storage access boundaries, recovery/KDF, AAD/nonce rules, freshness/rollback, SQLCipher selection/configuration, rotation, backup, metadata leakage, deletion, key lifecycle, and implementation split;
+- scope must cover threat model, key hierarchy/domain separation, randomness, candidate providers, OS secure-storage access boundaries, recovery/KDF, AAD/nonce rules, freshness/manifest/rollback, SQLCipher selection/configuration, rotation, backup, metadata leakage, deletion, key lifecycle, and implementation split;
 - review evidence must enumerate blocking findings, non-blocking recommendations, and residual risks and record a clear disposition;
 - absent/billing-blocked/skipped/neutral automated review is not independent review;
 - author self-review and green CI are not substitutes;
@@ -472,7 +590,7 @@ Before any 004B implementation:
 
 ### 004A remediation acceptance
 
-- all D001-D016 findings are addressed in normative design/tasks/evidence;
+- all D001-D018 findings are addressed in normative design/tasks/evidence;
 - no implementation or dependency adoption enters the remediation diff;
 - exact-head CI and Diffcipline R3 succeed;
 - remediation is merged with expected-head protection and post-merge CI/R3 succeed;
@@ -485,6 +603,7 @@ Specification 004 is not complete until later implementation proves:
 
 - platform secret-protector behavior for every claimed baseline target;
 - encrypted structured-store and bounded-blob foundation;
+- authenticated manifest and freshness-anchor contract on every claimed target;
 - fail-closed wrong-key/corruption/version/rollback/protector behavior;
 - nonce/AAD/transplant/metadata-leakage negative tests;
 - crash-atomic key rotation/recovery/backup/deletion semantics;
