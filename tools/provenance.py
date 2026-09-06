@@ -370,7 +370,12 @@ def self_test(root: Path) -> None:
         raise GateError("fixtures: cases must be a non-empty list")
     canonical_policy = (root / "governance/provenance/policy.json").read_text(encoding="utf-8")
     canonical_workspace = (root / "Cargo.toml").read_text(encoding="utf-8")
-    canonical_member = (root / "crates/himsat-core/Cargo.toml").read_text(encoding="utf-8")
+    workspace = tomllib.loads(canonical_workspace).get("workspace", {})
+    member_manifests: dict[str, str] = {}
+    for member in workspace.get("members", []):
+        member = safe_repo_path(member, "Cargo.toml workspace member")
+        relative = f"{member}/Cargo.toml"
+        member_manifests[relative] = (root / relative).read_text(encoding="utf-8")
     canonical_lock = (root / "Cargo.lock").read_text(encoding="utf-8")
     for case in cases:
         if not isinstance(case, dict) or not {"name", "expected", "registry"}.issubset(case):
@@ -379,13 +384,15 @@ def self_test(root: Path) -> None:
             fixture_root = Path(temp)
             (fixture_root / "governance/provenance").mkdir(parents=True)
             (fixture_root / "governance/generated").mkdir(parents=True)
-            (fixture_root / "crates/himsat-core").mkdir(parents=True)
             (fixture_root / "governance/provenance/policy.json").write_text(canonical_policy, encoding="utf-8")
             (fixture_root / "governance/provenance/registry.json").write_text(
                 json.dumps(case["registry"], indent=2, sort_keys=True) + "\n", encoding="utf-8"
             )
             (fixture_root / "Cargo.toml").write_text(canonical_workspace, encoding="utf-8")
-            (fixture_root / "crates/himsat-core/Cargo.toml").write_text(canonical_member, encoding="utf-8")
+            for relative, content in member_manifests.items():
+                path = fixture_root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
             (fixture_root / "Cargo.lock").write_text(case.get("cargo_lock", canonical_lock), encoding="utf-8")
             for relative, content in case.get("files", {}).items():
                 path = fixture_root / safe_repo_path(relative, "fixture file")
@@ -417,14 +424,17 @@ def self_test(root: Path) -> None:
         copy_root = Path(temp)
         (copy_root / "governance/generated").mkdir(parents=True)
         (copy_root / "governance/provenance").mkdir(parents=True)
-        (copy_root / "crates/himsat-core").mkdir(parents=True)
-        for relative in (
-            "governance/provenance/policy.json", "governance/provenance/registry.json",
-            "Cargo.toml", "Cargo.lock", "crates/himsat-core/Cargo.toml",
-        ):
+        canonical_files = {
+            "governance/provenance/policy.json": canonical_policy,
+            "governance/provenance/registry.json": (root / "governance/provenance/registry.json").read_text(encoding="utf-8"),
+            "Cargo.toml": canonical_workspace,
+            "Cargo.lock": canonical_lock,
+            **member_manifests,
+        }
+        for relative, content in canonical_files.items():
             target = copy_root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes((root / relative).read_bytes())
+            target.write_text(content, encoding="utf-8")
         (copy_root / "THIRD_PARTY_NOTICES.md").write_text(notices + "drift\n", encoding="utf-8")
         (copy_root / "governance/generated/sbom.json").write_text(sbom, encoding="utf-8")
         try:

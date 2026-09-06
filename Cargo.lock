@@ -5,3 +5,7 @@ version = 4
 [[package]]
 name = "himsat-core"
 version = "0.0.0"
+
+[[package]]
+name = "himsat-events"
+version = "0.0.0"
