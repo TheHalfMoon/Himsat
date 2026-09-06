@@ -30,7 +30,7 @@ Specification 004 shaping merged at `384608c8fc13531c399f3726caa5022eb3612aa2` a
 
 Independent CodeRabbit review on review-only PR #12 examined exact canonical SHA `384608c8fc13531c399f3726caa5022eb3612aa2` and posted 16 actionable findings. Himsat remediated D001-D016 and merged that remediation canonically at `6d1bbc9b55690939833917eebd447c361627f48a`; exact post-merge CI `34055180993` and R3 `34055180810` succeeded.
 
-A second substantive CodeRabbit review on review-only PR #18 examined exact canonical SHA `6d1bbc9b55690939833917eebd447c361627f48a` and returned `CHANGES_REQUIRED` with two blocking findings: the Apple Keychain baseline remained underspecified, and the freshness manifest lacked a normative authenticated-envelope construction. Exact review evidence and classification are in `review-evidence.md`.
+A second substantive CodeRabbit review on review-only PR #18 examined exact canonical SHA `6d1bbc9b55690939833917eebd447c361627f48a` and returned `CHANGES_REQUIRED` with two blocking findings: the Apple Keychain baseline remained underspecified, and the freshness manifest lacked a normative authenticated-envelope construction. Exact review evidence and classification are in `review-round2-evidence.md`.
 
 ## Scope in
 
@@ -379,7 +379,7 @@ u32(ciphertext_and_tag_length)
 bytes(ciphertext_and_tag)
 ```
 
-`ciphertext_and_tag_length` MUST be between 16 and `16_777_232` bytes inclusive (16 MiB plaintext plus the 16-byte Poly1305 tag). The complete envelope MUST fit within `16_777_306` bytes. Any other version/suite, zero generation/epoch, invalid length, truncation, or trailing bytes is rejected before state use.
+`ciphertext_and_tag_length` MUST be between 16 and `16_777_232` bytes inclusive (16 MiB plaintext plus the 16-byte Poly1305 tag). The complete envelope MUST fit within `16_777_325` bytes. Any other version/suite, zero generation/epoch, invalid length, truncation, or trailing bytes is rejected before state use.
 
 ### Manifest AAD v1
 
