@@ -54,11 +54,96 @@ jobs:
                   "version": pkg["version"],
                   "source": pkg.get("source"),
                   "license": pkg.get("license"),
+                  "license_file": pkg.get("license_file"),
                   "repository": pkg.get("repository"),
                   "features": sorted(node.get("features", [])),
               }, sort_keys=True, separators=(",", ":")))
           PY
           echo '=== HIMSAT_P003_RESOLUTION_END ==='
           echo '=== HIMSAT_P003_TREE_BEGIN ==='
-          cargo tree --manifest-path research/004p/Cargo.toml --locked --edges normal,build --all-targets
+          cargo tree --manifest-path research/004p/Cargo.toml --locked --edges normal,build --target all
           echo '=== HIMSAT_P003_TREE_END ==='
+      - name: Capture immutable VCS and license evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== HIMSAT_P003_SOURCE_LICENSE_BEGIN ==='
+          python - "$RUNNER_TEMP/metadata.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          metadata = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          external = [pkg for pkg in metadata["packages"] if pkg.get("source")]
+          external.sort(key=lambda pkg: (pkg["name"], pkg["version"]))
+
+          for pkg in external:
+              root = Path(pkg["manifest_path"]).resolve().parent
+              vcs_path = root / ".cargo_vcs_info.json"
+              vcs = None
+              if vcs_path.is_file():
+                  vcs = json.loads(vcs_path.read_text(encoding="utf-8"))
+
+              license_candidates = []
+              for candidate in sorted(root.iterdir(), key=lambda item: item.name.lower()):
+                  if not candidate.is_file():
+                      continue
+                  upper = candidate.name.upper()
+                  if upper.startswith(("LICENSE", "LICENCE", "COPYING", "NOTICE", "COPYRIGHT", "UNLICENSE")):
+                      license_candidates.append({
+                          "name": candidate.name,
+                          "sha256": hashlib.sha256(candidate.read_bytes()).hexdigest(),
+                      })
+
+              result = {
+                  "name": pkg["name"],
+                  "version": pkg["version"],
+                  "source": pkg.get("source"),
+                  "repository": pkg.get("repository"),
+                  "license_expression": pkg.get("license"),
+                  "license_file": pkg.get("license_file"),
+                  "vcs": vcs,
+                  "license_notice_files": license_candidates,
+              }
+              print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+          PY
+          echo '=== HIMSAT_P003_SOURCE_LICENSE_END ==='
+      - name: Capture selected native source hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== HIMSAT_P003_NATIVE_SOURCE_BEGIN ==='
+          python - "$RUNNER_TEMP/metadata.json" <<'PY'
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          metadata = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          by_name = {pkg["name"]: pkg for pkg in metadata["packages"] if pkg.get("source")}
+
+          libsqlite = Path(by_name["libsqlite3-sys"]["manifest_path"]).resolve().parent
+          for relative in ("sqlcipher/sqlite3.c", "sqlcipher/sqlite3.h", "sqlcipher/sqlite3ext.h", "build.rs"):
+              path = libsqlite / relative
+              print(json.dumps({
+                  "package": "libsqlite3-sys",
+                  "version": by_name["libsqlite3-sys"]["version"],
+                  "path": relative,
+                  "size": path.stat().st_size,
+                  "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+              }, sort_keys=True, separators=(",", ":")))
+
+          openssl_src = Path(by_name["openssl-src"]["manifest_path"]).resolve().parent
+          for relative in ("Cargo.toml", "openssl/VERSION.dat", "openssl/LICENSE.txt"):
+              path = openssl_src / relative
+              if path.is_file():
+                  print(json.dumps({
+                      "package": "openssl-src",
+                      "version": by_name["openssl-src"]["version"],
+                      "path": relative,
+                      "size": path.stat().st_size,
+                      "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                  }, sort_keys=True, separators=(",", ":")))
+          PY
+          echo '=== HIMSAT_P003_NATIVE_SOURCE_END ==='
