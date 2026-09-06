@@ -7,107 +7,71 @@ SPECIFICATION = 001-repository-foundation
 IMPLEMENTATION_PR = 3
 IMPLEMENTATION_HEAD = 34a0b1a4b7a5f4873a6de7141f160de45fd37740
 IMPLEMENTATION_MERGE = 4d1f8843577059d5cfa0cfeeb97df05feb2da8be
-CLOSEOUT = PENDING_CLOSEOUT_MERGE
+CLOSEOUT_PR = 4
+CLOSEOUT_HEAD = c21b611de8b799dceea148a86578fa53028458d2
+CLOSEOUT_MERGE = 90fc14196a4d5ce486d068e1fc6c45c19e2cc7f0
+CLOSEOUT = CLOSED_CANONICAL
 ```
 
-This file records executed evidence. It does not convert unavailable or skipped checks into PASS and does not claim any Himsat product feature, donor adoption, release, or native SpecGrain `GRAIN` state.
+This file records executed evidence. It does not convert unavailable/skipped checks into PASS and does not claim any Himsat product feature, donor adoption, release, or native SpecGrain `GRAIN` state.
 
 ## Canonical lineage
 
 - Specification 000 merge: `3f6687b34530e55098f7854042b12adfa607f394`.
 - Specification 001 shaping merge: `c7fadaebfc44a60f982763bfc20e3a7d41551f4e`.
-- Specification 001 implementation PR: `#3`.
 - Exact qualified implementation head: `34a0b1a4b7a5f4873a6de7141f160de45fd37740`.
-- Expected-head merge result: `4d1f8843577059d5cfa0cfeeb97df05feb2da8be`.
-- The merge commit is GitHub-signed and has shaping merge `c7fadae...` and qualified implementation head `34a0b1a...` as its parents.
+- Expected-head implementation merge: `4d1f8843577059d5cfa0cfeeb97df05feb2da8be`.
+- Exact closeout head: `c21b611de8b799dceea148a86578fa53028458d2`.
+- Expected-head closeout merge: `90fc14196a4d5ce486d068e1fc6c45c19e2cc7f0`.
 
-## Exact implementation scope
+Both merge commits were re-read on `main` and were GitHub-signed with the expected qualified head as the second parent.
 
-The final compare from shaping merge to qualified head was six commits ahead, zero behind, with exactly 16 changed paths:
+## Executed verification
 
-```text
-.diffcipline.toml
-.github/workflows/ci.yml
-.gitignore
-.specgrain/policies/default.json
-.specgrain/project.json
-.specgrain/specs/.gitkeep
-CONTRIBUTING.md
-Cargo.lock
-Cargo.toml
-LICENSE
-SECURITY.md
-crates/himsat-core/Cargo.toml
-crates/himsat-core/src/lib.rs
-rust-toolchain.toml
-specs/001-repository-foundation/tasks.md
-specs/CURRENT.md
-```
+### Implementation PR head
 
-No donor source, model, product feature, Tauri/Node/mobile shell, telemetry, binary, release artifact, or third-party Rust dependency entered the implementation diff.
+GitHub Actions run `34042429773` completed successfully on exact head `34a0b1a...`:
 
-## Exact-head PR verification
-
-GitHub Actions run `34042429773` executed against exact PR head `34a0b1a4b7a5f4873a6de7141f160de45fd37740` and completed successfully.
-
-Successful jobs:
-
-- `Rust / ubuntu-latest`: format, clippy with `-D warnings`, locked tests, dependency-free core invariant.
-- `Rust / macos-latest`: same checks.
-- `Rust / windows-latest`: same checks.
-- `SpecGrain / pinned source`: tracked state validated using `TheHalfMoon/SpecGrain@faddebccb4f4b1dd71bf06b1ce7e3d7b367178ed`.
-- `Diffcipline / R2 exact diff`: proof executed with verification enabled using `TheHalfMoon/Diffcipline@5cb1c77340b75649f6168e0e8f66479ea047ea96`.
-- `Negative controls`: deliberately broken formatting, clippy, test, SpecGrain state, configured-but-not-run Diffcipline verification, and an out-of-scope path were all detected/rejected as required.
-
-The CI workflow grants only `contents: read` repository permission.
-
-## Review and reconciliation
-
-Immediately before merge:
-
-- PR #3 was open, non-draft, and mergeable.
-- `main` still matched shaping merge `c7fadaebfc44a60f982763bfc20e3a7d41551f4e`.
-- PR head matched exact qualified head `34a0b1a4b7a5f4873a6de7141f160de45fd37740`.
-- no submitted pull-request reviews existed;
-- no inline review threads existed;
-- Qodo reported that review was unavailable because its trial had ended;
-- CodeRabbit reported that automatic substantive review was skipped because the repository had fewer than 10 stars. A success integration status therefore was not treated as a substantive review.
-- repository branch protection/required status checks were not configured; this absence was not represented as a successful required-check policy.
-
-Merge used GitHub expected-head protection with the exact qualified head.
-
-## Post-merge verification
-
-Canonical `main` was re-read at signed merge `4d1f8843577059d5cfa0cfeeb97df05feb2da8be`.
-
-Push-triggered GitHub Actions run `34042553778` executed on that exact merge and completed successfully with the same six job groups:
-
-- Rust / Ubuntu;
-- Rust / macOS;
-- Rust / Windows;
+- Rust / Ubuntu: fmt, clippy `-D warnings`, locked tests, dependency-free invariant;
+- Rust / macOS: same;
+- Rust / Windows: same;
 - pinned SpecGrain validation;
-- Diffcipline R2 proof;
-- negative controls.
+- Diffcipline R2 exact-diff proof with verification executed;
+- negative controls proving malformed formatting, clippy, tests, SpecGrain state, missing Diffcipline execution, and out-of-scope paths are rejected.
 
-This provides post-merge executable confirmation that the merged repository state retains the qualified foundation behavior.
+### Implementation merge
 
-## Local execution availability
+Push run `34042553778` completed successfully on exact merge `4d1f884...` with the same six job groups.
 
-The chat execution environment did not provide a usable local Rust installation/network path for repository-local Rust verification. Local execution therefore remained unavailable/NOT RUN rather than PASS. Exact GitHub-hosted verification described above supplied the executable evidence used for merge qualification.
+### Closeout PR head
 
-## Successor policy hardening
+Run `34042761301` completed successfully on exact closeout head `c21b611...` with the same six job groups. This included the hardened manifest/lockfile policy.
 
-The implementation bootstrap temporarily allowed Cargo manifest and lockfile changes because those files had to be created by Specification 001 itself.
+### Closeout merge
 
-The closeout change tightens both:
+Push run `34042822934` completed successfully on exact canonical closeout merge `90fc141...` with all six job groups succeeding.
+
+## Scope and supply-chain closure
+
+Specification 001 introduced the pinned Rust workspace, dependency-free `himsat-core`, Apache-2.0, SpecGrain/Diffcipline controls, and least-privilege CI. It introduced no donor source, model, product feature, app shell, telemetry, binary, release artifact, or third-party Rust package.
+
+The bootstrap Diffcipline policy permitted creation of Cargo manifests/lockfile only during foundation implementation. Closeout tightened both to:
 
 ```text
 dependency_manifest_changes = "review"
 lockfile_changes = "review"
 ```
 
-No third-party dependency adoption is authorized by this change. Future manifest/lockfile changes require explicit successor scope and cannot silently inherit the bootstrap allowance.
+Future dependency changes therefore require explicit successor scope rather than inheriting bootstrap authority.
 
-## Remaining closeout condition
+## Review truth
 
-Specification 001 becomes `CLOSED_CANONICAL` only after the closeout PR containing this evidence and the policy hardening merges successfully and canonical `main` is re-read. Until then Specification 002 remains blocked.
+PR #3 and PR #4 had no submitted reviews or inline review threads. Qodo was unavailable because its trial ended and CodeRabbit did not provide a substantive automatic review for the low-star repository; those conditions were not represented as substantive review PASS evidence. Repository branch protection/required checks were absent and were not represented as successful policy enforcement.
+
+## Local execution availability
+
+Local Rust execution in the chat environment remained unavailable/NOT RUN. Exact GitHub-hosted CI supplied the executed verification used for qualification.
+
+## Final disposition
+
+Specification 001 is `CLOSED_CANONICAL`. Its successor authority is limited to **shaping Specification 002**. Donor adoption remains prohibited until Specification 002 itself creates and proves exact provenance/license authorization machinery.
