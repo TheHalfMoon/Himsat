@@ -52,7 +52,9 @@ The provisional dependency order begins:
   -> 002 Provenance + license automation
   -> 003 Core event/schema foundation
   -> 004 Vault + key architecture
-  -> 005 Desktop capture spike/qualification
+  -> 005 Crash-safe media journal/chunk store
+  -> 006 Capture abstraction + Capture Health
+  -> 007 macOS capture
   -> ...
 ```
 
