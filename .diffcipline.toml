@@ -6,47 +6,12 @@ max_added_lines = 900
 dependency_manifest_changes = "allow"
 lockfile_changes = "allow"
 untracked_files = "fail"
-expected_files = [
-  "Cargo.toml",
-  "Cargo.lock",
-  "rust-toolchain.toml",
-  "crates/himsat-core/**",
-  ".gitignore",
-  ".github/workflows/ci.yml",
-  ".specgrain/**",
-  ".diffcipline.toml",
-  "LICENSE",
-  "CONTRIBUTING.md",
-  "SECURITY.md",
-  "specs/001-repository-foundation/**",
-  "specs/CURRENT.md",
-]
-forbidden_surfaces = [
-  ".env",
-  "secrets/**",
-  "vendor/**",
-  "models/**",
-]
+expected_files = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "crates/himsat-core/**", ".gitignore", ".github/workflows/ci.yml", ".specgrain/**", ".diffcipline.toml", "LICENSE", "CONTRIBUTING.md", "SECURITY.md", "specs/001-repository-foundation/**", "specs/CURRENT.md"]
+forbidden_surfaces = [".env", "secrets/**", "vendor/**", "models/**"]
 
 [verification]
-commands = [
-  "cargo fmt --all -- --check",
-  "cargo test --workspace --all-targets --locked",
-]
-r0_commands = [
-  "cargo fmt --all -- --check",
-]
-r1_commands = [
-  "cargo fmt --all -- --check",
-  "cargo test --workspace --all-targets --locked",
-]
-r2_commands = [
-  "cargo fmt --all -- --check",
-  "cargo clippy --workspace --all-targets --locked -- -D warnings",
-  "cargo test --workspace --all-targets --locked",
-]
-r3_commands = [
-  "cargo fmt --all -- --check",
-  "cargo clippy --workspace --all-targets --locked -- -D warnings",
-  "cargo test --workspace --all-targets --locked",
-]
+commands = ["cargo fmt --all -- --check", "cargo test --workspace --all-targets --locked"]
+r0_commands = ["cargo fmt --all -- --check"]
+r1_commands = ["cargo fmt --all -- --check", "cargo test --workspace --all-targets --locked"]
+r2_commands = ["cargo fmt --all -- --check", "cargo clippy --workspace --all-targets --locked -- -D warnings", "cargo test --workspace --all-targets --locked"]
+r3_commands = ["cargo fmt --all -- --check", "cargo clippy --workspace --all-targets --locked -- -D warnings", "cargo test --workspace --all-targets --locked"]
