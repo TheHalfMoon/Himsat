@@ -20,18 +20,81 @@ jobs:
           persist-credentials: false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.98.1 --profile minimal
-      - name: Collect exact package source and license evidence
+      - name: Collect exact package source license and native evidence
         shell: bash
         run: |
           set -euo pipefail
           echo "HEAD=$(git rev-parse HEAD)"
           rustc --version
           cargo --version
+
+          expected_fallible_revision="9217bc5e381b54b4ef4c38959488a5dc993b7b81"
+          fallible_revision="$(git ls-remote --refs https://github.com/sfackler/fallible-streaming-iterator refs/tags/v0.1.9 | awk 'NR == 1 {print $1}')"
+          test "$fallible_revision" = "$expected_fallible_revision"
+          export HIMSAT_FALLIBLE_STREAMING_ITERATOR_REVISION="$fallible_revision"
+          echo "FALLIBLE_STREAMING_ITERATOR_TAG=v0.1.9"
+          echo "FALLIBLE_STREAMING_ITERATOR_REVISION=$fallible_revision"
+
+          native_root="$RUNNER_TEMP/himsat-004p-native"
+          rm -rf "$native_root"
+          mkdir -p "$native_root"
+
+          git clone --quiet --depth 1 --branch v4.14.0 https://github.com/sqlcipher/sqlcipher "$native_root/sqlcipher"
+          test "$(git -C "$native_root/sqlcipher" rev-parse refs/tags/v4.14.0)" = "46bb08ec73b2caa84b6945a19c9e435fff446dcd"
+          test "$(git -C "$native_root/sqlcipher" rev-parse 'refs/tags/v4.14.0^{commit}')" = "778ab890cfc30c3631212dcceb0295498abdcd3e"
+          test "$(git -C "$native_root/sqlcipher" rev-parse HEAD)" = "778ab890cfc30c3631212dcceb0295498abdcd3e"
+          test "$(git -C "$native_root/sqlcipher" rev-parse HEAD:LICENSE.md)" = "3f71443161b6ff424ca4f335e910469f46ed4c44"
+          test "$(git -C "$native_root/sqlcipher" rev-parse HEAD:SQLITE_LICENSE.md)" = "4029dc9e7f25d12adfa0165542d702208276913a"
+          grep -Fq 'Redistribution and use in source and binary forms' "$native_root/sqlcipher/LICENSE.md"
+          grep -Fq 'Neither the name of the ZETETIC LLC' "$native_root/sqlcipher/LICENSE.md"
+          grep -Fq '[Public Domain](https://sqlite.org/copyright.html)' "$native_root/sqlcipher/SQLITE_LICENSE.md"
+
+          git init --quiet "$native_root/rusqlite"
+          git -C "$native_root/rusqlite" remote add origin https://github.com/rusqlite/rusqlite
+          git -C "$native_root/rusqlite" fetch --quiet --depth 1 origin e88f112bef7899234a497baed5cc3c3d553deeb8
+          git -C "$native_root/rusqlite" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$native_root/rusqlite" rev-parse HEAD)" = "e88f112bef7899234a497baed5cc3c3d553deeb8"
+          test "$(git -C "$native_root/rusqlite" rev-parse HEAD:libsqlite3-sys/sqlcipher/sqlite3.h)" = "d1a3f170510e551a47eeb91f04addd1387bc79ab"
+          test "$(git -C "$native_root/rusqlite" rev-parse HEAD:libsqlite3-sys/sqlcipher/sqlite3.c)" = "9a9d2f2034328eea3a595303ea6e8da9ffc36214"
+          test "$(git -C "$native_root/rusqlite" rev-parse HEAD:libsqlite3-sys/upgrade_sqlcipher.sh)" = "a96143d098a652fae59d21d6a6cd017e0438b5e7"
+          grep -Fq 'SQLCIPHER_VERSION="4.14.0"' "$native_root/rusqlite/libsqlite3-sys/upgrade_sqlcipher.sh"
+          grep -Fq '#define SQLITE_VERSION        "3.51.3"' "$native_root/rusqlite/libsqlite3-sys/sqlcipher/sqlite3.h"
+          grep -Fq '737ae4a34738ffa0c3ff7f9bb18df914dd1cad163f28fd6b6e114a344fe6alt1' "$native_root/rusqlite/libsqlite3-sys/sqlcipher/sqlite3.h"
+
+          git init --quiet "$native_root/openssl-src-rs"
+          git -C "$native_root/openssl-src-rs" remote add origin https://github.com/alexcrichton/openssl-src-rs
+          git -C "$native_root/openssl-src-rs" fetch --quiet --depth 1 origin 64c38cc48205400720199476aff8a780f98d167d
+          git -C "$native_root/openssl-src-rs" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$native_root/openssl-src-rs" rev-parse HEAD)" = "64c38cc48205400720199476aff8a780f98d167d"
+          test "$(git -C "$native_root/openssl-src-rs" rev-parse HEAD:openssl)" = "aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f"
+          grep -Fq 'url = https://github.com/openssl/openssl' "$native_root/openssl-src-rs/.gitmodules"
+
+          git clone --quiet --depth 1 --branch openssl-3.6.3 https://github.com/openssl/openssl "$native_root/openssl"
+          test "$(git -C "$native_root/openssl" rev-parse refs/tags/openssl-3.6.3)" = "e5c234b0c471a676ae6141d2f157df61eb293477"
+          test "$(git -C "$native_root/openssl" rev-parse 'refs/tags/openssl-3.6.3^{commit}')" = "aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f"
+          test "$(git -C "$native_root/openssl" rev-parse HEAD)" = "aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f"
+          test "$(git -C "$native_root/openssl" rev-parse HEAD:LICENSE.txt)" = "49cc83d2ee29d13453188217f0e4edd70c7f842f"
+          grep -Fq 'Apache License' "$native_root/openssl/LICENSE.txt"
+          grep -Fq 'Version 2.0, January 2004' "$native_root/openssl/LICENSE.txt"
+
+          echo "SQLCIPHER_TAG_OBJECT=46bb08ec73b2caa84b6945a19c9e435fff446dcd"
+          echo "SQLCIPHER_SOURCE_REVISION=778ab890cfc30c3631212dcceb0295498abdcd3e"
+          echo "SQLCIPHER_LICENSE_BLOB=3f71443161b6ff424ca4f335e910469f46ed4c44"
+          echo "SQLITE_LICENSE_BLOB=4029dc9e7f25d12adfa0165542d702208276913a"
+          echo "LIBSQLITE3_SYS_SOURCE_REVISION=e88f112bef7899234a497baed5cc3c3d553deeb8"
+          echo "SQLITE_VERSION=3.51.3"
+          echo "SQLITE_SOURCE_ID=737ae4a34738ffa0c3ff7f9bb18df914dd1cad163f28fd6b6e114a344fe6alt1"
+          echo "OPENSSL_SRC_REVISION=64c38cc48205400720199476aff8a780f98d167d"
+          echo "OPENSSL_TAG_OBJECT=e5c234b0c471a676ae6141d2f157df61eb293477"
+          echo "OPENSSL_SOURCE_REVISION=aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f"
+          echo "OPENSSL_LICENSE_BLOB=49cc83d2ee29d13453188217f0e4edd70c7f842f"
+
           cargo generate-lockfile --manifest-path research/004p/Cargo.toml
           cargo metadata --manifest-path research/004p/Cargo.toml --locked --format-version 1 > "$RUNNER_TEMP/metadata.json"
           python - "$RUNNER_TEMP/metadata.json" research/004p/Cargo.lock <<'PY'
           import hashlib
           import json
+          import os
           from pathlib import Path
           import sys
           import tomllib
@@ -49,11 +112,14 @@ jobs:
           if not registry_roots:
               raise SystemExit("cargo registry source root unavailable")
 
+          verified_fallible_revision = os.environ.get("HIMSAT_FALLIBLE_STREAMING_ITERATOR_REVISION")
+          if verified_fallible_revision != "9217bc5e381b54b4ef4c38959488a5dc993b7b81":
+              raise SystemExit("fallible-streaming-iterator tag verification unavailable or mismatched")
           vcs_overrides = {
               ("fallible-streaming-iterator", "0.1.9"): {
-                  "revision": "9217bc5e381b54b4ef4c38959488a5dc993b7b81",
+                  "revision": verified_fallible_revision,
                   "source_path": ".",
-                  "evidence": "upstream-tag-v0.1.9",
+                  "evidence": "verified-upstream-tag-v0.1.9",
               },
           }
           license_file_overrides = {
