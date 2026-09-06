@@ -15,8 +15,9 @@ Before changing the repository:
 3. `.specify/memory/constitution.md`;
 4. this file;
 5. active `spec.md`, `plan.md`, and `tasks.md`;
-6. referenced research/architecture/security/donor/qualification artifacts;
-7. live GitHub state, exact branch/head/diff/checks/reviews.
+6. `governance/provenance/source-use-authorization.md`;
+7. referenced research/architecture/security/donor/qualification artifacts;
+8. live GitHub state, exact branch/head/diff/checks/reviews.
 
 ## Delivery method
 
@@ -63,7 +64,7 @@ No donor adoption/product implementation until Specification 000 is reviewed and
 
 ### Gate B — Provenance before donors
 
-No non-trivial copied/closely adapted donor material before machine-readable donor/provenance/license policy is established and exact source revision/path/license is recorded.
+No non-trivial copied/closely adapted/vendor/dependency donor material before machine-readable donor/provenance policy is established and exact source revision/path plus controlling public terms or separate permission basis are recorded. Founder permission makes covered sources eligible for evaluation; it does not waive the adoption boundary.
 
 ### Gate C — Durable source before intelligence
 
@@ -84,6 +85,23 @@ No connector automation/external writes before capability policy, prompt-injecti
 ### Gate G — Release after qualification closure
 
 No 1.0 or comparative superiority claim before platform/reliability/privacy/accessibility/benchmark/security/release evidence closes.
+
+## Source-reuse authorization and selection rule
+
+The founder/user has recorded source-use permission for every external source referenced anywhere in the repository at or before the exact snapshot named in `governance/provenance/source-use-authorization.md`.
+
+This changes the planning default for covered sources:
+
+```text
+OLD_CONSERVATIVE_DEFAULT = REIMPLEMENT_WHEN_PERMISSION_UNCERTAIN
+NEW_DEFAULT = COMPARE_REFERENCE_COPY_ADAPT_DEPEND_VENDOR_NATIVE_ON_ENGINEERING_MERIT
+AUTOMATIC_ADOPTION = NO
+ACTIVE_UNIT_AUTHORITY_CHANGED = NO
+```
+
+When a source becomes relevant, the selected unit must compare the best available donor implementations and a Himsat-native alternative. Prefer the smallest reliable long-term boundary; do not bulk-copy simply because permission exists. Exact path/revision, permission/license scope, embedded third-party material, models/assets, notices, Himsat behavior tests, and risk-appropriate qualification remain mandatory.
+
+The detailed reuse decision matrix and current donor registry are maintained in `docs/donor-and-provenance.md`.
 
 ## Provisional dependency graph
 
@@ -185,10 +203,10 @@ Cross-cutting accessibility/security/RTL requirements apply inside earlier units
 
 ### 002 — Provenance, license, SBOM machinery
 
-**Outcome:** machine-readable donor/model/asset registry and CI policy for unknown/incompatible adoption.  
+**Outcome:** machine-readable donor/model/asset registry and CI policy for unknown/incompatible adoption, including separate permission evidence where an adoption does not rely solely on a compatible public license.  
 **Scope-out:** copying donor product behavior.  
 **Risk:** R2 governance/supply chain.  
-**Evidence:** positive/negative fixtures for allowed/manual/denied licenses, generated notice closure, source-digest checks.
+**Evidence:** positive/negative fixtures for allowed/manual/denied licenses, separate-permission cases as needed, generated notice closure, source-digest checks.
 
 ### 003 — Core identities, schemas, events
 
@@ -219,7 +237,7 @@ Cross-cutting accessibility/security/RTL requirements apply inside earlier units
 ### 007 — macOS capture
 
 **Outcome:** qualified microphone + authorized system/screen-audio pathways using current supported Apple APIs.  
-**Donor review:** Meetily/Anarlog/native API patterns.  
+**Donor review:** Meetily/Anarlog/OpenSuperWhisper/native API patterns and any stronger covered source available at shaping time.  
 **Risk:** R3 recording lifecycle.  
 **Evidence:** route changes, permissions, sleep/wake, long-session matrix.
 
@@ -238,19 +256,19 @@ Cross-cutting accessibility/security/RTL requirements apply inside earlier units
 ### 010 — Audio processing
 
 **Outcome:** AEC/NS/AGC/limiting/resampling pipeline behind swappable contract.  
-**Donor candidates:** Sonora/WebRTC AudioProcessing.  
+**Donor candidates:** Sonora/WebRTC AudioProcessing plus any stronger covered implementation identified at shaping time.  
 **Risk:** R2.  
 **Evidence:** objective/perceptual fixtures, CPU/latency, speech-damage regression.
 
 ### 011 — Model registry and speech-engine contract
 
-**Outcome:** model identity/license/digest/resource manifest, offline side-load path, engine abstraction/router.  
-**Donor candidates:** whisper.cpp, sherpa-onnx, Argmax OSS, Moonshine/Parakeet experiments.  
+**Outcome:** model identity/license-or-permission/digest/resource manifest, offline side-load path, engine abstraction and explicit Voice Model Router exposing locality, capability, resource, and Network Lock compatibility.  
+**Donor candidates:** whisper.cpp, sherpa-onnx, Argmax OSS, Moonshine/Parakeet experiments, OpenSuperWhisper engine/routing patterns, and other covered engines after exact comparison.  
 **Risk:** R2 supply chain/native execution.
 
 ### 012 — Live transcription
 
-**Outcome:** low-latency streaming transcript revisions with backpressure/cancellation and source time mapping.  
+**Outcome:** low-latency streaming transcript revisions with backpressure/cancellation and source time mapping, suitable for both meeting/live surfaces and later dictation-grade fast paths without conflating their retention/consent UX.  
 **Risk:** R2.  
 **Evidence:** latency/resource/device/language benchmarks.
 
@@ -267,7 +285,8 @@ Cross-cutting accessibility/security/RTL requirements apply inside earlier units
 
 ### 015 — Desktop runtime, controls, meeting detection
 
-**Outcome:** close-window-to-tray/menu runtime, launch-ready behavior, floating controls, opt-in meeting detection, session recovery.  
+**Outcome:** close-window-to-tray/menu runtime, launch-ready behavior, floating controls, opt-in meeting detection, session recovery, and a reusable Input Control Layer for global shortcuts/push-to-talk/mouse controls where supported.  
+**Donor review:** Meetily, Anarlog, OpenSuperWhisper, native platform APIs, and any stronger covered implementation available at shaping time.  
 **Scope-out:** hidden recording.  
 **Risk:** R3 due persistent recording state.
 
@@ -293,7 +312,8 @@ Cross-cutting accessibility/security/RTL requirements apply inside earlier units
 
 ### 019 — Audio/video import
 
-**Outcome:** safe cancellable media import, demux/decode, timeline/chapter hooks, crash isolation.  
+**Outcome:** safe cancellable media import, demux/decode, timeline/chapter hooks, crash isolation, and recoverable file-transcription queue behavior where shaped.  
+**Donor review:** covered media/transcription sources including OpenSuperWhisper queue UX/implementation patterns where useful.  
 **Risk:** R2 hostile media parsing.  
 **Evidence:** malformed/large/media-format matrix and fuzzing as justified.
 
@@ -359,7 +379,7 @@ Cross-cutting accessibility/security/RTL requirements apply inside earlier units
 
 ### 031 — Local API/CLI/MCP + permission broker
 
-**Outcome:** capability-scoped local developer/agent interface; read/write/sensitive scopes separate.  
+**Outcome:** capability-scoped local developer/agent interface; read/write/sensitive scopes separate. Its capability model is also the foundation for a later Context Capability Broker used by context-aware dictation/modes.  
 **Risk:** R3 authorization.  
 **Evidence:** capability negative tests, prompt-injection/tool tests, no ambient raw-audio/biometric access.
 
@@ -404,13 +424,50 @@ Cross-cutting accessibility/security/RTL requirements apply inside earlier units
 
 ### 039 — Security, fuzzing, supply chain, updates
 
-**Outcome:** threat-model reconciliation, parser/media fuzzing, plugin/model integrity, SBOM/license closure, release signing/update verification, deletion/backup/security evidence.  
+**Outcome:** threat-model reconciliation, parser/media fuzzing, plugin/model integrity, SBOM/license/permission closure, release signing/update verification, deletion/backup/security evidence.  
 **Risk:** R3.
 
 ### 040 — Public release qualification
 
 **Outcome:** bounded release spec based on actual supported surfaces, not roadmap aspiration.  
 **Expected proof:** signed/attested artifacts, platform matrix, long-session reliability, network/privacy, speech/diarization/retrieval/document/publish/accessibility benchmarks, backup/export/migration, security closeout, exact release-source preservation.
+
+## Source-derived roadmap overlays
+
+The Superwhisper/OpenSuperWhisper research and the broader covered donor set expose product capabilities that should be carried into future shaping without prematurely creating new fixed-number units.
+
+### Universal Dictation Surface
+
+**Dependencies:** 011 + 012 + 015.  
+**Outcome candidate:** system-wide private voice-to-text/voice-to-polished-text with explicit recording state, deterministic target insertion/fallback, and retention/consent semantics distinct from meetings.  
+**Source inputs:** Superwhisper product behavior, OpenSuperWhisper implementation, Meetily/Anarlog/native platform mechanisms, and any stronger covered source available at shaping time.
+
+### Terminology System
+
+**Dependencies:** 003 + 011 + 012, with 024/025 integration where evidence-aware project context is needed.  
+**Outcome candidate:** separate probabilistic `VocabularyHint` and deterministic `ReplacementRule` layers with project/mode scope, reversible rules, import/export, and benchmark evidence.
+
+### Mode Engine
+
+**Dependencies:** dictation/live surface + 031 capability foundations.  
+**Outcome candidate:** versioned/exportable declarative profiles covering capture policy, model route, language, context capabilities, post-processing instructions, output target, activation rules, network policy, and retention policy.
+
+### Context Capability Broker
+
+**Dependencies:** 031 plus the user-visible surface consuming context.  
+**Outcome candidate:** explicit per-mode grants for selected text, focused field, clipboard, app/window identity, screen region, meeting context, and project memory, with payload bounds and no hidden ambient context.
+
+### Voice Model Router
+
+**Home:** 011.  
+**Outcome candidate:** queryable model/provider routing by locality, language, streaming, diarization, resource, provenance, and Network Lock compatibility.
+
+### Input Control Layer
+
+**Home:** 015.  
+**Outcome candidate:** reliable keyboard chords, left/right modifiers where supported, push-to-talk, mouse buttons, tray/menu actions, deep-link/automation invocation, collision handling, and visible recording state.
+
+These overlays are canonical planning inputs, not current implementation authority. Their exact Grain/unit boundaries are shaped only when their dependencies and active frontier permit implementation.
 
 ## Program features not assigned a fixed unit yet
 
@@ -439,7 +496,7 @@ No implementation authority exists merely because a feature appears here.
 3. **Privacy:** new captured data types require retention/export/delete analysis.
 4. **Evidence:** new AI/memory object types define source lineage before release.
 5. **Offline:** core behavior cannot acquire an undeclared network dependency.
-6. **Provenance:** donor/model/assets need exact records before merge.
+6. **Provenance:** donor/model/assets need exact records before merge; covered sources may rely on the founder permission only when exact permission scope is recorded and embedded third-party material is independently qualified.
 7. **Recovery:** persistent mutations define recovery/rollback.
 8. **Migration:** schema changes define compatibility/migration or explicitly document pre-release reset authority.
 9. **Resource use:** model/capture changes measure memory/CPU/battery/thermal effects.
@@ -468,6 +525,6 @@ No force-push or rebase of shared project history is authorized by this plan.
 
 ## Program continuation rule
 
-Continue only through **genuinely selected and authorized** dependency-ordered work. The existence of this long plan is not blanket authority to implement all 040 units at once.
+Continue only through **genuinely selected and authorized** dependency-ordered work. The existence of this long plan or the founder source-use authorization is not blanket authority to implement all 040 units at once.
 
-If fresh live evidence changes architecture, licensing, platform APIs, or donor suitability, shape the smallest corrective successor and update canonical planning through a reviewed change. Repository truth wins over this document.
+If fresh live evidence changes architecture, licensing/permission scope, platform APIs, or donor suitability, shape the smallest corrective successor and update canonical planning through a reviewed change. Repository truth wins over this document.
