@@ -254,11 +254,7 @@ impl NormalizedRegion {
     pub const SCALE: u32 = 1_000_000;
 
     pub const fn new(x: u32, y: u32, width: u32, height: u32) -> Result<Self, RegionError> {
-        if x > Self::SCALE
-            || y > Self::SCALE
-            || width > Self::SCALE
-            || height > Self::SCALE
-        {
+        if x > Self::SCALE || y > Self::SCALE || width > Self::SCALE || height > Self::SCALE {
             return Err(RegionError::ComponentOutOfBounds);
         }
 
@@ -639,10 +635,15 @@ mod tests {
             "name"
         );
         let digest = [7_u8; 32];
-        let model = ModelIdentity::new("engine", "1", "abc", Some(digest))
-            .expect("valid model identity");
+        let model =
+            ModelIdentity::new("engine", "1", "abc", Some(digest)).expect("valid model identity");
         assert_eq!(
-            (model.name(), model.version(), model.revision(), model.digest()),
+            (
+                model.name(),
+                model.version(),
+                model.revision(),
+                model.digest()
+            ),
             ("engine", "1", "abc", Some(digest))
         );
     }
