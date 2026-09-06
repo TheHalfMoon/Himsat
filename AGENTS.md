@@ -12,8 +12,9 @@ Read in this order before changing the repository:
 2. `.specify/memory/constitution.md`
 3. `docs/execution-master-plan.md`
 4. the active specification's `spec.md`, `plan.md`, and `tasks.md`
-5. referenced ADR/research/security/donor/qualification documents
-6. live GitHub state, exact branch/head, diff, checks, reviews, and mergeability
+5. `governance/provenance/source-use-authorization.md`
+6. referenced ADR/research/security/donor/qualification documents
+7. live GitHub state, exact branch/head, diff, checks, reviews, and mergeability
 
 Live repository and GitHub truth override stale plans, chat summaries, cached CI, stale hashes, stale donor assumptions, and remembered authority.
 
@@ -31,7 +32,7 @@ Use SpecGrain's model as the planning and delivery control discipline:
 - do not call a candidate a Grain merely because it is small;
 - do not claim native SpecGrain lifecycle state unless the actual SpecGrain tooling/state proves it.
 
-The relevant upstream methodology repository is `TheHalfMoon/SpecGrain`. Himsat planning may adopt its concepts without copying its product code into Himsat.
+The relevant upstream methodology repository is `TheHalfMoon/SpecGrain`. Himsat planning may adopt its concepts without copying its product code into Himsat unless a separately authorized bounded adoption later chooses to do so.
 
 ## Diffcipline discipline
 
@@ -67,24 +68,30 @@ Do not weaken these without an explicit constitutional/governance change:
 - platform capability detection instead of unsupported promises;
 - donor/model/dataset provenance before adoption.
 
-## Donor code
+## Donor/source code
 
-Never copy or closely adapt a donor merely because its repository is public.
+The founder/user has recorded project-level source-use permission for every external source referenced anywhere in the repository as of the snapshot named in `governance/provenance/source-use-authorization.md`.
 
-Before non-trivial adoption:
+Do not ignore that authorization merely because an older planning note assumed no additional permission. For covered sources, `COPY`, `ADAPT`, `DEPEND`, `VENDOR`, and `REFERENCE` are all eligible strategies when technically appropriate and when active specification authority permits them.
+
+Permission is not automatic adoption. Before non-trivial reuse:
 
 1. identify repository and immutable revision/tag;
-2. verify the exact path's controlling license;
-3. inspect model/weight/data licenses separately from code licenses;
-4. preserve required notices;
-5. create/update a provenance record;
-6. explain why adoption is better than a smaller native implementation or dependency;
-7. write Himsat-owned behavior tests;
-8. keep incompatible/mixed-license paths out of the Himsat dependency graph.
+2. identify exact source path(s);
+3. verify the exact path's public license/terms and, when public terms are insufficient, record the separate permission basis and exact scope needed for the intended Himsat use;
+4. inspect submodules, generated/vendor code, and transitive dependencies separately;
+5. inspect model/weight/data/font/asset licenses or separate permission separately from code permission;
+6. preserve required notices/attribution and other obligations;
+7. create/update a machine-readable provenance record as required by the canonical adoption boundary;
+8. explain why copy/adaptation/dependency/vendor/native implementation is the best bounded engineering choice;
+9. write Himsat-owned behavior tests;
+10. keep material outside the proven permission/provenance scope out of the Himsat dependency/adoption graph.
 
-Current source-available, non-commercial, GPL/AGPL/SSPL, unknown-license, or custom-restriction material is `REFERENCE_ONLY` by default until an explicit legal/governance decision says otherwise.
+Do not bulk-copy donors merely because reuse is permitted. Prefer the smallest reliable source reuse that improves product quality and long-term maintainability.
 
-Do not copy current Screenpipe, historical Kreuzberg 4.8/4.9 ELv2 code, MinerU custom-license code, Marker restricted code/models, or Anarlog `enterprise/**` into Himsat under the permissive-core plan. Current `xberg-io/xberg` v1 is MIT at the repository workspace level, but exact path/dependency/model/asset provenance is still required before adoption.
+Earlier categorical exclusions based only on assumed lack of permission are superseded for covered sources. However, restrictive/public-license terms, historical license changes, enterprise subtrees, proprietary code, and unavailable source still require exact-path permission/provenance evidence before copying. Permission does not create source bytes that Himsat cannot access.
+
+Current `xberg-io/xberg`, historical Kreuzberg lines, Screenpipe, MinerU, Marker variants, Anarlog `enterprise/**`, Superwhisper/OpenSuperWhisper, and every other covered source must therefore be evaluated on exact live source, exact permission scope, embedded third-party provenance, architecture, and tests rather than on stale blanket assumptions.
 
 ## Security rules
 
