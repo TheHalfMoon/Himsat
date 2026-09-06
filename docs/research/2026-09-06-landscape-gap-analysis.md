@@ -3,18 +3,20 @@
 **Research date:** 2026-09-06  
 **Purpose:** identify missing product, platform, architecture, reliability, security, interoperability, and donor-plan requirements before Himsat implementation begins.
 
-This document is a planning research record. Product proposals are not implementation claims. External product behavior can change after the research date; live sources must be rechecked before comparative claims or donor adoption.
+This document is a planning research record. Product proposals are not implementation claims. External product behavior, operating-system APIs, repository ownership, and licenses can change; live sources must be rechecked before comparative claims or donor adoption.
 
 ## Executive conclusion
 
-The original concept — a better local alternative to Otter built from Meetily — is directionally strong but incomplete. The category has moved from “meeting transcription” to **continuous conversation context + live assistance + workflow action + cross-source memory**. The strongest Himsat opportunity is not feature-count parity; it is combining modern meeting intelligence with an architecture competitors generally do not optimize for:
+The original concept — a better local alternative to Otter built from Meetily — is directionally strong but incomplete. The category has moved from “meeting transcription” toward **continuous conversation context + live assistance + workflow action + cross-source memory**.
+
+The strongest Himsat opportunity is not feature-count parity. It is combining modern meeting intelligence with an architecture competitors generally do not optimize for:
 
 > **user-controlled local capture + local multimodal evidence + temporal memory + professional document intelligence + local agents + portable context + accountless/private sync.**
 
 The largest gaps found in the earlier plan were:
 
 1. audio enhancement/AEC and capture-quality diagnostics were under-specified;
-2. OS/version capability boundaries, especially mobile system audio and phone calls, needed stronger versioning/fail-closed behavior;
+2. OS/version capability boundaries, especially mobile system audio and phone calls, needed stronger versioning and fail-closed behavior;
 3. background recording was described as a feature rather than a reliability program covering interruptions, routes, power, storage, thermal state, crash recovery, and updates;
 4. accessibility was not treated as a release-critical capability;
 5. document intelligence needed a full ingestion/intermediate-representation architecture, not only “talk to PDF”;
@@ -26,7 +28,7 @@ The largest gaps found in the earlier plan were:
 11. continuous-memory ideas needed an explicit privacy-safe rolling-buffer design instead of accidental always-on surveillance;
 12. compliance/consent UX needed to be separated from unverifiable legal-compliance marketing claims;
 13. project-level memory needed temporal state, contradiction/change tracking, and source provenance across meetings **and documents**;
-14. the donor plan needed path-level licensing and model-license gates because multiple attractive projects are mixed/custom licensed.
+14. the donor plan needed path-level licensing and model-license gates because attractive projects can contain mixed licenses or can change licensing over time.
 
 ## Competitive signals
 
@@ -43,14 +45,14 @@ Sources:
 
 Observed signals:
 
-- unlimited meeting notes/action items are becoming commodity entry features;
-- assistant search now spans meetings plus connected email/context;
-- integrations are not only export targets: the assistant can search and take actions in external apps;
+- meeting notes/action items are becoming commodity entry features;
+- assistant search spans meetings plus connected context;
+- integrations are not only export targets: assistants can search and take actions in external apps;
 - automations use conditions plus chained actions;
-- screen-shared information is captured into searchable meeting context;
-- desktop capture can be botless and records microphone plus computer audio;
+- screen-shared information can become searchable meeting context;
+- desktop capture can be botless and capture microphone plus computer audio;
 - MCP/API/CLI access makes meeting context a reusable platform surface;
-- Circleback's MCP is centrally hosted, which creates a differentiation opportunity for a local capability-scoped Himsat MCP.
+- Circleback's MCP is hosted, creating room for a local capability-scoped Himsat MCP.
 
 **Himsat implication:** transcript + summary is insufficient. Himsat needs cross-source search, multimodal context, local action workflows, and reusable local developer/agent surfaces.
 
@@ -64,11 +66,11 @@ Sources:
 
 Observed signals:
 
-- automatic meeting recording based on microphone/meeting activity is now a mainstream expectation;
+- automatic meeting recording based on microphone/meeting activity is a mainstream expectation;
 - desktop capture, headphones support, meeting reminders, and recording-state ergonomics matter as much as transcription models;
-- live assistance/coaching grounded in playbooks, SOPs, prior meetings, and resources is moving intelligence into the meeting itself.
+- live assistance/coaching grounded in playbooks, prior meetings, and resources moves intelligence into the meeting itself.
 
-**Himsat implication:** local live assistance and meeting detection belong in the core roadmap, but must remain opt-in and evidence-aware.
+**Himsat implication:** local live assistance and meeting detection belong in the roadmap, but must remain opt-in, evidence-aware, and platform-qualified.
 
 ### Granola
 
@@ -82,12 +84,11 @@ Sources:
 
 Observed signals:
 
-- mobile, Android, Apple Watch, briefs, team context, MCP, integrations, people/company views, and saved prompt “recipes” have expanded the product beyond meeting notes;
-- human notes are intentionally used to guide AI enhancement;
-- iPhone behavior exposes an important platform truth: ordinary iOS apps cannot simply capture arbitrary other-app virtual meeting audio; Granola uses the phone microphone for in-person capture and a built-in outbound-calling mechanism for phone-call notes;
-- inbound call transcription remains constrained in Granola's documented iOS behavior.
+- mobile, Android, Apple Watch, briefs, team context, MCP, integrations, people/company views, and saved prompt recipes expand the product beyond meeting notes;
+- human notes are intentionally useful guidance for AI enhancement;
+- mobile audio behavior exposes platform limits: ordinary iOS applications cannot simply assume arbitrary other-app virtual meeting/call audio is available.
 
-**Himsat implication:** Note Gravity stays important; mobile UI must be native-quality; virtual-meeting/system-audio claims require OS-specific capability detection; phone-call support must not be generalized from desktop audio capture.
+**Himsat implication:** Note Gravity stays important; mobile UI must be native-quality; virtual-meeting/system-audio/call claims require OS-specific capability detection.
 
 ### Fireflies
 
@@ -97,9 +98,9 @@ Source:
 
 Observed signals:
 
-- live notes, live transcript, real-time Q&A, custom skills, meeting prep, instant summary, and sales suggestions are converging in a floating desktop surface.
+- live notes, transcript, Q&A, custom skills, meeting prep, instant summaries, and suggestions converge in a floating desktop surface.
 
-**Himsat implication:** a local floating Live surface should expose transcript, bookmarks, open questions, decisions, contradictions, and user-selected playbook prompts without sending the meeting to a vendor cloud.
+**Himsat implication:** a local floating Live surface should expose transcript, bookmarks, questions, decisions, contradictions, and user-selected playbook prompts without requiring vendor-cloud processing.
 
 ### Plaud / dedicated capture hardware
 
@@ -109,21 +110,21 @@ Source:
 
 Observed signal:
 
-- dedicated hardware can record/store offline, but AI processing commonly requires cloud connectivity.
+- dedicated hardware can record/store offline while advanced processing may still require connectivity.
 
-**Himsat implication:** local intelligence is a genuine differentiator. Himsat should support imported hardware-recorder files and generic external microphones before considering proprietary hardware.
+**Himsat implication:** local intelligence is a meaningful differentiator. Generic recorder-file import and external microphones are higher-priority than proprietary hardware.
 
-### Limitless/Rewind category
+### Continuous-memory category
 
-Source:
+Reference:
 
 - https://www.limitless.ai/
 
 Observed signal:
 
-- continuous personal-memory products create both demand and long-term platform/provider risk; data export and graceful exit matter.
+- continuous personal-memory products create both demand and platform/provider risk; portability and graceful exit matter.
 
-**Himsat implication:** continuous-memory capability must be portable, explicitly enabled, visibly active, locally encrypted, retention-controlled, and never dependent on a vendor service continuing to exist.
+**Himsat implication:** continuous-memory capability must be explicitly enabled, visibly active, locally encrypted, retention-controlled, exportable, and independent of a vendor service remaining online.
 
 ## Platform research and consequences
 
@@ -135,14 +136,14 @@ Sources:
 - https://developer.apple.com/documentation/appintents/audiorecordingintent
 - https://developer.apple.com/documentation/appintents/widgets-live-activities-and-controls
 
-Key facts:
+Planning facts rechecked on 2026-09-06:
 
-- correct AVAudioSession/background configuration supports ongoing audio while the screen is locked/backgrounded;
-- the user must grant recording permission;
-- recording sessions remain subject to interruptions and route/lifecycle events;
-- `AudioRecordingIntent` makes recording actions available to system surfaces and requires visible Live Activity behavior where the API specifies it.
+- correct audio-session/background configuration supports ongoing recording behavior under supported conditions;
+- microphone permission remains explicit;
+- sessions are still subject to interruptions, routes, lifecycle, power, and OS policy;
+- when `AudioRecordingIntent` is used, Apple requires the corresponding visible Live Activity behavior while recording; the API is not a stealth background-capture mechanism.
 
-**Gap added:** Himsat needs a formal Apple recording lifecycle state machine, Live Activity/lock-screen/control-center/action-button integration, and interruption reconciliation tests.
+**Gap added:** Himsat needs a formal Apple recording lifecycle state machine, Live Activity/system-control integration where used, and interruption reconciliation tests.
 
 ### Apple ScreenCaptureKit
 
@@ -151,13 +152,13 @@ Sources:
 - https://developer.apple.com/documentation/screencapturekit
 - https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-on-ios
 
-Key facts:
+Planning facts rechecked on 2026-09-06:
 
-- ScreenCaptureKit provides fine-grained screen/audio capture with a system content-sharing picker;
-- user permission and visible system controls are expected;
-- current documentation includes newer iOS capabilities whose sample requires iOS 27 or later.
+- ScreenCaptureKit provides fine-grained user-authorized screen/audio capture surfaces;
+- permission and system selection/control are part of the model;
+- the current iOS screen-capture sample referenced by Apple requires iOS 27 or later and is not a baseline for all supported phones.
 
-**Gap added:** selected-screen/window capture must be version-gated. Future/beta iOS APIs are an enhancement track, not a minimum supported mobile requirement.
+**Gap added:** selected-screen/window/app capture must be runtime/version-gated. New/future APIs are enhancement tracks, not minimum mobile requirements.
 
 ### Android background microphone
 
@@ -166,15 +167,16 @@ Sources:
 - https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start
 - https://developer.android.com/about/versions/14/changes/fgs-types-required
 
-Key facts:
+Planning facts rechecked on 2026-09-06:
 
-- ongoing microphone capture can use a microphone foreground service;
-- modern Android restricts starting such services from the background;
-- user-visible foreground-service notification/state is part of the platform contract.
+- ongoing microphone capture uses a microphone foreground service in the normal background-recording architecture;
+- Android 12+ restricts starting foreground services from the background;
+- Android 14+ applies stricter while-in-use microphone permission/start constraints;
+- user-visible foreground-service state is part of the platform contract.
 
-**Gap added:** Android needs a foreground-service lifecycle, notification/quick-action UX, restart/recovery rules, and tests for process death/background start restrictions.
+**Gap added:** Android needs a foreground-service lifecycle, notification/quick-action UX, process-death/recovery rules, and version/device tests.
 
-### Android system/playback audio and phone calls
+### Android playback audio and phone calls
 
 Sources:
 
@@ -183,11 +185,11 @@ Sources:
 - https://developer.android.com/reference/android/media/MediaRecorder.AudioSource
 - https://developer.android.com/media/platform/sharing-audio-input
 
-Key facts:
+Planning facts:
 
 - playback capture requires MediaProjection approval and depends on source-app usage/capture policy;
-- a third-party application does not generally receive privileged `CAPTURE_AUDIO_OUTPUT` access to cellular voice-call uplink/downlink;
-- concurrent audio-input behavior can produce silence depending on privacy-sensitive/app-priority conditions.
+- ordinary third-party applications do not generally receive privileged cellular call uplink/downlink capture authority;
+- concurrent audio input/privacy-sensitive app priority can cause silence or degraded capture.
 
 **Gap added:** Himsat must expose source health/capability diagnostics and must never promise universal “record every phone call/app” behavior.
 
@@ -195,14 +197,23 @@ Key facts:
 
 ### Meetily
 
-- https://github.com/Zackriya-Solutions/meetily
-- public Community code is MIT;
-- useful Rust/Tauri audio/transcription foundation;
-- legacy Python backend is not the desired future architecture.
+Sources:
 
-Role: **primary historical capture donor candidate**, not final Himsat architecture.
+- https://github.com/Zackriya-Solutions/meetily
+- public Community repository license and architecture documents
+
+Observed:
+
+- Community source is MIT;
+- Rust/Tauri capture/transcription foundations are useful;
+- the legacy Python backend is not the desired Himsat architecture;
+- separate Pro behavior must not be assumed to exist in the Community source.
+
+Role: **primary historical selective donor candidate**, not final Himsat architecture.
 
 ### Anarlog
+
+Sources:
 
 - https://github.com/fastrepl/anarlog
 - https://github.com/fastrepl/anarlog/blob/main/LICENSING.md
@@ -210,127 +221,172 @@ Role: **primary historical capture donor candidate**, not final Himsat architect
 Observed:
 
 - community layer is MIT;
-- repository includes desktop, mobile, watch, CLI/MCP, plugins, and Rust crates for capture/transcription/diarization/storage;
-- `enterprise/**` is commercially licensed and must not enter a permissive Himsat core.
+- repository spans desktop, mobile, watch, CLI/MCP, plugins, and Rust crates for capture/transcription/diarization/storage;
+- `enterprise/**` is commercially licensed and must not enter the permissive Himsat core without a separate decision/license.
 
-Role: **selective community donor/reference** with path-level license gates.
+Role: **selective community donor/reference with path-level license gates**.
 
 ### Argmax OSS / WhisperKit / SpeakerKit direction
+
+Source:
 
 - https://github.com/argmaxinc/argmax-oss-swift
 
 Observed:
 
-- MIT on-device Speech AI for Apple platforms, with WhisperKit/SpeakerKit/TTSKit direction and Apple-native acceleration.
+- MIT on-device Speech AI for Apple platforms with Apple-native acceleration paths.
 
-Role: **Apple speech/diarization candidate**, especially where native CoreML/Apple integration beats forcing a generic Rust backend.
+Role: **Apple speech/diarization candidate**, especially where CoreML/native integration is stronger than forcing one generic runtime.
 
 ### Moonshine
+
+Source:
 
 - https://github.com/moonshine-ai/moonshine
 
 Observed:
 
-- very-low-latency speech stack targeted at voice agents/edge devices;
-- code is MIT; current models are generally MIT with explicitly documented legacy non-English exceptions.
+- low-latency speech stack targeted at edge/voice-agent scenarios;
+- source code is MIT;
+- model licenses must be checked per exact model/revision, including documented legacy exceptions.
 
-Role: **experimental low-latency speech donor/dependency candidate**. Model licenses must be checked per model.
+Role: **experimental low-latency speech donor/dependency candidate**.
 
 ### Sonora / WebRTC audio processing
+
+Sources:
 
 - https://github.com/dignifiedquire/sonora
 - https://github.com/tonarino/webrtc-audio-processing
 
 Observed:
 
-- echo cancellation, noise suppression, AGC, VAD, resampling;
-- Sonora is pure Rust, BSD-3-Clause, and targets desktop plus Android/iOS.
+- echo cancellation, noise suppression, AGC, VAD, and resampling are reusable subsystem candidates;
+- Sonora is Rust-oriented and permissively licensed.
 
-**Major gap discovered:** earlier Himsat plans relied too heavily on capture and STT while under-specifying acoustic preprocessing. Add `himsat-audio-processing` with AEC/NS/AGC and reproducible quality tests.
+**Major gap discovered:** earlier plans relied too heavily on capture and STT while under-specifying acoustic preprocessing. Add a dedicated audio-processing boundary with AEC/NS/AGC and reproducible quality tests.
 
 ### Document ingestion candidates
 
-#### Kreuzberg
+#### Xberg / Kreuzberg lineage
 
-- current project: https://github.com/kreuzberg-dev/kreuzberg
-- MIT LTS history: https://github.com/kreuzberg-dev/kreuzberg-lts
+Live repository truth rechecked on 2026-09-06:
 
-Observed:
+- the former `kreuzberg-dev/kreuzberg` repository resolves to `https://github.com/xberg-io/xberg`;
+- current Xberg v1 workspace metadata declares `license = "MIT"`;
+- the Xberg changelog explicitly distinguishes the current MIT v1 line from Kreuzberg 4.8/4.9 releases that used Elastic License 2.0;
+- the separate `kreuzberg-dev/kreuzberg-lts` v4 line is a historical MIT candidate;
+- exact path-level third-party/vendored/model/font/plugin/asset terms still require review.
 
-- excellent Rust-core multi-format architecture and broad format coverage;
-- current line uses Elastic License 2.0 and is not a default permissive donor for Himsat;
-- v4 LTS is MIT but is a legacy line with limited support horizon.
+Sources:
 
-Role: **current code REFERENCE_ONLY**; historical MIT LTS can only be considered after exact snapshot/provenance/security review.
+- https://github.com/xberg-io/xberg
+- https://github.com/xberg-io/xberg/blob/main/Cargo.toml
+- https://github.com/xberg-io/xberg/blob/main/CHANGELOG.md
+- https://github.com/kreuzberg-dev/kreuzberg-lts
+
+Role: **current Xberg is a permissive experiment/dependency/selective-copy candidate, not `REFERENCE_ONLY` solely because of historical Kreuzberg licensing**. Historical releases must be treated by exact revision and controlling license.
 
 #### tokimo-package-fileparser
+
+Source:
 
 - https://github.com/tokimo-lab/tokimo-package-fileparser
 
 Observed:
 
-- pure-Rust unified PDF/DOCX/XLSX/PPTX/text/archive to Markdown extraction;
-- embedded images/media/objects extraction;
-- MIT OR Apache-2.0.
+- Rust-oriented unified PDF/DOCX/XLSX/PPTX/text/archive extraction;
+- embedded asset extraction;
+- permissive MIT OR Apache-2.0 licensing at the project level.
 
-Role: **strong permissive document-parser donor/dependency candidate** subject to maturity/security testing.
+Role: **strong permissive document-parser donor/dependency candidate subject to maturity/security tests**.
 
 #### MarkItDown
+
+Source:
 
 - https://github.com/microsoft/markitdown
 
 Observed:
 
-- MIT file-to-Markdown conversion with useful security guidance for untrusted inputs;
-- Python-centric.
+- MIT file-to-Markdown conversion;
+- useful security guidance for untrusted inputs;
+- Python-centric runtime.
 
-Role: **behavior/reference and selective algorithm donor**, not preferred runtime dependency for the Rust core.
+Role: **behavior/reference and selective algorithm donor**, not preferred mandatory core runtime.
 
 #### Docling
+
+Sources:
 
 - https://github.com/docling-project/docling
 - https://github.com/DS4SD/docling-core
 
 Observed:
 
-- MIT code, rich document intermediate representation, advanced PDF/layout/table/formula/image understanding;
-- model licenses are separate.
+- MIT code with rich document representation and advanced PDF/layout/table/formula/image understanding;
+- models remain separate supply-chain/license objects.
 
-Role: **document-IR and quality reference; potential optional local worker** if Rust-native paths cannot initially reach required extraction quality.
+Role: **document-IR/quality reference and possible optional worker if Rust-native paths cannot initially reach required quality**.
 
-#### MinerU / Marker
+#### MinerU / Marker variants
+
+References:
 
 - https://github.com/opendatalab/MinerU
-- Marker project variants/references
+- current Marker variants/repositories at implementation time
 
 Observed:
 
-- technically strong document parsing but current licensing/model restrictions are not a clean fit for a permissive Himsat core.
+- technically strong document parsing;
+- licensing/model/commercial constraints are not a clean default fit for a permissive Himsat core.
 
-Role: **REFERENCE_ONLY by default**.
+Role: **REFERENCE_ONLY by default until exact terms are independently cleared**.
 
 ### Plugin sandbox candidates
 
-- https://github.com/extism/extism — BSD-3-Clause, Wasm-oriented plugin framework with host-controlled capabilities and runtime limits;
-- https://github.com/bytecodealliance/wasmtime — Apache-2.0 WebAssembly runtime.
+Sources:
 
-**Gap added:** Himsat plugins should not be arbitrary in-process dynamic code with ambient filesystem/network access. A Wasm capability sandbox is the preferred direction for third-party extensions.
+- https://github.com/extism/extism
+- https://github.com/bytecodealliance/wasmtime
+
+Observed:
+
+- Wasm provides a practical way to give third-party extensions bounded host capabilities rather than ambient filesystem/network access.
+
+**Gap added:** Himsat plugins should use a capability-constrained sandbox direction with memory/time/fuel/resource controls.
 
 ### Local storage/search/sync/publishing candidates
 
-- SQLCipher: https://github.com/sqlcipher/sqlcipher — BSD-style community license, encrypted SQLite;
-- sqlite-vec: https://github.com/asg017/sqlite-vec — MIT/Apache-2.0, pre-v1 vector extension;
-- fastembed-rs: https://github.com/Anush008/fastembed-rs — Apache-2.0 local embeddings/reranking;
-- Iroh: https://github.com/n0-computer/iroh — MIT/Apache-2.0 P2P QUIC/NAT traversal;
-- Typst: https://github.com/typst/typst — professional PDF generation with Tagged PDF, PDF/A and PDF/UA support;
-- docx-rs: https://github.com/bokuweb/docx-rs — MIT DOCX read/write.
+Candidates:
 
-**Gaps added:**
+- SQLCipher — https://github.com/sqlcipher/sqlcipher
+- sqlite-vec — https://github.com/asg017/sqlite-vec
+- fastembed-rs — https://github.com/Anush008/fastembed-rs
+- Iroh — https://github.com/n0-computer/iroh
+- Typst — https://github.com/typst/typst
+- docx-rs — https://github.com/bokuweb/docx-rs
 
-- distinguish LAN/direct P2P from relay-assisted sync; strict Network Lock must not silently use public relays;
-- publish accessible PDF/UA/PDF/A profiles, not only visually attractive PDF;
-- document export must preserve semantic structure for Word/LLM reuse;
-- sqlite-vec pre-v1 status requires an abstraction and migration strategy.
+Planning consequences:
+
+- separate database encryption, blob encryption, key management, and backup semantics;
+- hide vector search behind an abstraction because pre-v1 APIs can change;
+- distinguish direct/LAN P2P from relay-assisted connectivity so Network Lock cannot silently use public relays;
+- publish accessible/semantic PDF and DOCX rather than treating visual appearance as sufficient;
+- treat fonts/templates/assets as separately licensed objects.
+
+### Screenpipe licensing boundary
+
+Source:
+
+- https://github.com/screenpipe/screenpipe
+
+Live licensing rechecked on 2026-09-06:
+
+- current Screenpipe source uses a commercial/source-available license that restricts using current code to build a competing product without the required commercial permission;
+- versions previously released under MIT retain their historical MIT license.
+
+Role: **current code REFERENCE_ONLY under the default permissive-core plan**. An older permissive snapshot may only be considered after exact commit/path/license/security review.
 
 ## Feature gaps added to the canonical plan
 
@@ -355,7 +411,7 @@ The product should warn during the meeting instead of discovering an empty recor
 
 Add:
 
-- AEC3/echo cancellation;
+- echo cancellation;
 - noise suppression;
 - AGC/limiting;
 - resampling/channel alignment;
@@ -364,66 +420,65 @@ Add:
 
 ### 3. Recall Buffer
 
-An optional, visible, user-enabled encrypted rolling buffer can solve “I forgot to press save” without pretending recording was never active.
+An optional, visible, user-enabled encrypted rolling buffer can solve “I forgot to save that moment” without pretending recording was inactive.
 
-Proposed behavior:
+Required direction:
 
 - explicit mode with OS recording indicator;
-- short bounded duration (for example 2/5/10 minutes configurable);
-- preferably memory-backed where practical, encrypted spill only when required;
+- short bounded configurable duration;
 - overwritten automatically;
 - becomes durable only on user action;
-- disabled by default.
+- disabled by default;
+- retention/storage behavior is visible.
 
 ### 4. Capture Fusion / Himsat Bridge
 
-Himsat Bridge becomes a first-class protocol, not just a convenience:
+Himsat Bridge is a first-class protocol:
 
-- phone controls session;
-- desktop provides clean system audio;
+- phone can control a session;
+- desktop can contribute clean system audio;
 - multiple devices can contribute timestamped sources;
-- clocks are synchronized and drift measured;
-- fusion preserves original sources and lineage;
-- consensus reconstruction is a later high-risk Grain.
+- clocks/drift are measured;
+- reconnection preserves lineage;
+- original sources remain available;
+- consensus reconstruction is a later separately shaped high-risk capability.
 
 ### 5. Accessibility
 
 Add release gates for:
 
 - live captions;
-- screen reader semantics;
+- screen-reader semantics;
 - complete keyboard control on desktop;
 - scalable text/high contrast/reduced motion where appropriate;
 - RTL and mixed RTL/LTR correctness;
-- PDF/UA and tagged PDF publishing;
-- caption/subtitle exports (`VTT`, `SRT`);
-- optional local translation/caption language layer.
+- PDF/UA/tagged PDF targets where selected;
+- VTT/SRT caption export;
+- optional local translation while preserving source-language evidence.
 
 ### 6. Translation and multilingual memory
 
-Store original transcript as evidence and treat translations as derived artifacts. Search should support queries in one language retrieving evidence in another without replacing source truth.
+Store original transcript as evidence and translations as derived artifacts. Search should support a query in one language retrieving evidence in another without overwriting source truth.
 
 ### 7. Document Intermediate Representation
 
-Create a Himsat-owned document IR rather than coupling memory directly to one parser. It must represent:
+Create a Himsat-owned document IR rather than coupling memory directly to one parser. It should represent:
 
 - pages/slides/sheets/sections;
 - paragraphs/lists/headings;
-- tables and cells;
+- tables/cells;
 - images/figures/charts;
 - formulas;
-- annotations/comments;
+- comments/annotations;
 - bounding regions/page coordinates;
 - source hashes;
-- extracted attachments/media;
+- attachments/media;
 - OCR confidence;
 - parser/model provenance.
 
-This allows parser replacement without rewriting the memory system.
-
 ### 8. Portable AI Context Pack
 
-Human PDF/DOCX is not the same output as optimal LLM context. Define an open Himsat Context Pack containing at least:
+Human PDF/DOCX is not the same output as optimal LLM context. Define an open pack containing at least:
 
 ```text
 manifest.json
@@ -434,31 +489,31 @@ relations.jsonl
 assets/
 ```
 
-Optional profiles can generate bounded context for different token budgets while preserving source IDs and excluded-material declarations.
+Profiles may create bounded context for token budgets while preserving source IDs and excluded-material declarations.
 
 ### 9. Model/Plugin Supply Chain
 
-Every executable model/plugin pack requires:
+Every executable model/plugin pack needs:
 
 - immutable identity/version;
 - source/license;
 - cryptographic digest;
 - supported architectures/accelerators;
-- memory/disk estimates;
+- resource estimates;
 - capability declaration;
 - signature/trust policy;
-- offline side-load path for air-gapped installations;
-- explicit model-data license separate from engine code.
+- offline side-load path;
+- explicit model/data/asset license separate from engine code.
 
 ### 10. Privacy Firewall and selective disclosure
 
 Before connector/write/export/share operations:
 
-- detect/mark sensitive content where possible;
-- preview exactly what leaves the vault;
-- support “summary only”, “actions only”, “selected evidence”, “no audio”, “redacted transcript”;
+- preview what leaves the vault;
+- minimize payloads;
+- support summary-only/actions-only/selected-evidence/no-audio/redacted-transcript modes;
 - record egress provenance locally;
-- never give a connector broader data access simply because OAuth allowed it.
+- never treat broad OAuth scope as permission to export every local object.
 
 ### 11. Project/time memory
 
@@ -471,13 +526,13 @@ Beyond meeting search, Himsat needs:
 - unresolved questions;
 - contradictions;
 - “what changed since?”;
-- “what did we believe on date X?” temporal reconstruction;
+- “what did we believe on date X?” reconstruction;
 - document-vs-meeting discrepancy detection;
-- evidence lineage for every derived state.
+- evidence lineage for derived state.
 
 ### 12. Migration / Bring Your Memory
 
-Support import adapters for available exports from:
+Potential adapters include available exports from:
 
 - Otter;
 - Circleback;
@@ -487,7 +542,7 @@ Support import adapters for available exports from:
 - generic audio/video/folder trees;
 - Meetily/Anarlog when formats are known.
 
-Migration quality must be measured: timestamps, speakers, notes, attachments, and evidence should not silently disappear.
+Migration quality must be measured. Timestamps, speakers, notes, attachments, and evidence must not silently disappear.
 
 ### 13. Safe local agents and automation
 
@@ -500,26 +555,24 @@ Add:
 - action preview;
 - explicit approval by default for external writes;
 - Wasm plugin sandbox;
-- prompt-injection-aware provenance labels (document/transcript content is untrusted data, not system instruction);
-- automation dry-run and replay/evidence.
+- prompt-injection-aware provenance labels;
+- automation dry-run/replay/evidence.
 
 ### 14. Daily/weekly private intelligence
 
 A local scheduler can produce:
 
-- today's meeting prep;
-- daily decisions/actions digest;
+- meeting prep;
+- decisions/actions digest;
 - overdue commitments;
-- project changes since last week;
+- project changes;
 - unresolved questions;
 - documents added/changed;
 - storage/model health notices.
 
-This extends Himsat beyond active meeting time without creating a cloud service.
-
 ### 15. Accessibility-safe professional publishing
 
-“Himsat Publish” should support templates for executive reports, minutes, research briefs, SOPs, PRDs, decision records, study guides, and technical specs while preserving semantic headings/tables/lists, citations, source links, RTL, and accessibility.
+Himsat Publish should support executive reports, minutes, research briefs, SOPs, PRDs, decision records, study guides, and technical specs while preserving semantic headings/tables/lists, citations, source links, RTL, and accessibility.
 
 ## Explicitly rejected or deferred directions
 
@@ -529,17 +582,17 @@ The following are not default product goals:
 - generalized emotion/personality scoring presented as truth;
 - covert biometric speaker profiling;
 - automatic external writes with no policy/approval;
-- mandatory hosted Himsat identity or storage;
-- cloud transcription or cloud LLM fallback hidden behind “local” branding;
-- a claim that Himsat is legally compliant in every jurisdiction;
-- a claim that every mobile application/phone call can be captured;
-- copying public source that is not permissively licensed;
-- copying donor architecture wholesale when a smaller native abstraction is better.
+- mandatory hosted Himsat identity/storage;
+- hidden cloud STT/LLM fallback behind “local” branding;
+- blanket legal-compliance claims;
+- claims that every mobile application/phone call can be captured;
+- copying public source that is not licensed for the intended use;
+- copying donor architecture wholesale when a smaller Himsat-native abstraction is lower risk.
 
 ## Research conclusion
 
 Himsat's strongest defensible product shape is:
 
-> A private multimodal memory and action layer that records user-authorized conversations reliably, understands speech and documents locally, preserves evidence, reconstructs decisions and commitments over time, publishes human-quality and AI-ready outputs, and exposes the memory to local agents without requiring a vendor cloud.
+> A private multimodal memory and action layer that records user-authorized conversations reliably, understands speech and documents locally, preserves evidence, reconstructs decisions and commitments over time, publishes human-quality and AI-ready outputs, and exposes memory to local agents without requiring a vendor cloud.
 
-The execution program must therefore optimize first for **provenance, reliability, platform truth, evidence, and data architecture**, then for feature breadth.
+The execution program should optimize first for **provenance, reliability, platform truth, evidence, and data architecture**, then for feature breadth.
