@@ -1,0 +1,17 @@
+# Rust build output
+target/
+
+# Local control-tool checkouts used only by CI/developers
+.control/
+
+# Editor / operating-system noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
