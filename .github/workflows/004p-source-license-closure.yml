@@ -49,32 +49,55 @@ jobs:
           if not registry_roots:
               raise SystemExit("cargo registry source root unavailable")
 
+          gaps = []
           print("=== HIMSAT_P003_P004_CLOSURE_BEGIN ===")
           for pkg in sorted(packages, key=lambda p: (p["name"], p["version"])):
               key = (pkg["name"], pkg["version"])
               locked = lock_by_id.get(key)
-              if locked is None:
-                  raise SystemExit(f"metadata package absent from lock: {key}")
-              source_dir = None
               dirname = f"{pkg['name']}-{pkg['version']}"
+              if locked is None:
+                  gaps.append(f"lock-missing:{dirname}")
+                  locked = {}
+
+              source_dir = None
               for root in registry_roots:
                   candidate = root / dirname
                   if candidate.is_dir():
                       source_dir = candidate
                       break
               if source_dir is None:
-                  raise SystemExit(f"unpacked crate source unavailable: {dirname}")
+                  gaps.append(f"source-unpacked-missing:{dirname}")
+                  record = {
+                      "name": pkg["name"],
+                      "version": pkg["version"],
+                      "source": pkg["source"],
+                      "checksum": locked.get("checksum"),
+                      "license_expression": pkg.get("license"),
+                      "license_file": pkg.get("license_file"),
+                      "repository": pkg.get("repository"),
+                      "source_revision": None,
+                      "source_path": None,
+                      "packaged_license_files": [],
+                  }
+                  print(json.dumps(record, sort_keys=True, separators=(",", ":")))
+                  continue
+
+              revision = None
+              path_in_vcs = None
               vcs_path = source_dir / ".cargo_vcs_info.json"
-              if not vcs_path.is_file():
-                  raise SystemExit(f"missing .cargo_vcs_info.json: {dirname}")
-              vcs = json.loads(vcs_path.read_text(encoding="utf-8"))
-              git = vcs.get("git", {})
-              revision = git.get("sha1")
-              path_in_vcs = git.get("path_in_vcs")
-              if not isinstance(revision, str) or len(revision) != 40:
-                  raise SystemExit(f"invalid VCS revision: {dirname}")
-              if path_in_vcs is not None and not isinstance(path_in_vcs, str):
-                  raise SystemExit(f"invalid path_in_vcs: {dirname}")
+              if vcs_path.is_file():
+                  vcs = json.loads(vcs_path.read_text(encoding="utf-8"))
+                  git = vcs.get("git", {})
+                  revision = git.get("sha1")
+                  path_in_vcs = git.get("path_in_vcs")
+                  if not isinstance(revision, str) or len(revision) != 40:
+                      gaps.append(f"vcs-revision-invalid:{dirname}")
+                      revision = None
+                  if path_in_vcs is not None and not isinstance(path_in_vcs, str):
+                      gaps.append(f"vcs-path-invalid:{dirname}")
+                      path_in_vcs = None
+              else:
+                  gaps.append(f"vcs-info-missing:{dirname}")
 
               license_files = []
               for child in sorted(source_dir.iterdir(), key=lambda p: p.name.lower()):
@@ -90,7 +113,7 @@ jobs:
                           "sha256": hashlib.sha256(child.read_bytes()).hexdigest(),
                       })
               if not license_files:
-                  raise SystemExit(f"no top-level license/notice file in packaged crate: {dirname}")
+                  gaps.append(f"license-files-missing:{dirname}")
 
               record = {
                   "name": pkg["name"],
@@ -101,11 +124,18 @@ jobs:
                   "license_file": pkg.get("license_file"),
                   "repository": pkg.get("repository"),
                   "source_revision": revision,
-                  "source_path": path_in_vcs or ".",
+                  "source_path": path_in_vcs if isinstance(path_in_vcs, str) and path_in_vcs else "." if revision else None,
                   "packaged_license_files": license_files,
               }
-              if not record["checksum"] or not record["license_expression"] or not record["repository"]:
-                  raise SystemExit(f"incomplete package metadata: {dirname}")
+              for field in ("checksum", "license_expression", "repository"):
+                  if not record[field]:
+                      gaps.append(f"metadata-{field}-missing:{dirname}")
               print(json.dumps(record, sort_keys=True, separators=(",", ":")))
           print("=== HIMSAT_P003_P004_CLOSURE_END ===")
+          print("=== HIMSAT_P003_P004_GAPS_BEGIN ===")
+          for gap in sorted(set(gaps)):
+              print(gap)
+          print("=== HIMSAT_P003_P004_GAPS_END ===")
+          if gaps:
+              raise SystemExit(f"provenance gaps remain: {len(set(gaps))}")
           PY
