@@ -1,6 +1,6 @@
 # Specification 001 Tasks — Repository and Delivery-Control Foundation
 
-> Checkboxes record authoring/reconciliation progress. They are not substitutes for exact CI, SpecGrain, or Diffcipline evidence.
+> Checkboxes record authoring/reconciliation progress. They are not substitutes for exact CI, SpecGrain, or Diffcipline evidence. Durable proof is recorded in `evidence.md`.
 
 ## Shaping
 
@@ -22,8 +22,8 @@
 - [x] I003 Add Apache-2.0 `LICENSE` for Himsat-owned source.
 - [x] I004 Add minimal `CONTRIBUTING.md` and `SECURITY.md` consistent with repository governance.
 - [x] I005 Add native `.specgrain` project/policy state in report mode with no fabricated Grain state.
-- [ ] I006 Validate native state using pinned SpecGrain revision `faddebccb4f4b1dd71bf06b1ce7e3d7b367178ed` on the exact candidate.
-- [ ] I007 Validate bounded `.diffcipline.toml` parsing, expected scope, and R2 proof behavior on the exact candidate.
+- [x] I006 Validate native state using pinned SpecGrain revision `faddebccb4f4b1dd71bf06b1ce7e3d7b367178ed` on exact implementation head `34a0b1a4b7a5f4873a6de7141f160de45fd37740`.
+- [x] I007 Validate bounded `.diffcipline.toml` parsing, expected scope, and R2 proof behavior on the exact candidate.
 
 ## Implementation — Rust workspace
 
@@ -31,41 +31,41 @@
 - [x] I009 Add root Rust 2024 Cargo workspace.
 - [x] I010 Add dependency-free `crates/himsat-core` library crate.
 - [x] I011 Add deterministic smoke/unit tests with no product-domain implementation.
-- [ ] I012 Confirm checked-in `Cargo.lock` is accepted by locked Cargo verification and contains no third-party package.
+- [x] I012 Confirm checked-in `Cargo.lock` is accepted by locked Cargo verification and contains no third-party package.
 
 ## Implementation — CI
 
 - [x] I013 Add one least-privilege CI workflow.
-- [ ] I014 Observe exact-head fmt/clippy/test success on Linux.
-- [ ] I015 Observe exact-head fmt/clippy/test success on macOS.
-- [ ] I016 Observe exact-head fmt/clippy/test success on Windows.
-- [x] I017 Add deterministic pinned SpecGrain validation job.
-- [x] I018 Add Diffcipline exact-diff proof path at R2 without weakening repository permissions.
+- [x] I014 Observe exact-head fmt/clippy/test success on Linux in run `34042429773`.
+- [x] I015 Observe exact-head fmt/clippy/test success on macOS in run `34042429773`.
+- [x] I016 Observe exact-head fmt/clippy/test success on Windows in run `34042429773`.
+- [x] I017 Add and execute deterministic pinned SpecGrain validation job.
+- [x] I018 Add and execute Diffcipline exact-diff proof path at R2 without weakening repository permissions.
 - [x] I019 Pin third-party GitHub Actions and repository control tools to immutable revisions used by this workflow.
 
 ## Negative / policy evidence
 
-- [ ] N001 Observe formatting-failure negative control succeed by rejecting malformed formatting.
-- [ ] N002 Observe clippy and failing-test negative controls reject their injected defects.
-- [ ] N003 Observe malformed SpecGrain state fail validation.
-- [ ] N004 Observe unexpected/out-of-scope path fail Diffcipline policy.
-- [ ] N005 Observe configured-but-not-run Diffcipline verification remain non-PASS.
-- [ ] N006 Inspect workflow permissions and confirm no write permission is granted.
+- [x] N001 Observe formatting-failure negative control succeed by rejecting malformed formatting.
+- [x] N002 Observe clippy and failing-test negative controls reject their injected defects.
+- [x] N003 Observe malformed SpecGrain state fail validation.
+- [x] N004 Observe unexpected/out-of-scope path fail Diffcipline policy.
+- [x] N005 Observe configured-but-not-run Diffcipline verification remain non-PASS.
+- [x] N006 Inspect workflow permissions and confirm no write permission is granted.
 
 ## Qualification
 
-- [ ] Q001 Run exact local verification where the execution environment supports it and preserve unavailable checks honestly.
-- [ ] Q002 Push bounded implementation candidate and record exact head SHA.
-- [ ] Q003 Require exact-head CI success across every configured required cell.
-- [ ] Q004 Require successful SpecGrain state validation on exact head.
-- [ ] Q005 Require Diffcipline proof tied to exact base/head and executed verification.
-- [ ] Q006 Inspect exact changed paths, dependency manifests, lockfile, license, and generated/untracked state.
-- [ ] Q007 Reconcile submitted reviews, inline threads, comments, and any check failures.
-- [ ] Q008 Recheck `main`, PR base/head, scope, statuses/checks, mergeability, and rulesets immediately before merge.
-- [ ] Q009 Merge only with expected-head protection.
-- [ ] Q010 Re-read canonical `main` after merge and record post-merge verification.
-- [ ] Q011 Tighten dependency-manifest/lockfile policy for successor work before third-party dependency adoption.
-- [ ] Q012 Close Specification 001 only if exact evidence supports the closure; otherwise repair forward.
+- [x] Q001 Preserve unavailable local Rust execution honestly as NOT RUN while using executed GitHub-hosted evidence for qualification.
+- [x] Q002 Push bounded implementation candidate and record exact head `34a0b1a4b7a5f4873a6de7141f160de45fd37740`.
+- [x] Q003 Require exact-head CI success across every configured cell; run `34042429773` succeeded.
+- [x] Q004 Require successful SpecGrain state validation on exact head.
+- [x] Q005 Require Diffcipline proof tied to exact base/head and executed verification.
+- [x] Q006 Inspect exact changed paths, dependency manifests, lockfile, license, and generated/untracked state.
+- [x] Q007 Reconcile submitted reviews, inline threads, comments, and check availability without treating unavailable reviews as PASS.
+- [x] Q008 Recheck `main`, PR base/head, scope, checks, mergeability, and branch-protection status immediately before merge.
+- [x] Q009 Merge with expected-head protection. Merge: `4d1f8843577059d5cfa0cfeeb97df05feb2da8be`.
+- [x] Q010 Re-read canonical `main` after merge and observe post-merge run `34042553778` succeed across all configured jobs.
+- [x] Q011 Tighten dependency-manifest/lockfile policy for successor work from bootstrap `allow` to `review` in the closeout candidate.
+- [ ] Q012 Merge the closeout candidate, re-read canonical `main`, and only then mark Specification 001 `CLOSED_CANONICAL`.
 
 ## Explicit non-tasks
 
