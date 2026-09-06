@@ -3,58 +3,77 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_003_CLOSEOUT
-ACTIVE_SPECIFICATION = 003-core-identities-events
+PROGRAM_STATE = SPEC_004_SHAPING
+ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
 SPEC_002_DISPOSITION = CLOSED_CANONICAL
-SPEC_002_CLOSEOUT_MERGE = 42648f015ba611929fb0aa8f2dba90aab72fc80e
-SPEC_002_POST_CLOSEOUT_CI = 34044962282_SUCCESS
-SPEC_003_SHAPING_MERGE = f0cc839cbe908cd7c4bb4623c668a01db3bbbb07
-SPEC_003_EXACT_SHAPING_CI = 34045966688_SUCCESS
-SPEC_003_POST_SHAPING_CI = 34046036952_SUCCESS
-SPEC_003_IMPLEMENTATION_HEAD = ff24d5c3084d54627d50004f1e527ba06683696b
-SPEC_003_EXACT_IMPLEMENTATION_CI = 34046989073_SUCCESS
+SPEC_003_DISPOSITION = CLOSED_CANONICAL
 SPEC_003_IMPLEMENTATION_MERGE = 21946f7abc9247cacf784220b1932ab5946c7540
 SPEC_003_POST_IMPLEMENTATION_CI = 34047078983_SUCCESS
-SPEC_003_MERGE_GUARD_OUTCOME = EXACT_QUALIFIED_HEAD_IS_MERGE_PARENT
-SPEC_003_HISTORICAL_EXPECTED_HEAD_REQUEST_METADATA = UNKNOWN_NOT_CLAIMED
+SPEC_003_CLOSEOUT_HEAD = a098593bd48b8d69aacea2ebdc4da9ed1da2cfb7
+SPEC_003_EXACT_CLOSEOUT_CI = 34047401282_SUCCESS
+SPEC_003_CLOSEOUT_MERGE = 1f14bbe004962dd164402e6e6c7f9c046cf5b489
+SPEC_003_CLOSEOUT_EXPECTED_HEAD_GUARD = PROVEN
+SPEC_003_POST_CLOSEOUT_CI = 34047579266_SUCCESS
 NATIVE_SPEC_GRAIN_STATE = TRACKED_REPORT_MODE_VALIDATED
-IMPLEMENTATION_AUTHORITY = NONE_DURING_SPEC_003_CLOSEOUT
+IMPLEMENTATION_AUTHORITY = NONE_DURING_SPEC_004_SHAPING
+SPEC_004_DESIGN_AUTHORITY = SHAPING_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = BLOCKED_PENDING_INDEPENDENT_REVIEW_AND_PROVENANCE
 PRODUCT_FEATURE_AUTHORITY = NONE
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
 ```
 
-Live GitHub truth proves Specification 003 implementation merged at `21946f7abc9247cacf784220b1932ab5946c7540` with exact qualified head `ff24d5c3084d54627d50004f1e527ba06683696b` as the implementation parent and shaping base `f0cc839cbe908cd7c4bb4623c668a01db3bbbb07` as the other parent. Exact-head CI run `34046989073` and post-merge CI run `34047078983` both completed successfully.
-
-The post-hoc GitHub endpoints do not expose whether the historical merge request itself carried an `expected_head_sha` precondition. That transport-level metadata is therefore unknown and is not represented as PASS evidence. The exact-parent relationship proves that no stale implementation head was merged. Closeout requires explicit expected-head protection prospectively.
+Live GitHub truth proves Specification 003 closeout merged at `1f14bbe004962dd164402e6e6c7f9c046cf5b489` after exact-head CI run `34047401282` succeeded on `a098593bd48b8d69aacea2ebdc4da9ed1da2cfb7`. The merge request was explicitly guarded by that expected head, canonical parentage contains that exact closeout head, and post-closeout CI run `34047579266` completed successfully. Specification 003 is therefore `CLOSED_CANONICAL`.
 
 ## Active objective
 
-Close Specification 003 without adding product behavior:
+Shape the smallest safe R3 path for Specification 004:
 
-- preserve exact implementation evidence in `specs/003-core-identities-events/evidence.md`;
-- reconcile the completed positive/adversarial and qualification task ledger;
-- restore Diffcipline dependency-manifest and lockfile changes from the bounded implementation allowance back to `review`;
-- exact-head qualify and expected-head merge the closeout candidate;
-- require successful post-closeout CI before Specification 004 shaping begins.
+- freeze protected assets, attacker/failure classes, security goals, non-goals, and metadata/deletion limits;
+- define a candidate portable vault-root/key-separation design without inventing cryptographic primitives;
+- define OS secret-protector contracts for Apple, Android, Windows, and Linux while preserving platform truth;
+- define recovery, rotation, revocation, backup, restore, and deletion semantics;
+- define encrypted structured-store and bounded blob-envelope requirements;
+- refresh current upstream crypto/platform/storage facts without adopting any dependency;
+- require an independent substantive crypto/security review tied to an exact canonical design revision before any crypto/storage implementation;
+- require exact provenance/license closure for every later dependency/provider before implementation bytes enter Himsat.
+
+Active artifacts:
+
+```text
+specs/004-vault-key-crypto/spec.md
+specs/004-vault-key-crypto/plan.md
+specs/004-vault-key-crypto/tasks.md
+docs/research/2026-09-06-vault-crypto-foundation.md
+```
 
 ## Authority boundary
 
-During Specification 003 closeout:
+During Specification 004 shaping:
 
-- no new `himsat-events` behavior is authorized;
-- no database/event-log, serialization/wire format, timestamp/clock, ID generation, persistent migration, encryption, key-management, media storage, capture, transcription, document, search, memory, sync, plugin, agent, connector, UI, or release implementation is authorized;
-- no donor code/dependency/model/dataset/font/asset adoption is authorized;
+- no crypto, key-management, encrypted-database, blob-encryption, recovery, or OS secret-store implementation is authorized;
+- no Cargo/native dependency, SQLCipher, libsodium, RustCrypto, or other candidate is adopted merely because it appears in research;
+- no database/event-log schema, media journal/chunk store, capture, transcription, document, search, memory, sync, plugin, agent, connector, UI, or release implementation is authorized;
+- no custom cipher/MAC/KDF/PRNG/protocol is authorized;
+- no plaintext key-file fallback is authorized;
 - the Specification 002 provenance registry remains the sole machine adoption boundary and currently authorizes zero third-party entries;
-- no public compatibility or superiority claim is authorized.
+- no security/FIPS/compliance/public-superiority claim is authorized.
 
-## Successor rule
+## Specification 004 review gate
 
-If the Specification 003 closeout candidate is exact-head qualified, merged with explicit expected-head protection, and its post-closeout CI succeeds, Specification 003 becomes `CLOSED_CANONICAL` and Specification 004 may be shaped only.
+Specification 004 is recursively split:
 
-Specification 004 shaping must define the smallest R3 vault/key/crypto architecture and encrypted storage-foundation unit from exact canonical truth. It must include a threat model and independent crypto/security review requirements and must not invent custom cryptographic primitives.
+```text
+004A reviewed cryptographic design
+  -> independent exact-revision crypto/security review
+  -> exact dependency/provenance decision
+  -> 004B encrypted storage foundation implementation
+  -> closeout
+```
+
+A successful shaping merge alone authorizes preparation and solicitation of the independent review. It does **not** authorize 004B implementation. If no substantively independent reviewer is available, record `BLOCKED_EXTERNAL_REVIEW`; author self-review, CI success, skipped review, or billing-blocked review is not a substitute.
 
 ## Program dependency summary
 
@@ -62,9 +81,9 @@ Specification 004 shaping must define the smallest R3 vault/key/crypto architect
 000 Foundation planning                    CLOSED_CANONICAL
   -> 001 Repository/delivery control       CLOSED_CANONICAL
       -> 002 Provenance/license/SBOM        CLOSED_CANONICAL
-      -> 003 Core event/schema foundation  CLOSEOUT
-          -> 004 Vault/key architecture    BLOCKED_PENDING_003_CLOSEOUT
-              -> 005 Crash-safe media journal/chunk store
+      -> 003 Core event/schema foundation  CLOSED_CANONICAL
+          -> 004 Vault/key architecture    SHAPING_R3
+              -> 005 Crash-safe media journal/chunk store  BLOCKED
                   -> 006 Capture abstraction + Capture Health
                       -> 007 macOS capture
                       -> ...
@@ -76,5 +95,5 @@ Specification 004 shaping must define the smallest R3 vault/key/crypto architect
 - No force-push/rebase/destructive shared-history rewrite is authorized.
 - No donor code may be copied without exact machine-readable provenance plus bounded adoption authority.
 - Model/asset/data licensing is independent of engine/software licensing.
-- `NOT RUN`, unavailable, manual-review, unknown historical request metadata, and skipped review are never equivalent to PASS.
+- `NOT RUN`, unavailable, manual-review, unknown, absent, skipped, billing-blocked, and self-review are never equivalent to independent PASS evidence.
 - Native SpecGrain lifecycle state comes only from validated tool state.
