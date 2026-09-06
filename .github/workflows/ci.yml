@@ -47,12 +47,15 @@ jobs:
       - name: Tests
         shell: bash
         run: cargo test --workspace --all-targets --locked
-      - name: Dependency-free core invariant
+      - name: Dependency-free workspace invariant
         shell: bash
         run: |
           set -euo pipefail
-          lines="$(cargo tree --workspace --locked --depth 1 | wc -l | tr -d ' ')"
-          test "$lines" = "1"
+          cargo tree --workspace --locked --depth 1
+          packages="$(grep -c '^\[\[package\]\]$' Cargo.lock)"
+          test "$packages" = "2"
+          test "$(grep -c '^name = "himsat-core"$' Cargo.lock)" = "1"
+          test "$(grep -c '^name = "himsat-events"$' Cargo.lock)" = "1"
 
   provenance:
     name: Provenance / ${{ matrix.os }}
