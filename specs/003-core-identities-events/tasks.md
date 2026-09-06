@@ -39,32 +39,40 @@ Authorized only by canonical shaping merge `f0cc839cbe908cd7c4bb4623c668a01db3bb
 
 ## Positive and adversarial evidence
 
-Pending exact-head execution.
+Executed on final exact head `ff24d5c3084d54627d50004f1e527ba06683696b` in CI run `34046989073`.
 
-- [ ] N001 Identity parse/display round trips pass for each ID class.
-- [ ] N002 Short, long, and non-hex identity strings fail deterministically.
-- [ ] N003 Schema compatibility boundaries reject incompatible future major versions.
-- [ ] N004 Reversed time/ordinal ranges fail.
-- [ ] N005 Normalized region coordinates/extents outside the unit square fail.
-- [ ] N006 Boundary-valid normalized regions succeed without floating-point state.
-- [ ] N007 Empty required model/parser identity fields fail.
-- [ ] N008 Foundational event/session/source/artifact relationship invariants are exercised.
-- [ ] N009 Workspace dependency closure contains no external Cargo package.
-- [ ] N010 Existing provenance self-test/generated-output failure detection remains intact.
+- [x] N001 Identity parse/display round trips pass for each ID class.
+- [x] N002 Short, long, and non-hex identity strings fail deterministically.
+- [x] N003 Schema compatibility boundaries reject incompatible future major versions.
+- [x] N004 Reversed time/ordinal ranges fail.
+- [x] N005 Normalized region coordinates/extents outside the unit square fail.
+- [x] N006 Boundary-valid normalized regions succeed without floating-point state.
+- [x] N007 Empty required model/parser identity fields fail.
+- [x] N008 Foundational event/session/source/artifact relationship invariants are exercised.
+- [x] N009 Workspace dependency closure contains no external Cargo package.
+- [x] N010 Existing provenance self-test/generated-output failure detection remains intact.
 
 ## Qualification
 
 - [x] Q001 Extend Diffcipline expected paths for Specification 003 and `himsat-events` without weakening forbidden surfaces or R2 commands.
-- [ ] Q002 Push exact bounded implementation candidate and record head/base compare.
-- [ ] Q003 Confirm Cargo manifest/lockfile changes add only the local workspace crate and no external package.
-- [ ] Q004 Require provenance validate/check-generated/self-test success.
-- [ ] Q005 Require Rust fmt/clippy/tests on Ubuntu, macOS, and Windows.
-- [ ] Q006 Require SpecGrain and Diffcipline R2 exact-head success.
-- [ ] Q007 Require existing negative controls to remain successful.
-- [ ] Q008 Reconcile exact changed paths, reviews, threads, comments, `main`, and mergeability.
-- [ ] Q009 Merge only with expected-head protection.
-- [ ] Q010 Re-read canonical `main` and require post-merge CI success.
-- [ ] Q011 Record closeout evidence and close Specification 003 only after all required proof is exact and durable.
+- [x] Q002 Push bounded implementation candidate and reconcile final exact head `ff24d5c3084d54627d50004f1e527ba06683696b` against shaping base `f0cc839cbe908cd7c4bb4623c668a01db3bbbb07`.
+- [x] Q003 Confirm Cargo manifest/lockfile changes add only local `himsat-events`; final lockfile contains only `himsat-core` and `himsat-events`.
+- [x] Q004 Require provenance validate/check-generated/self-test success; final exact-head run `34046989073` passed.
+- [x] Q005 Require Rust fmt/clippy/tests on Ubuntu, macOS, and Windows; final exact-head run `34046989073` passed all three Rust jobs.
+- [x] Q006 Require SpecGrain and Diffcipline R2 exact-head success; final exact-head run `34046989073` passed both jobs.
+- [x] Q007 Require existing negative controls to remain successful; final exact-head run `34046989073` passed the negative-controls job.
+- [x] Q008 Reconcile exact changed paths, reviews, threads, comments, `main`, and mergeability. PR #9 had no submitted reviews or inline threads; Qodo was billing-blocked and CodeRabbit skipped automatic review, neither counted as PASS; PR was mergeable at exact qualified head.
+- [x] Q009 Reconcile merge-head safety. Canonical merge `21946f7abc9247cacf784220b1932ab5946c7540` has exact shaping base `f0cc839cbe908cd7c4bb4623c668a01db3bbbb07` and exact qualified head `ff24d5c3084d54627d50004f1e527ba06683696b` as parents, proving no stale-head merge. Historical transport-level `expected_head_sha` request metadata is not exposed post-hoc and is explicitly not claimed as PASS evidence; closeout records this limitation and requires expected-head protection prospectively.
+- [x] Q010 Re-read canonical `main` and require post-merge CI success; push run `34047078983` passed on exact merge `21946f7abc9247cacf784220b1932ab5946c7540`.
+- [x] Q011 Record durable implementation evidence in `evidence.md` and restore dependency manifest/lockfile disposition to `review` for successor work.
+
+## Closeout
+
+- [ ] C001 Exact-head qualify the Specification 003 closeout candidate.
+- [ ] C002 Reconcile closeout paths, reviews/threads/comments, canonical `main`, and mergeability immediately before closeout merge.
+- [ ] C003 Merge closeout with explicit expected-head protection.
+- [ ] C004 Re-read canonical closeout merge and require post-closeout CI success.
+- [ ] C005 Mark Specification 003 `CLOSED_CANONICAL` only from successor shaping after C001-C004 are proven.
 
 ## Explicit non-tasks
 
