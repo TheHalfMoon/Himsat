@@ -84,7 +84,7 @@ Before non-trivial adoption:
 
 Current source-available, non-commercial, GPL/AGPL/SSPL, unknown-license, or custom-restriction material is `REFERENCE_ONLY` by default until an explicit legal/governance decision says otherwise.
 
-Do not copy current Screenpipe, current Kreuzberg/Xberg ELv2 code, MinerU custom-license code, Marker restricted code/models, or Anarlog `enterprise/**` into Himsat under the permissive-core plan.
+Do not copy current Screenpipe, historical Kreuzberg 4.8/4.9 ELv2 code, MinerU custom-license code, Marker restricted code/models, or Anarlog `enterprise/**` into Himsat under the permissive-core plan. Current `xberg-io/xberg` v1 is MIT at the repository workspace level, but exact path/dependency/model/asset provenance is still required before adoption.
 
 ## Security rules
 
