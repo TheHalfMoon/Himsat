@@ -1,6 +1,6 @@
 # Specification 002 Tasks — Provenance, License, and SBOM Machinery
 
-> Checkboxes track authoring/reconciliation work; exact CI/proof remains authoritative.
+> Checkboxes track authoring/reconciliation work; exact CI/proof remains authoritative. Durable proof is recorded in `evidence.md`.
 
 ## Shaping
 
@@ -32,16 +32,16 @@
 
 ## Negative and positive evidence
 
-- [x] N001 Allowed permissive fixture is represented and expected to pass.
-- [x] N002 Manual-review license fixture cannot become adopted PASS.
-- [x] N003 Denied/restricted and unknown-license fixtures fail non-reference adoption.
-- [x] N004 Malformed/non-immutable revision and missing source path fixtures fail.
-- [x] N005 Unsafe traversal path fixture fails.
-- [x] N006 Missing/invalid/mismatched digest fixtures fail where required.
-- [x] N007 Model/data/asset independent-license requirement is covered.
-- [x] N008 Unregistered external Cargo dependency fixture fails.
-- [x] N009 Registered dependency checksum mismatch fixture fails where observed.
-- [x] N010 Notice/SBOM deterministic regeneration and drift failure are exercised by `self-test`.
+- [x] N001 Allowed permissive fixture passes in exact-head self-test.
+- [x] N002 Manual-review license cannot become adopted PASS.
+- [x] N003 Denied/restricted and unknown licenses fail non-reference adoption.
+- [x] N004 Malformed/non-immutable revision and missing source path fail.
+- [x] N005 Unsafe traversal path fails.
+- [x] N006 Missing/invalid/mismatched digest fails where required.
+- [x] N007 Model/data/asset independent-license requirement is enforced.
+- [x] N008 Unregistered external Cargo dependency fails.
+- [x] N009 Registered dependency checksum mismatch fails where observed and exact matching registration passes.
+- [x] N010 Notice/SBOM deterministic regeneration succeeds and deliberate drift fails.
 - [x] N011 Unsupported registry schema and duplicate IDs fail closed.
 - [x] N012 Restricted reference-only entry remains non-adopted and excluded from distribution output.
 
@@ -50,12 +50,12 @@
 - [x] Q001 Extend existing least-privilege CI for provenance validation/self-test/generated closure.
 - [x] Q002 Preserve Rust Ubuntu/macOS/Windows, SpecGrain, Diffcipline, and existing negative controls.
 - [x] Q003 Keep Cargo manifests/lockfile unchanged and add no third-party package.
-- [ ] Q004 Push exact bounded implementation candidate and record head.
-- [ ] Q005 Require exact-head provenance, Rust, SpecGrain, Diffcipline, and negative-control success.
-- [ ] Q006 Inspect exact paths, registry, generated outputs, dependency closure, reviews/threads/checks, and mergeability.
-- [ ] Q007 Merge only with expected-head protection.
-- [ ] Q008 Re-read canonical `main` and require post-merge CI success.
-- [ ] Q009 Close Specification 002 only with exact evidence; otherwise repair forward.
+- [x] Q004 Push exact bounded implementation candidate at `7c20f2dc1a2a3c8c0cc7674af4241f10f50c6cfb`.
+- [x] Q005 Require exact-head provenance, Rust, SpecGrain, Diffcipline, and negative-control success; run `34044644315` passed all 10 jobs.
+- [x] Q006 Inspect exact paths, empty real registry, generated outputs, dependency closure, reviews/threads/comments, `main`, and mergeability before merge.
+- [x] Q007 Merge with expected-head protection. Implementation merge: `dead41f7254386c643973af081cccc2f238d3a67`.
+- [x] Q008 Re-read canonical `main` and require post-merge CI success; run `34044759392` passed all 10 jobs.
+- [ ] Q009 Merge the closeout candidate, re-read canonical `main`, and only then mark Specification 002 `CLOSED_CANONICAL`.
 
 ## Explicit non-tasks
 
