@@ -1,0 +1,14 @@
+[package]
+name = "himsat-p003-resolver"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+chacha20poly1305 = { version = "=0.11.0", default-features = false, features = ["alloc", "zeroize"] }
+hkdf = { version = "=0.13.0", default-features = false }
+sha2 = { version = "=0.11.0", default-features = false }
+argon2 = { version = "=0.6.0", default-features = false, features = ["alloc", "zeroize"] }
+zeroize = { version = "=1.9.0" }
+getrandom = { version = "=0.4.3", default-features = false }
+rusqlite = { version = "=0.40.1", default-features = false, features = ["bundled-sqlcipher-vendored-openssl"] }
