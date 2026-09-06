@@ -1,0 +1,111 @@
+name: 004P Source and License Closure Research
+
+on:
+  push:
+    branches:
+      - research/004p-p003-source-license-closure
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+    env:
+      OPENSSL_RUST_USE_NASM: "0"
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Collect exact package source and license evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HEAD=$(git rev-parse HEAD)"
+          rustc --version
+          cargo --version
+          cargo generate-lockfile --manifest-path research/004p/Cargo.toml
+          cargo metadata --manifest-path research/004p/Cargo.toml --locked --format-version 1 > "$RUNNER_TEMP/metadata.json"
+          python - "$RUNNER_TEMP/metadata.json" research/004p/Cargo.lock <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import sys
+          import tomllib
+
+          metadata = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          lock = tomllib.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+          packages = [p for p in metadata["packages"] if p.get("source") is not None]
+          if len(packages) != 41:
+              raise SystemExit(f"expected 41 external metadata packages, found {len(packages)}")
+          lock_external = [p for p in lock["package"] if p.get("source") is not None]
+          if len(lock_external) != 41:
+              raise SystemExit(f"expected 41 external lock packages, found {len(lock_external)}")
+          lock_by_id = {(p["name"], p["version"]): p for p in lock_external}
+          registry_roots = list((Path.home() / ".cargo" / "registry" / "src").glob("*"))
+          if not registry_roots:
+              raise SystemExit("cargo registry source root unavailable")
+
+          print("=== HIMSAT_P003_P004_CLOSURE_BEGIN ===")
+          for pkg in sorted(packages, key=lambda p: (p["name"], p["version"])):
+              key = (pkg["name"], pkg["version"])
+              locked = lock_by_id.get(key)
+              if locked is None:
+                  raise SystemExit(f"metadata package absent from lock: {key}")
+              source_dir = None
+              dirname = f"{pkg['name']}-{pkg['version']}"
+              for root in registry_roots:
+                  candidate = root / dirname
+                  if candidate.is_dir():
+                      source_dir = candidate
+                      break
+              if source_dir is None:
+                  raise SystemExit(f"unpacked crate source unavailable: {dirname}")
+              vcs_path = source_dir / ".cargo_vcs_info.json"
+              if not vcs_path.is_file():
+                  raise SystemExit(f"missing .cargo_vcs_info.json: {dirname}")
+              vcs = json.loads(vcs_path.read_text(encoding="utf-8"))
+              git = vcs.get("git", {})
+              revision = git.get("sha1")
+              path_in_vcs = git.get("path_in_vcs")
+              if not isinstance(revision, str) or len(revision) != 40:
+                  raise SystemExit(f"invalid VCS revision: {dirname}")
+              if path_in_vcs is not None and not isinstance(path_in_vcs, str):
+                  raise SystemExit(f"invalid path_in_vcs: {dirname}")
+
+              license_files = []
+              for child in sorted(source_dir.iterdir(), key=lambda p: p.name.lower()):
+                  upper = child.name.upper()
+                  if child.is_file() and (
+                      upper.startswith("LICENSE")
+                      or upper.startswith("COPYING")
+                      or upper.startswith("NOTICE")
+                      or upper.startswith("COPYRIGHT")
+                  ):
+                      license_files.append({
+                          "name": child.name,
+                          "sha256": hashlib.sha256(child.read_bytes()).hexdigest(),
+                      })
+              if not license_files:
+                  raise SystemExit(f"no top-level license/notice file in packaged crate: {dirname}")
+
+              record = {
+                  "name": pkg["name"],
+                  "version": pkg["version"],
+                  "source": pkg["source"],
+                  "checksum": locked.get("checksum"),
+                  "license_expression": pkg.get("license"),
+                  "license_file": pkg.get("license_file"),
+                  "repository": pkg.get("repository"),
+                  "source_revision": revision,
+                  "source_path": path_in_vcs or ".",
+                  "packaged_license_files": license_files,
+              }
+              if not record["checksum"] or not record["license_expression"] or not record["repository"]:
+                  raise SystemExit(f"incomplete package metadata: {dirname}")
+              print(json.dumps(record, sort_keys=True, separators=(",", ":")))
+          print("=== HIMSAT_P003_P004_CLOSURE_END ===")
+          PY
