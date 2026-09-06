@@ -23,7 +23,7 @@ pub const fn build_identity() -> BuildIdentity {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_identity, BuildIdentity};
+    use super::{BuildIdentity, build_identity};
 
     #[test]
     fn build_identity_is_deterministic() {
