@@ -31,15 +31,17 @@ SPEC_004_NEGATIVE_REVIEW_PR = 24
 SPEC_004_NEGATIVE_REVIEWED_SHA = 3c3847add4c8f56fe418fc02e62ae735e8239058
 SPEC_004_NEGATIVE_REVIEW_COMMENT = 5561981955
 SPEC_004_NEGATIVE_REVIEW_DISPOSITION = CHANGES_REQUIRED_B019_B020
-SPEC_004_CONFLICTING_REVIEW_PR = 25
-SPEC_004_CONFLICTING_REVIEWED_SHA = ea7ed384f3cadf68e6a3e82f4a3e4372c8727121
-SPEC_004_CONFLICTING_INITIAL_DISPOSITION = APPROVE
-SPEC_004_REVIEW_CONFLICT_RECONCILIATION = REQUIRED
+SPEC_004_RECONCILIATION_REVIEW_PR = 25
+SPEC_004_RECONCILIATION_REVIEWED_SHA = ea7ed384f3cadf68e6a3e82f4a3e4372c8727121
+SPEC_004_RECONCILIATION_INITIAL_DISPOSITION = APPROVE_WITHDRAWN
+SPEC_004_RECONCILIATION_REQUEST = 5562030888
+SPEC_004_RECONCILIATION_RESPONSE = 5562034608
+SPEC_004_RECONCILIATION_FINAL_DISPOSITION = CHANGES_REQUIRED_B019_B020
 SPEC_004_B019_B020 = ROUND3_REMEDIATION_AUTHORED_UNMERGED
 NATIVE_SPEC_GRAIN_STATE = TRACKED_REPORT_MODE_VALIDATED
 SPEC_004_DESIGN_AUTHORITY = ROUND3_REMEDIATION_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = BLOCKED_PENDING_CONSISTENT_NO_BLOCKER_REVIEW_AND_PROVENANCE
-DEPENDENCY_ADOPTION_AUTHORITY = BLOCKED_PENDING_CONSISTENT_NO_BLOCKER_REVIEW
+SPEC_004_IMPLEMENTATION_AUTHORITY = BLOCKED_PENDING_NO_BLOCKER_EXACT_SHA_REVIEW_AND_PROVENANCE
+DEPENDENCY_ADOPTION_AUTHORITY = BLOCKED_PENDING_NO_BLOCKER_EXACT_SHA_REVIEW
 PRODUCT_FEATURE_AUTHORITY = NONE
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -53,20 +55,30 @@ The second independent review on PR #18 reviewed exact SHA `6d1bbc9b556909398339
 
 A ledger-only reconciliation later merged canonically at `ea7ed384f3cadf68e6a3e82f4a3e4372c8727121`; exact post-merge CI `34058307222` and R3 `34058307204` succeeded. GitHub comparison proves the reconciliation from `3c3847add4c8f56fe418fc02e62ae735e8239058` to `ea7ed384f3cadf68e6a3e82f4a3e4372c8727121` changed only this state file and `specs/004-vault-key-crypto/tasks.md`, not Specification 004 security semantics.
 
-Independent evidence is currently contradictory and MUST be reconciled conservatively. PR #24 comment `5561981955` reviewed exact canonical SHA `3c3847add4c8f56fe418fc02e62ae735e8239058` and returned `CHANGES_REQUIRED` with two concrete blockers:
+Independent review evidence briefly conflicted, then was explicitly reconciled. PR #24 comment `5561981955` reviewed exact SHA `3c3847add4c8f56fe418fc02e62ae735e8239058` and returned `CHANGES_REQUIRED` with B019 and B020. PR #25 initially returned `APPROVE` for exact SHA `ea7ed384f3cadf68e6a3e82f4a3e4372c8727121`, although the intervening commits had not changed the implicated security text.
 
-- B019: bounded-blob and recovery envelopes lacked normative canonical public-byte layouts, exact total-size/length relations, and complete safe parser rules;
-- B020: the freshness-anchor contract lacked an explicit crash-atomic genesis transition for new-vault creation and first accepted restore on a fresh device.
+Focused reconciliation request `5562030888` required the reviewer to evaluate B019/B020 directly. CodeRabbit response `5562034608` explicitly withdrew the prior approval as invalid after reconciliation and returned:
 
-PR #25 later initially returned `APPROVE` for exact SHA `ea7ed384f3cadf68e6a3e82f4a3e4372c8727121`, but the intervening commits did not change the security text implicated by B019/B020. The approval discussed bounded-blob AAD/nonce and established-anchor compare-and-advance behavior but did not identify a canonical public blob/recovery envelope layout or a genesis transition. A focused reconciliation request was posted as PR #25 comment `5562030888`.
+```text
+REVIEWED_SHA = ea7ed384f3cadf68e6a3e82f4a3e4372c8727121
+DISPOSITION = CHANGES_REQUIRED
+B019 = BLOCKING
+B020 = BLOCKING
+```
 
-Diffcipline negative-evidence discipline therefore requires B019/B020 to remain blocking unless a substantive exact-text reconciliation proves the contracts already existed or the contracts are remediated and a new exact-canonical review returns no blocker. Provider/dependency selection and 004B implementation remain blocked.
+The focused reconciliation states that D017 and D018 remain resolved and B019/B020 are separate design gaps. The live design authority is therefore unambiguously limited to forward round-3 remediation.
+
+B019 requires normative canonical public-byte layouts for bounded-blob and recovery envelopes, including exact field order/widths, version/suite/policy identities, ciphertext/tag length encoding, total bounds, parse-before-allocation behavior, rejection of truncation/trailing/non-canonical values, and exact stored blob-envelope bytes used by manifest inventory hashing.
+
+B020 requires a deterministic crash-atomic first-anchor transition. The round-3 design intentionally uses an explicit protected `UNINITIALIZED` state rather than interpreting a missing/reset secure-store item as genesis. This is a stricter fail-closed realization of the required initial compare-and-set state.
+
+Provider/dependency selection and 004B implementation remain blocked until the round-3 semantics are canonicalized, exact-head and post-merge CI/R3 succeed, and a new substantive review of the exact resulting canonical SHA reports no unresolved blocking finding.
 
 ## Active objective
 
 Complete the smallest round-3 Specification 004A design-remediation leaf:
 
-- preserve the contradictory review evidence rather than selecting the more convenient disposition;
+- preserve the reconciled negative review evidence;
 - freeze canonical public-byte layouts, bounds, authenticated public fields, and safe parser behavior for v1 recovery and bounded-blob envelopes;
 - define explicit protected freshness state and crash-atomic genesis for new vaults and first accepted fresh-device restore;
 - prohibit interpreting missing/reset protector state as a fresh genesis opportunity;
@@ -75,7 +87,7 @@ Complete the smallest round-3 Specification 004A design-remediation leaf:
 - merge only with expected-head protection after live reconciliation;
 - require post-merge CI/R3 on the exact new canonical SHA;
 - obtain a new substantive independent crypto/security review tied to that exact SHA;
-- only after a consistent no-unresolved-blocker disposition, shape 004P dependency/provenance selection.
+- only after a no-unresolved-blocker disposition, shape 004P dependency/provenance selection.
 
 Active artifacts:
 
@@ -112,7 +124,7 @@ Specification 004 remains recursively split:
 
 ```text
 004A reviewed cryptographic design
-  -> reconcile contradictory security evidence
+  -> reconcile negative evidence
   -> round-3 exact design remediation
   -> independent exact-revision crypto/security review with no unresolved blocker
   -> exact dependency/provenance decision
@@ -121,7 +133,7 @@ Specification 004 remains recursively split:
   -> closeout
 ```
 
-Green CI/R3, author self-review, summaries, skipped review, billing-blocked review, old review evidence, or an approval that does not reconcile a known contradictory blocking finding are not substitutes for the final consistent independent exact-revision review.
+Green CI/R3, author self-review, summaries, skipped review, billing-blocked review, old review evidence, or an incomplete approval later withdrawn by focused reconciliation are not substitutes for the final independent exact-revision review.
 
 ## Program dependency summary
 
