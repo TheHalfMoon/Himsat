@@ -43,6 +43,7 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def validate_native_component(
+    root: Path,
     policy: dict[str, Any],
     component: Any,
     *,
@@ -90,6 +91,14 @@ def validate_native_component(
         raise GateError(f"{label}: notice text required")
 
     evidence_reference = legacy.safe_repo_path(component["evidence_reference"], f"{label}.evidence_reference")
+    repo_root = root.resolve()
+    evidence_path = (repo_root / evidence_reference).resolve()
+    try:
+        evidence_path.relative_to(repo_root)
+    except ValueError as exc:
+        raise GateError(f"{label}.evidence_reference: resolves outside repository root") from exc
+    if not evidence_path.is_file():
+        raise GateError(f"{label}.evidence_reference: repository-local evidence file required")
 
     normalized = dict(component)
     normalized["source_paths"] = source_paths
@@ -144,6 +153,7 @@ def validate_registry(root: Path, policy: dict[str, Any], registry: dict[str, An
             raise GateError(f"entry {entry['id']}: native_components require an adopted dependency")
         natives = [
             validate_native_component(
+                root,
                 policy,
                 component,
                 parent_id=entry["id"],
@@ -358,6 +368,7 @@ def run_native_fixture_matrix(root: Path, policy: dict[str, Any]) -> None:
         error = None
         try:
             validate_native_component(
+                root,
                 policy,
                 copy.deepcopy(case["component"]),
                 parent_id="fixture-parent",
