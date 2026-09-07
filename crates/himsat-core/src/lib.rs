@@ -1,7 +1,13 @@
 #![forbid(unsafe_code)]
-//! Minimal dependency-free foundation metadata for the Himsat workspace.
+//! Core provider-neutral contracts shared by Himsat runtime layers.
 //!
-//! Product-domain behavior intentionally does not belong in Specification 001.
+//! Specification 004B1 adds contract-only vault types. Cryptographic behavior,
+//! persistence, and platform secure-store implementations remain outside this
+//! module until separately authorized leaves.
+
+/// Provider-neutral vault identity, freshness, lease, capability, and
+/// secret-protector contract surface.
+pub mod vault;
 
 /// Immutable package identity exposed for repository smoke verification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
