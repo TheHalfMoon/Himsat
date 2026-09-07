@@ -293,12 +293,9 @@ impl KeyedHandlePermit<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        FreshnessError, KeyedHandleError, VaultAccessError, VaultLease,
-    };
+    use super::{FreshnessError, KeyedHandleError, VaultAccessError, VaultLease};
     use crate::vault::{
-        KeyGeneration, ProtectorError, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity,
-        VaultLeaseState,
+        KeyGeneration, ProtectorError, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity, VaultLeaseState,
     };
     use std::error::Error;
 
