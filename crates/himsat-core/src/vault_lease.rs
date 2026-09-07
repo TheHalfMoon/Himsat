@@ -8,7 +8,12 @@
 use crate::vault::{ProtectorError, VaultLeaseIdentity, VaultLeaseState};
 use std::error::Error;
 use std::fmt;
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard};
+
+const LEASE_ACTIVE: u8 = 0;
+const LEASE_LOCKED: u8 = 1;
+const LEASE_REVOKED: u8 = 2;
 
 /// Typed rejection returned by an existing keyed handle at its operation gate.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -89,6 +94,22 @@ enum LeaseLifecycle {
 }
 
 impl LeaseLifecycle {
+    const fn from_raw(raw: u8) -> Self {
+        match raw {
+            LEASE_ACTIVE => Self::Active,
+            LEASE_LOCKED => Self::Locked,
+            _ => Self::Revoked,
+        }
+    }
+
+    const fn as_raw(self) -> u8 {
+        match self {
+            Self::Active => LEASE_ACTIVE,
+            Self::Locked => LEASE_LOCKED,
+            Self::Revoked => LEASE_REVOKED,
+        }
+    }
+
     const fn public_state(self) -> VaultLeaseState {
         match self {
             Self::Active => VaultLeaseState::Active,
@@ -105,6 +126,36 @@ impl LeaseLifecycle {
     }
 }
 
+#[derive(Debug)]
+struct LeaseShared {
+    lifecycle: AtomicU8,
+    operation_barrier: RwLock<()>,
+}
+
+impl LeaseShared {
+    fn new() -> Self {
+        Self {
+            lifecycle: AtomicU8::new(LEASE_ACTIVE),
+            operation_barrier: RwLock::new(()),
+        }
+    }
+
+    fn lifecycle(&self) -> LeaseLifecycle {
+        LeaseLifecycle::from_raw(self.lifecycle.load(Ordering::Acquire))
+    }
+
+    fn fail_closed_if_poisoned(&self) {
+        if self.operation_barrier.is_poisoned() {
+            let _ = self.lifecycle.compare_exchange(
+                LEASE_ACTIVE,
+                LEASE_REVOKED,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            );
+        }
+    }
+}
+
 /// Controller for one in-process vault lease.
 ///
 /// The controller is intentionally not `Clone`: keyed consumers receive
@@ -113,7 +164,7 @@ impl LeaseLifecycle {
 #[derive(Debug)]
 pub struct VaultLease {
     identity: VaultLeaseIdentity,
-    lifecycle: Arc<RwLock<LeaseLifecycle>>,
+    shared: Arc<LeaseShared>,
 }
 
 impl VaultLease {
@@ -123,7 +174,7 @@ impl VaultLease {
     pub fn new(identity: VaultLeaseIdentity) -> Self {
         Self {
             identity,
-            lifecycle: Arc::new(RwLock::new(LeaseLifecycle::Active)),
+            shared: Arc::new(LeaseShared::new()),
         }
     }
 
@@ -135,14 +186,12 @@ impl VaultLease {
 
     /// Returns the externally visible active/revoked state.
     ///
-    /// A poisoned synchronization primitive is treated as revoked so a panic
-    /// cannot silently preserve authorization.
+    /// A poisoned synchronization primitive is converted to terminal revoked
+    /// state so a panic cannot silently preserve authorization.
     #[must_use]
     pub fn state(&self) -> VaultLeaseState {
-        match self.lifecycle.read() {
-            Ok(state) => state.public_state(),
-            Err(_) => VaultLeaseState::Revoked,
-        }
+        self.shared.fail_closed_if_poisoned();
+        self.shared.lifecycle().public_state()
     }
 
     /// Creates a non-revoking authorization token for a keyed handle.
@@ -150,14 +199,15 @@ impl VaultLease {
     pub fn keyed_handle_lease(&self) -> KeyedHandleLease {
         KeyedHandleLease {
             identity: self.identity,
-            lifecycle: Arc::clone(&self.lifecycle),
+            shared: Arc::clone(&self.shared),
         }
     }
 
     /// Revokes the lease because the vault is being locked.
     ///
-    /// Returns `true` only for the first transition out of `Active`. Later
-    /// terminal transitions are rejected so the first fail-closed reason wins.
+    /// The terminal state is published before waiting for already-authorized
+    /// operations to drain, so no operation beginning after publication can
+    /// obtain a new permit. Returns `true` only for the first terminal transition.
     pub fn revoke_for_lock(&self) -> bool {
         self.terminate(LeaseLifecycle::Locked)
     }
@@ -173,23 +223,31 @@ impl VaultLease {
     }
 
     fn terminate(&self, requested: LeaseLifecycle) -> bool {
-        match self.lifecycle.write() {
-            Ok(mut state) => {
-                if *state != LeaseLifecycle::Active {
-                    return false;
-                }
-                *state = requested;
-                true
-            }
+        self.shared.fail_closed_if_poisoned();
+
+        let first_transition = self
+            .shared
+            .lifecycle
+            .compare_exchange(
+                LEASE_ACTIVE,
+                requested.as_raw(),
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .is_ok();
+
+        // Every revocation caller crosses the exclusive barrier before returning,
+        // including repeated callers. Therefore return from `revoke*` means any
+        // operation permit granted before the terminal publication has drained.
+        match self.shared.operation_barrier.write() {
+            Ok(_guard) => {}
             Err(poisoned) => {
-                // Panic while mutating lease state is security-significant. Keep
-                // the synchronization primitive poisoned and force the inner
-                // value terminal so every future authorization fails closed.
-                let mut state = poisoned.into_inner();
-                *state = LeaseLifecycle::Revoked;
-                false
+                self.shared.fail_closed_if_poisoned();
+                drop(poisoned.into_inner());
             }
         }
+
+        first_transition
     }
 }
 
@@ -201,7 +259,7 @@ impl VaultLease {
 #[derive(Clone, Debug)]
 pub struct KeyedHandleLease {
     identity: VaultLeaseIdentity,
-    lifecycle: Arc<RwLock<LeaseLifecycle>>,
+    shared: Arc<LeaseShared>,
 }
 
 impl KeyedHandleLease {
@@ -213,17 +271,24 @@ impl KeyedHandleLease {
 
     /// Acquires an operation-scoped authorization permit.
     ///
-    /// The read guard remains held for the permit lifetime. Revocation requires
-    /// the corresponding write lock, so a revocation transition completes only
-    /// after already-authorized operations release their permits; after that
-    /// transition, no new permit can be acquired.
+    /// Authorization checks lifecycle both before and after acquiring the shared
+    /// operation barrier. A revocation race therefore either becomes an
+    /// already-authorized in-flight operation that the revoker drains, or fails
+    /// before a permit is returned. Poisoning fails closed as `Revoked`.
     pub fn authorize(&self) -> Result<KeyedHandlePermit<'_>, KeyedHandleError> {
-        let guard = self
-            .lifecycle
-            .read()
-            .map_err(|_| KeyedHandleError::Revoked)?;
+        if let Some(error) = self.shared.lifecycle().access_error() {
+            return Err(error);
+        }
 
-        if let Some(error) = guard.access_error() {
+        let guard = match self.shared.operation_barrier.read() {
+            Ok(guard) => guard,
+            Err(_) => {
+                self.shared.fail_closed_if_poisoned();
+                return Err(KeyedHandleError::Revoked);
+            }
+        };
+
+        if let Some(error) = self.shared.lifecycle().access_error() {
             return Err(error);
         }
 
@@ -241,7 +306,7 @@ impl KeyedHandleLease {
 #[must_use = "keep the permit alive for the complete keyed operation"]
 pub struct KeyedHandlePermit<'a> {
     identity: VaultLeaseIdentity,
-    _guard: RwLockReadGuard<'a, LeaseLifecycle>,
+    _guard: RwLockReadGuard<'a, ()>,
 }
 
 impl KeyedHandlePermit<'_> {
@@ -318,13 +383,70 @@ mod tests {
     }
 
     #[test]
+    fn revocation_publishes_terminal_state_before_in_flight_permit_drains() {
+        let lease = std::sync::Arc::new(VaultLease::new(identity()));
+        let handle = lease.keyed_handle_lease();
+        let in_flight_handle = handle.clone();
+        let (permit_ready_tx, permit_ready_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+
+        let operation = std::thread::spawn(move || {
+            let _permit = in_flight_handle
+                .authorize()
+                .expect("operation must start before revocation");
+            permit_ready_tx
+                .send(())
+                .expect("test must publish permit readiness");
+            release_rx
+                .recv()
+                .expect("test must release the in-flight operation");
+        });
+
+        permit_ready_rx
+            .recv()
+            .expect("in-flight operation must acquire its permit");
+
+        let revoking_lease = std::sync::Arc::clone(&lease);
+        let (revocation_done_tx, revocation_done_rx) = std::sync::mpsc::channel();
+        let revoker = std::thread::spawn(move || {
+            let first_transition = revoking_lease.revoke();
+            revocation_done_tx
+                .send(first_transition)
+                .expect("test must publish revocation completion");
+        });
+
+        while lease.state() == VaultLeaseState::Active {
+            std::thread::yield_now();
+        }
+
+        assert_eq!(handle.authorize().err(), Some(KeyedHandleError::Revoked));
+        assert_eq!(
+            revocation_done_rx.try_recv(),
+            Err(std::sync::mpsc::TryRecvError::Empty)
+        );
+
+        release_tx
+            .send(())
+            .expect("test must release the in-flight operation");
+        assert!(
+            revocation_done_rx
+                .recv()
+                .expect("revocation must complete after permit drains")
+        );
+
+        operation.join().expect("in-flight operation must finish");
+        revoker.join().expect("revocation thread must finish");
+    }
+
+    #[test]
     fn synchronization_poisoning_fails_closed() {
         let lease = VaultLease::new(identity());
         let handle = lease.keyed_handle_lease();
-        let lifecycle = std::sync::Arc::clone(&lease.lifecycle);
+        let shared = std::sync::Arc::clone(&lease.shared);
 
         let poison_result = std::thread::spawn(move || {
-            let _guard = lifecycle
+            let _guard = shared
+                .operation_barrier
                 .write()
                 .expect("fresh lease synchronization must start healthy");
             panic!("intentional B102 synchronization poison fixture");
