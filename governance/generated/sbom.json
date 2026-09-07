@@ -1,5 +1,856 @@
 {
-  "components": [],
+  "components": [
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-aead-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: aead 0.6.1",
+      "package": {
+        "checksum": "1973cfbc1a2daf9cf550e74e1f088c28e7f7d8c1e1418fb6c9dc5184b7e84c99",
+        "ecosystem": "cargo",
+        "name": "aead",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "aead"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "3d2d90045bffc402af4edb6a5a4dbb1e217329d1"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-argon2-0.6.0",
+      "kind": "dependency",
+      "name": "Cargo: argon2 0.6.0",
+      "package": {
+        "checksum": "134c52ddac6d63c576bef8168db10c83c49c26444ecbc68060fef078925a901c",
+        "ecosystem": "cargo",
+        "name": "argon2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "argon2"
+      ],
+      "source_repository": "https://github.com/RustCrypto/password-hashes",
+      "source_revision": "b1e0ad6fe229b1ba74e4696c7359ab45d7e931f0"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-base64ct-1.8.3",
+      "kind": "dependency",
+      "name": "Cargo: base64ct 1.8.3",
+      "package": {
+        "checksum": "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06",
+        "ecosystem": "cargo",
+        "name": "base64ct",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.8.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "base64ct"
+      ],
+      "source_repository": "https://github.com/RustCrypto/formats",
+      "source_revision": "9adf88fe3e6e0fb9f8cf20b54747aff67a3eca6e"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-bitflags-2.13.1",
+      "kind": "dependency",
+      "name": "Cargo: bitflags 2.13.1",
+      "package": {
+        "checksum": "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da",
+        "ecosystem": "cargo",
+        "name": "bitflags",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.13.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/bitflags/bitflags",
+      "source_revision": "f92a2921b41644b02ca5d50a6ace542e309e6a6f"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-blake2-0.11.0",
+      "kind": "dependency",
+      "name": "Cargo: blake2 0.11.0",
+      "package": {
+        "checksum": "5b5d4d889834ee8ecfc0f8426ad30faf7cdcb10f741a8e6d7224d95325479f6f",
+        "ecosystem": "cargo",
+        "name": "blake2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "blake2"
+      ],
+      "source_repository": "https://github.com/RustCrypto/hashes",
+      "source_revision": "fa3084083d946ac12436567d5a59c0935d5db1fa"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-block-buffer-0.12.1",
+      "kind": "dependency",
+      "name": "Cargo: block-buffer 0.12.1",
+      "package": {
+        "checksum": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa",
+        "ecosystem": "cargo",
+        "name": "block-buffer",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.12.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "block-buffer"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "cbd0963c685df025c42bed31f78c50d1bada3805"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-cc-1.4.5",
+      "kind": "dependency",
+      "name": "Cargo: cc 1.4.5",
+      "package": {
+        "checksum": "005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80",
+        "ecosystem": "cargo",
+        "name": "cc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.4.5"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/cc-rs",
+      "source_revision": "171f8f64698226b88c1971afc50a4b7fcdd3ff74"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-cfg-if-1.0.4",
+      "kind": "dependency",
+      "name": "Cargo: cfg-if 1.0.4",
+      "package": {
+        "checksum": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801",
+        "ecosystem": "cargo",
+        "name": "cfg-if",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/cfg-if",
+      "source_revision": "3510ca6abea34cbbc702509a4e50ea9709925eda"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-chacha20-0.10.2",
+      "kind": "dependency",
+      "name": "Cargo: chacha20 0.10.2",
+      "package": {
+        "checksum": "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06",
+        "ecosystem": "cargo",
+        "name": "chacha20",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.10.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "chacha20"
+      ],
+      "source_repository": "https://github.com/RustCrypto/stream-ciphers",
+      "source_revision": "6b236b758a0279f64d777797514813b2cb572c8b"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-chacha20poly1305-0.11.0",
+      "kind": "dependency",
+      "name": "Cargo: chacha20poly1305 0.11.0",
+      "package": {
+        "checksum": "9b89e1c441e926b9c82a8d023f6e1b7ae0adcfaa7d621814e4d60789bac751cb",
+        "ecosystem": "cargo",
+        "name": "chacha20poly1305",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "chacha20poly1305"
+      ],
+      "source_repository": "https://github.com/RustCrypto/AEADs",
+      "source_revision": "e37a978ccf0992d9053fbc039470d6527108e393"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-cipher-0.5.2",
+      "kind": "dependency",
+      "name": "Cargo: cipher 0.5.2",
+      "package": {
+        "checksum": "e8cf2a2c93cd704877c0858356ed03480ff301ee950b43f1cbe4573b088bfa6c",
+        "ecosystem": "cargo",
+        "name": "cipher",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.5.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cipher"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "f836f71fadb3b975b577a293d57851d044f0a44b"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-cmov-0.5.4",
+      "kind": "dependency",
+      "name": "Cargo: cmov 0.5.4",
+      "package": {
+        "checksum": "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a",
+        "ecosystem": "cargo",
+        "name": "cmov",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.5.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cmov"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "5c7e4f9bb31af81bf766360e836b6d633b84dbff"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-cpufeatures-0.3.1",
+      "kind": "dependency",
+      "name": "Cargo: cpufeatures 0.3.1",
+      "package": {
+        "checksum": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566",
+        "ecosystem": "cargo",
+        "name": "cpufeatures",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cpufeatures"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "e3ac92bfd33051e146025baa2d0ce79891b7fc73"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-crypto-common-0.2.2",
+      "kind": "dependency",
+      "name": "Cargo: crypto-common 0.2.2",
+      "package": {
+        "checksum": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453",
+        "ecosystem": "cargo",
+        "name": "crypto-common",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crypto-common"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "93dee26c6bde3741a197f1c5f6b7baac277705f3"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-ctutils-0.4.2",
+      "kind": "dependency",
+      "name": "Cargo: ctutils 0.4.2",
+      "package": {
+        "checksum": "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e",
+        "ecosystem": "cargo",
+        "name": "ctutils",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "ctutils"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "53f7fc3fa806e6d4e9650675e7b97d3621cff340"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-digest-0.11.3",
+      "kind": "dependency",
+      "name": "Cargo: digest 0.11.3",
+      "package": {
+        "checksum": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2",
+        "ecosystem": "cargo",
+        "name": "digest",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "digest"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "2fb9ed8922e244117040bb037a7d141a6a2b8228"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-fallible-iterator-0.3.0",
+      "kind": "dependency",
+      "name": "Cargo: fallible-iterator 0.3.0",
+      "package": {
+        "checksum": "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649",
+        "ecosystem": "cargo",
+        "name": "fallible-iterator",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/sfackler/rust-fallible-iterator",
+      "source_revision": "11cfa0558045e52bdb473c9eab6a1eb35a54e302"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-fallible-streaming-iterator-0.1.9",
+      "kind": "dependency",
+      "name": "Cargo: fallible-streaming-iterator 0.1.9",
+      "package": {
+        "checksum": "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a",
+        "ecosystem": "cargo",
+        "name": "fallible-streaming-iterator",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.9"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/sfackler/fallible-streaming-iterator",
+      "source_revision": "9217bc5e381b54b4ef4c38959488a5dc993b7b81"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-find-msvc-tools-0.1.12",
+      "kind": "dependency",
+      "name": "Cargo: find-msvc-tools 0.1.12",
+      "package": {
+        "checksum": "3e0f1c7c3a72c66fd80abe965175f7523475c0489a87d3ff9d6e8c87d87a9d2d",
+        "ecosystem": "cargo",
+        "name": "find-msvc-tools",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.12"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "find-msvc-tools"
+      ],
+      "source_repository": "https://github.com/rust-lang/cc-rs",
+      "source_revision": "171f8f64698226b88c1971afc50a4b7fcdd3ff74"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-getrandom-0.4.3",
+      "kind": "dependency",
+      "name": "Cargo: getrandom 0.4.3",
+      "package": {
+        "checksum": "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099",
+        "ecosystem": "cargo",
+        "name": "getrandom",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-random/getrandom",
+      "source_revision": "5e7cd5733536844a9856dc7259bd4696bbe5e3ae"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-hkdf-0.13.0",
+      "kind": "dependency",
+      "name": "Cargo: hkdf 0.13.0",
+      "package": {
+        "checksum": "4aaa26c720c68b866f2c96ef5c1264b3e6f473fe5d4ce61cd44bbe913e553018",
+        "ecosystem": "cargo",
+        "name": "hkdf",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.13.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "hkdf"
+      ],
+      "source_repository": "https://github.com/RustCrypto/KDFs/",
+      "source_revision": "bfb3b209abeeaa02277935b167e06bac320b2773"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-hmac-0.13.0",
+      "kind": "dependency",
+      "name": "Cargo: hmac 0.13.0",
+      "package": {
+        "checksum": "6303bc9732ae41b04cb554b844a762b4115a61bfaa81e3e83050991eeb56863f",
+        "ecosystem": "cargo",
+        "name": "hmac",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.13.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "hmac"
+      ],
+      "source_repository": "https://github.com/RustCrypto/MACs",
+      "source_revision": "0236c8eb50098dd7f277a71ab89caaeb1e7314df"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-hybrid-array-0.4.14",
+      "kind": "dependency",
+      "name": "Cargo: hybrid-array 0.4.14",
+      "package": {
+        "checksum": "707114b52a152fa7bdb290cd7cd5912d9467273b6d74e21b8d81aca1f8533f6b",
+        "ecosystem": "cargo",
+        "name": "hybrid-array",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.14"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/RustCrypto/hybrid-array",
+      "source_revision": "1b65ce708c931d27b2a17400d0dad92500f23f30"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-inout-0.2.2",
+      "kind": "dependency",
+      "name": "Cargo: inout 0.2.2",
+      "package": {
+        "checksum": "4250ce6452e92010fdf7268ccc5d14faa80bb12fc741938534c58f16804e03c7",
+        "ecosystem": "cargo",
+        "name": "inout",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "inout"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "2d5eac49c253b19a064b33fc1f9ca7839732cb30"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-libc-0.2.189",
+      "kind": "dependency",
+      "name": "Cargo: libc 0.2.189",
+      "package": {
+        "checksum": "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2",
+        "ecosystem": "cargo",
+        "name": "libc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.189"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/libc",
+      "source_revision": "ef0906e20828777175f65caa7e681a0ce33c559a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-libsqlite3-sys-0.38.2",
+      "kind": "dependency",
+      "name": "Cargo: libsqlite3-sys 0.38.2",
+      "native_components": [
+        {
+          "embedded_paths": [
+            "libsqlite3-sys/sqlcipher/sqlite3.c",
+            "libsqlite3-sys/sqlcipher/sqlite3.h"
+          ],
+          "evidence_reference": "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md",
+          "id": "sqlcipher-4.14.0",
+          "name": "SQLCipher 4.14.0",
+          "source_license": "BSD-3-Clause",
+          "source_paths": [
+            "LICENSE.md",
+            "src"
+          ],
+          "source_repository": "https://github.com/sqlcipher/sqlcipher",
+          "source_revision": "778ab890cfc30c3631212dcceb0295498abdcd3e"
+        },
+        {
+          "embedded_paths": [
+            "libsqlite3-sys/sqlcipher/sqlite3.c",
+            "libsqlite3-sys/sqlcipher/sqlite3.h"
+          ],
+          "evidence_reference": "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md",
+          "id": "sqlite-3.51.3",
+          "name": "SQLite 3.51.3 embedded in SQLCipher 4.14.0",
+          "source_license": "LicenseRef-SQLite-Public-Domain",
+          "source_paths": [
+            "libsqlite3-sys/sqlcipher/sqlite3.c",
+            "libsqlite3-sys/sqlcipher/sqlite3.h"
+          ],
+          "source_repository": "https://github.com/rusqlite/rusqlite",
+          "source_revision": "e88f112bef7899234a497baed5cc3c3d553deeb8"
+        }
+      ],
+      "package": {
+        "checksum": "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8",
+        "ecosystem": "cargo",
+        "name": "libsqlite3-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.38.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "libsqlite3-sys"
+      ],
+      "source_repository": "https://github.com/rusqlite/rusqlite",
+      "source_revision": "e88f112bef7899234a497baed5cc3c3d553deeb8"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-openssl-src-300.6.1-3.6.3",
+      "kind": "dependency",
+      "name": "Cargo: openssl-src 300.6.1+3.6.3",
+      "native_components": [
+        {
+          "embedded_paths": [
+            "openssl"
+          ],
+          "evidence_reference": "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md",
+          "id": "openssl-3.6.3",
+          "name": "OpenSSL 3.6.3",
+          "source_license": "Apache-2.0",
+          "source_paths": [
+            "LICENSE.txt",
+            "crypto",
+            "include",
+            "providers",
+            "ssl"
+          ],
+          "source_repository": "https://github.com/openssl/openssl",
+          "source_revision": "aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f"
+        }
+      ],
+      "package": {
+        "checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+        "ecosystem": "cargo",
+        "name": "openssl-src",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "300.6.1+3.6.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src",
+        "openssl"
+      ],
+      "source_repository": "https://github.com/alexcrichton/openssl-src-rs",
+      "source_revision": "64c38cc48205400720199476aff8a780f98d167d"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-openssl-sys-0.9.117",
+      "kind": "dependency",
+      "name": "Cargo: openssl-sys 0.9.117",
+      "package": {
+        "checksum": "b47e7e6bb2c38cd930d25a23b40fa52e068c10e85f3e03a7f5ba5aaca5713695",
+        "ecosystem": "cargo",
+        "name": "openssl-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.117"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "openssl-sys"
+      ],
+      "source_repository": "https://github.com/rust-openssl/rust-openssl",
+      "source_revision": "db9c9e2f5db2ad7b45fd894e8d297ee15bfd0c7c"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-password-hash-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: password-hash 0.6.1",
+      "package": {
+        "checksum": "aab41826031698d6ffcd9cff78ef56ef998e39dc7e5067cdfebe373842d4723b",
+        "ecosystem": "cargo",
+        "name": "password-hash",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "password-hash"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "d1954d88cbde6b6ee839d3a2f78e5b03fd4eaa1d"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-phc-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: phc 0.6.1",
+      "package": {
+        "checksum": "44dc769b75f93afdddd8c7fa12d685292ddeff1e66f7f0f3a234cf1818afe892",
+        "ecosystem": "cargo",
+        "name": "phc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "phc"
+      ],
+      "source_repository": "https://github.com/RustCrypto/formats",
+      "source_revision": "02a43929d75c8f7a515dcc240648c26d2fe4ee5f"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-pkg-config-0.3.34",
+      "kind": "dependency",
+      "name": "Cargo: pkg-config 0.3.34",
+      "package": {
+        "checksum": "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548",
+        "ecosystem": "cargo",
+        "name": "pkg-config",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/pkg-config-rs",
+      "source_revision": "a8852cc148f8f7d504bf3a62444c298dcd3637f0"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-poly1305-0.9.1",
+      "kind": "dependency",
+      "name": "Cargo: poly1305 0.9.1",
+      "package": {
+        "checksum": "6e2d0073b297041425c7c3df6eb4792d598a15323fe63346852b092eca02904c",
+        "ecosystem": "cargo",
+        "name": "poly1305",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "poly1305"
+      ],
+      "source_repository": "https://github.com/RustCrypto/universal-hashes",
+      "source_revision": "4f5691919d96ec0089ecca4492be7f1848c78fdf"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-r-efi-6.0.0",
+      "kind": "dependency",
+      "name": "Cargo: r-efi 6.0.0",
+      "package": {
+        "checksum": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf",
+        "ecosystem": "cargo",
+        "name": "r-efi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "6.0.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/r-efi/r-efi",
+      "source_revision": "7e1b0322d31d625f81a5656096330934f9cd835d"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-rusqlite-0.40.1",
+      "kind": "dependency",
+      "name": "Cargo: rusqlite 0.40.1",
+      "package": {
+        "checksum": "11438310b19e3109b6446c33d1ed5e889428cf2e278407bc7896bc4aaea43323",
+        "ecosystem": "cargo",
+        "name": "rusqlite",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.40.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rusqlite/rusqlite",
+      "source_revision": "6d3c282dc5531a57eb4e22ece3207f00c95d0fb0"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-sha2-0.11.0",
+      "kind": "dependency",
+      "name": "Cargo: sha2 0.11.0",
+      "package": {
+        "checksum": "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4",
+        "ecosystem": "cargo",
+        "name": "sha2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "sha2"
+      ],
+      "source_repository": "https://github.com/RustCrypto/hashes",
+      "source_revision": "ffe093984c004769747e998f77da8ff7c0e7a765"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-shlex-2.0.1",
+      "kind": "dependency",
+      "name": "Cargo: shlex 2.0.1",
+      "package": {
+        "checksum": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba",
+        "ecosystem": "cargo",
+        "name": "shlex",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.0.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/comex/rust-shlex",
+      "source_revision": "e82b1411beb7c92871c2c078c9ab415bbcf207ef"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-smallvec-1.16.0",
+      "kind": "dependency",
+      "name": "Cargo: smallvec 1.16.0",
+      "package": {
+        "checksum": "b9be42f50aa861c555654aa3a37f52f4b1074bacf4e48fe0ef7fa584e80f1f0f",
+        "ecosystem": "cargo",
+        "name": "smallvec",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.16.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/servo/rust-smallvec",
+      "source_revision": "aa22a8ff83108228b6d941b83fc91399267d72c9"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-typenum-1.20.1",
+      "kind": "dependency",
+      "name": "Cargo: typenum 1.20.1",
+      "package": {
+        "checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+        "ecosystem": "cargo",
+        "name": "typenum",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.20.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/paholg/typenum",
+      "source_revision": "0db9a0f731981f29266b63586c29fa07e4477b1a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-universal-hash-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: universal-hash 0.6.1",
+      "package": {
+        "checksum": "f4987bdc12753382e0bec4a65c50738ffaabc998b9cdd1f952fb5f39b0048a96",
+        "ecosystem": "cargo",
+        "name": "universal-hash",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "universal-hash"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "82279a5a9ff2af5f10194b9147fe60050cda1851"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-vcpkg-0.2.15",
+      "kind": "dependency",
+      "name": "Cargo: vcpkg 0.2.15",
+      "package": {
+        "checksum": "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426",
+        "ecosystem": "cargo",
+        "name": "vcpkg",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.15"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/mcgoo/vcpkg-rs",
+      "source_revision": "e7d37e095ef2aa85c80242aa3850d442832b7b54"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-zeroize-1.9.0",
+      "kind": "dependency",
+      "name": "Cargo: zeroize 1.9.0",
+      "package": {
+        "checksum": "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e",
+        "ecosystem": "cargo",
+        "name": "zeroize",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.9.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zeroize"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "0b715735a660a8566ccd240bf42489fe2ed98efb"
+    }
+  ],
   "generated_from": "governance/provenance/registry.json",
   "schema": "himsat.sbom/v1"
 }

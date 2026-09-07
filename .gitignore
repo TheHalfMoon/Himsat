@@ -1,6 +1,10 @@
 # Rust build output
 target/
 
+# Python cache output
+__pycache__/
+*.py[cod]
+
 # Local control-tool checkouts used only by CI/developers
 .control/
 
