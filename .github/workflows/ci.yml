@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  OPENSSL_RUST_USE_NASM: "0"
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -47,17 +50,14 @@ jobs:
       - name: Tests
         shell: bash
         run: cargo test --workspace --all-targets --locked
-      - name: Dependency-free workspace invariant
+      - name: Registered dependency closure invariant
         shell: bash
         run: |
           set -euo pipefail
-          tree="$(cargo tree --workspace --locked --depth 1)"
-          printf '%s\n' "$tree"
-          test "$(printf '%s\n' "$tree" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')" = "2"
-          packages="$(grep -c '^\[\[package\]\]$' Cargo.lock)"
-          test "$packages" = "2"
-          test "$(grep -c '^name = "himsat-core"$' Cargo.lock)" = "1"
-          test "$(grep -c '^name = "himsat-events"$' Cargo.lock)" = "1"
+          cargo tree --workspace --locked --depth 1
+          python tools/provenance_gate.py validate
+          python tools/provenance_gate.py check-generated
+          python tools/004p_dependency_closure.py
 
   provenance:
     name: Provenance / ${{ matrix.os }}
@@ -84,10 +84,12 @@ jobs:
           python --version
       - name: Validate provenance registry
         shell: bash
-        run: python tools/provenance.py validate
+        run: python tools/provenance_gate.py validate
       - name: Generated closure
         shell: bash
-        run: python tools/provenance.py check-generated
+        run: |
+          python tools/provenance_gate.py check-generated
+          python tools/004p_dependency_closure.py
 
   provenance-self-test:
     name: Provenance / adversarial self-test
@@ -107,7 +109,7 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
       - name: Run fixture matrix
         shell: bash
-        run: python tools/provenance.py self-test
+        run: python tools/provenance_gate.py self-test
 
   specgrain:
     name: SpecGrain / pinned source
