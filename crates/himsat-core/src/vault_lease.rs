@@ -318,6 +318,26 @@ mod tests {
     }
 
     #[test]
+    fn synchronization_poisoning_fails_closed() {
+        let lease = VaultLease::new(identity());
+        let handle = lease.keyed_handle_lease();
+        let lifecycle = std::sync::Arc::clone(&lease.lifecycle);
+
+        let poison_result = std::thread::spawn(move || {
+            let _guard = lifecycle
+                .write()
+                .expect("fresh lease synchronization must start healthy");
+            panic!("intentional B102 synchronization poison fixture");
+        })
+        .join();
+
+        assert!(poison_result.is_err());
+        assert_eq!(lease.state(), VaultLeaseState::Revoked);
+        assert_eq!(handle.authorize().err(), Some(KeyedHandleError::Revoked));
+        assert!(!lease.revoke());
+    }
+
+    #[test]
     fn access_error_preserves_handle_and_protector_error_classes() {
         assert_eq!(
             VaultAccessError::from(KeyedHandleError::Locked),
