@@ -7,6 +7,7 @@
 use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity, VaultLeaseState};
 use crate::vault_lease::{KeyedHandleLease, VaultLease};
 use std::fmt;
+use std::mem::size_of;
 use zeroize::Zeroize;
 
 /// Canonical byte length of owned v1 VRK, Recovery KEK, and purpose-key buffers.
