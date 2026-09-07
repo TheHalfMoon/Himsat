@@ -114,13 +114,16 @@
 
 ## 004B1 portable vault contracts
 
-B101 code is canonical and exact-post-merge qualified. Historical expected-head transport proof for PR #38 is not reconstructible post hoc and remains explicit negative/unknown evidence. B102 remains blocked until the B101/B102 forward-repair reconciliation below is explicitly expected-head guarded and exact-post-merge qualified.
+B101 and B102 code are canonical and exact-post-merge qualified. Historical expected-head transport proof for PR #38 remains not reconstructible post hoc; that evidence gap was repaired forward-only by canonical reconciliation PR #40 without rewriting history. B103 remains blocked until the B102/B103 state/evidence reconciliation below is explicitly expected-head guarded and exact-post-merge qualified.
 
 - [x] B101 Add only reviewed `VaultId`, generation, freshness, lock/error, lease, and provider-neutral `SecretProtector` contract surface. Exact final head `ea82e1246095bb921dc9e7e40716076edbda41a6` passed CI `34148418394` and R3 `34148418341`; canonical merge `95cf1de6b57f26545fd3ad03d99e18c9f9dc0a5c` passed post-merge CI `34149709088` and R3 `34149708977`.
-- [ ] B101R001 Canonicalize the B101 final-evidence and B102 re-bound reconciliation without security-semantic, dependency, provenance, generated-artifact, workflow, donor, or product-runtime changes.
-- [ ] B101R002 Merge that exact reconciliation head with an explicit `expected_head_sha` guard and record the exact transport result durably.
-- [ ] B101R003 Verify canonical merge parentage and require exact post-merge CI/R3 SUCCESS before B102 implementation begins.
-- [ ] B102 Implement typed lock/unlock/protector/freshness errors and revocable keyed-handle lease.
+- [x] B101R001 Canonicalize the B101 final-evidence and B102 re-bound reconciliation without security-semantic, dependency, provenance, generated-artifact, workflow, donor, or product-runtime changes; exact reconciliation head `d99ceb841d834324d06774753b661bdf108f354b` passed CI `34152839411` and R3 `34152839424`.
+- [x] B101R002 Merge that exact reconciliation head with explicit `expected_head_sha = d99ceb841d834324d06774753b661bdf108f354b`; canonical merge `0252bb31764c9178e270694f4087e8ac701271a0` records successful guarded transport.
+- [x] B101R003 Verify canonical reconciliation parentage and exact post-merge qualification: CI `34153492791` SUCCESS and R3 `34153492769` SUCCESS on `0252bb31764c9178e270694f4087e8ac701271a0` before the accepted B102 lineage began.
+- [x] B102 Implement typed lock/unlock/protector/freshness access errors and revocable keyed-handle lease. Accepted PR #41 exact head `40b9705258a302a4e71340f4dd0a28746e86c8a7` passed CI `34154993507` and R3 `34154993537`, merged with explicit expected-head protection as `4b27ede7d9bf17caac163b7607c331056634fc95`, and passed post-merge CI `34155726527` and R3 `34155726505`. PR #39 remains preserved as pre-authority closed-unmerged history; stale/cancelled CI `34154807417` is not PASS.
+- [ ] B102R001 Canonicalize `b102-revocable-lease-final-evidence.md`, this task-ledger reconciliation, and the B103 re-bound `specs/CURRENT.md` state without security-semantic, dependency, provenance, generated-artifact, workflow, donor, or product-runtime changes.
+- [ ] B102R002 Merge the exact B102/B103 reconciliation head with an explicit `expected_head_sha` guard and record the actual transport result durably.
+- [ ] B102R003 Verify canonical reconciliation parentage and require exact post-merge CI/R3 SUCCESS before any B103 implementation begins.
 - [ ] B103 Implement reviewed `SecretProtector` behavior contract without pretending platform mechanics/capabilities are identical.
 - [ ] B104 Implement reviewed key hierarchy/domain separation; on lock/rotation/revocation/fatal failure revoke lease first, close handles, release VRK/Recovery KEK/purpose keys, and zeroize owned buffers where reviewed runtime support exists.
 - [ ] B105 Prove previously obtained DB/blob handles reject reads/writes after lock/revocation/failure; document process-teardown/swap/crash/runtime memory limits as residual risk.
