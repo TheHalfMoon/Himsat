@@ -1,1 +1,1022 @@
-{"entries":[],"schema":"himsat.provenance-registry/v1"}
+{
+  "entries": [
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-aead-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: aead 0.6.1",
+      "notice": "Copyright (c) 2019-2026 The RustCrypto Project Developers\nCopyright (c) 2019 MobileCoin, LLC\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "1973cfbc1a2daf9cf550e74e1f088c28e7f7d8c1e1418fb6c9dc5184b7e84c99",
+        "ecosystem": "cargo",
+        "name": "aead",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "aead"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "3d2d90045bffc402af4edb6a5a4dbb1e217329d1"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-argon2-0.6.0",
+      "kind": "dependency",
+      "name": "Cargo: argon2 0.6.0",
+      "notice": "Copyright (c) 2021-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "134c52ddac6d63c576bef8168db10c83c49c26444ecbc68060fef078925a901c",
+        "ecosystem": "cargo",
+        "name": "argon2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "argon2"
+      ],
+      "source_repository": "https://github.com/RustCrypto/password-hashes",
+      "source_revision": "b1e0ad6fe229b1ba74e4696c7359ab45d7e931f0"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-base64ct-1.8.3",
+      "kind": "dependency",
+      "name": "Cargo: base64ct 1.8.3",
+      "notice": "Copyright (c) 2014 Steve \"Sc00bz\" Thomas (steve at tobtu dot com)\nCopyright (c) 2021-2025 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06",
+        "ecosystem": "cargo",
+        "name": "base64ct",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.8.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "base64ct"
+      ],
+      "source_repository": "https://github.com/RustCrypto/formats",
+      "source_revision": "9adf88fe3e6e0fb9f8cf20b54747aff67a3eca6e"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-bitflags-2.13.1",
+      "kind": "dependency",
+      "name": "Cargo: bitflags 2.13.1",
+      "notice": "Copyright (c) 2014 The Rust Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da",
+        "ecosystem": "cargo",
+        "name": "bitflags",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.13.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/bitflags/bitflags",
+      "source_revision": "f92a2921b41644b02ca5d50a6ace542e309e6a6f"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-blake2-0.11.0",
+      "kind": "dependency",
+      "name": "Cargo: blake2 0.11.0",
+      "notice": "Copyright (c) 2017-2026 The RustCrypto Project Developers\nCopyright (c) 2017 Artyom Pavlov\nCopyright (c) 2015-2016 The blake2-rfc Developers, Cesar Barros\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "5b5d4d889834ee8ecfc0f8426ad30faf7cdcb10f741a8e6d7224d95325479f6f",
+        "ecosystem": "cargo",
+        "name": "blake2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "blake2"
+      ],
+      "source_repository": "https://github.com/RustCrypto/hashes",
+      "source_revision": "fa3084083d946ac12436567d5a59c0935d5db1fa"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-block-buffer-0.12.1",
+      "kind": "dependency",
+      "name": "Cargo: block-buffer 0.12.1",
+      "notice": "Copyright (c) 2018-2025 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa",
+        "ecosystem": "cargo",
+        "name": "block-buffer",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.12.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "block-buffer"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "cbd0963c685df025c42bed31f78c50d1bada3805"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-cc-1.4.5",
+      "kind": "dependency",
+      "name": "Cargo: cc 1.4.5",
+      "notice": "Copyright (c) 2014 Alex Crichton\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80",
+        "ecosystem": "cargo",
+        "name": "cc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.4.5"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/cc-rs",
+      "source_revision": "171f8f64698226b88c1971afc50a4b7fcdd3ff74"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-cfg-if-1.0.4",
+      "kind": "dependency",
+      "name": "Cargo: cfg-if 1.0.4",
+      "notice": "Copyright (c) 2014 Alex Crichton\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801",
+        "ecosystem": "cargo",
+        "name": "cfg-if",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/cfg-if",
+      "source_revision": "3510ca6abea34cbbc702509a4e50ea9709925eda"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-chacha20-0.10.2",
+      "kind": "dependency",
+      "name": "Cargo: chacha20 0.10.2",
+      "notice": "Copyright (c) 2019-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06",
+        "ecosystem": "cargo",
+        "name": "chacha20",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.10.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "chacha20"
+      ],
+      "source_repository": "https://github.com/RustCrypto/stream-ciphers",
+      "source_revision": "6b236b758a0279f64d777797514813b2cb572c8b"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-chacha20poly1305-0.11.0",
+      "kind": "dependency",
+      "name": "Cargo: chacha20poly1305 0.11.0",
+      "notice": "Copyright (c) 2019-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "9b89e1c441e926b9c82a8d023f6e1b7ae0adcfaa7d621814e4d60789bac751cb",
+        "ecosystem": "cargo",
+        "name": "chacha20poly1305",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "chacha20poly1305"
+      ],
+      "source_repository": "https://github.com/RustCrypto/AEADs",
+      "source_revision": "e37a978ccf0992d9053fbc039470d6527108e393"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-cipher-0.5.2",
+      "kind": "dependency",
+      "name": "Cargo: cipher 0.5.2",
+      "notice": "Copyright (c) 2016-2025 RustCrypto Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "e8cf2a2c93cd704877c0858356ed03480ff301ee950b43f1cbe4573b088bfa6c",
+        "ecosystem": "cargo",
+        "name": "cipher",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.5.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cipher"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "f836f71fadb3b975b577a293d57851d044f0a44b"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-cmov-0.5.4",
+      "kind": "dependency",
+      "name": "Cargo: cmov 0.5.4",
+      "notice": "Copyright (c) 2022-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a",
+        "ecosystem": "cargo",
+        "name": "cmov",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.5.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cmov"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "5c7e4f9bb31af81bf766360e836b6d633b84dbff"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-cpufeatures-0.3.1",
+      "kind": "dependency",
+      "name": "Cargo: cpufeatures 0.3.1",
+      "notice": "Copyright (c) 2020-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566",
+        "ecosystem": "cargo",
+        "name": "cpufeatures",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cpufeatures"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "e3ac92bfd33051e146025baa2d0ce79891b7fc73"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-crypto-common-0.2.2",
+      "kind": "dependency",
+      "name": "Cargo: crypto-common 0.2.2",
+      "notice": "Copyright (c) 2021-2026 RustCrypto Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453",
+        "ecosystem": "cargo",
+        "name": "crypto-common",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crypto-common"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "93dee26c6bde3741a197f1c5f6b7baac277705f3"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-ctutils-0.4.2",
+      "kind": "dependency",
+      "name": "Cargo: ctutils 0.4.2",
+      "notice": "Copyright (c) 2025-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e",
+        "ecosystem": "cargo",
+        "name": "ctutils",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "ctutils"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "53f7fc3fa806e6d4e9650675e7b97d3621cff340"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-digest-0.11.3",
+      "kind": "dependency",
+      "name": "Cargo: digest 0.11.3",
+      "notice": "Copyright (c) 2017-2025 RustCrypto Developers\nCopyright (c) 2017 Artyom Pavlov\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2",
+        "ecosystem": "cargo",
+        "name": "digest",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "digest"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "2fb9ed8922e244117040bb037a7d141a6a2b8228"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-fallible-iterator-0.3.0",
+      "kind": "dependency",
+      "name": "Cargo: fallible-iterator 0.3.0",
+      "notice": "Copyright (c) 2015 The rust-openssl-verify Developers\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649",
+        "ecosystem": "cargo",
+        "name": "fallible-iterator",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/sfackler/rust-fallible-iterator",
+      "source_revision": "11cfa0558045e52bdb473c9eab6a1eb35a54e302"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-fallible-streaming-iterator-0.1.9",
+      "kind": "dependency",
+      "name": "Cargo: fallible-streaming-iterator 0.1.9",
+      "notice": "Copyright (c) 2016 The fallible-streaming-iterator Developers\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a",
+        "ecosystem": "cargo",
+        "name": "fallible-streaming-iterator",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.9"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/sfackler/fallible-streaming-iterator",
+      "source_revision": "9217bc5e381b54b4ef4c38959488a5dc993b7b81"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-find-msvc-tools-0.1.12",
+      "kind": "dependency",
+      "name": "Cargo: find-msvc-tools 0.1.12",
+      "notice": "Copyright (c) 2014 Alex Crichton\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "3e0f1c7c3a72c66fd80abe965175f7523475c0489a87d3ff9d6e8c87d87a9d2d",
+        "ecosystem": "cargo",
+        "name": "find-msvc-tools",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.12"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "find-msvc-tools"
+      ],
+      "source_repository": "https://github.com/rust-lang/cc-rs",
+      "source_revision": "171f8f64698226b88c1971afc50a4b7fcdd3ff74"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-getrandom-0.4.3",
+      "kind": "dependency",
+      "name": "Cargo: getrandom 0.4.3",
+      "notice": "Copyright (c) 2018-2026 The rust-random Project Developers\nCopyright (c) 2014 The Rust Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099",
+        "ecosystem": "cargo",
+        "name": "getrandom",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-random/getrandom",
+      "source_revision": "5e7cd5733536844a9856dc7259bd4696bbe5e3ae"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-hkdf-0.13.0",
+      "kind": "dependency",
+      "name": "Cargo: hkdf 0.13.0",
+      "notice": "Copyright (c) 2015-2018 Vlad Filippov\nCopyright (c) 2018-2021 RustCrypto Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "4aaa26c720c68b866f2c96ef5c1264b3e6f473fe5d4ce61cd44bbe913e553018",
+        "ecosystem": "cargo",
+        "name": "hkdf",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.13.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "hkdf"
+      ],
+      "source_repository": "https://github.com/RustCrypto/KDFs/",
+      "source_revision": "bfb3b209abeeaa02277935b167e06bac320b2773"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-hmac-0.13.0",
+      "kind": "dependency",
+      "name": "Cargo: hmac 0.13.0",
+      "notice": "Copyright (c) 2017 Artyom Pavlov\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "6303bc9732ae41b04cb554b844a762b4115a61bfaa81e3e83050991eeb56863f",
+        "ecosystem": "cargo",
+        "name": "hmac",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.13.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "hmac"
+      ],
+      "source_repository": "https://github.com/RustCrypto/MACs",
+      "source_revision": "0236c8eb50098dd7f277a71ab89caaeb1e7314df"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-hybrid-array-0.4.14",
+      "kind": "dependency",
+      "name": "Cargo: hybrid-array 0.4.14",
+      "notice": "Copyright (c) 2022-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "707114b52a152fa7bdb290cd7cd5912d9467273b6d74e21b8d81aca1f8533f6b",
+        "ecosystem": "cargo",
+        "name": "hybrid-array",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.14"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/RustCrypto/hybrid-array",
+      "source_revision": "1b65ce708c931d27b2a17400d0dad92500f23f30"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-inout-0.2.2",
+      "kind": "dependency",
+      "name": "Cargo: inout 0.2.2",
+      "notice": "Copyright (c) 2022-2025 The RustCrypto Project Developers\nCopyright (c) 2022 Artyom Pavlov\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "4250ce6452e92010fdf7268ccc5d14faa80bb12fc741938534c58f16804e03c7",
+        "ecosystem": "cargo",
+        "name": "inout",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "inout"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "2d5eac49c253b19a064b33fc1f9ca7839732cb30"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-libc-0.2.189",
+      "kind": "dependency",
+      "name": "Cargo: libc 0.2.189",
+      "notice": "Copyright (c) The Rust Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2",
+        "ecosystem": "cargo",
+        "name": "libc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.189"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/libc",
+      "source_revision": "ef0906e20828777175f65caa7e681a0ce33c559a"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-libsqlite3-sys-0.38.2",
+      "kind": "dependency",
+      "name": "Cargo: libsqlite3-sys 0.38.2",
+      "native_components": [
+        {
+          "embedded_paths": [
+            "libsqlite3-sys/sqlcipher/sqlite3.c",
+            "libsqlite3-sys/sqlcipher/sqlite3.h"
+          ],
+          "evidence_reference": "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md",
+          "id": "sqlcipher-4.14.0",
+          "name": "SQLCipher 4.14.0",
+          "notice": "Copyright (c) 2025, ZETETIC LLC\nAll rights reserved.\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions are met:\n    * Redistributions of source code must retain the above copyright\n      notice, this list of conditions and the following disclaimer.\n    * Redistributions in binary form must reproduce the above copyright\n      notice, this list of conditions and the following disclaimer in the\n      documentation and/or other materials provided with the distribution.\n    * Neither the name of the ZETETIC LLC nor the\n      names of its contributors may be used to endorse or promote products\n      derived from this software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY ZETETIC LLC ''AS IS'' AND ANY\nEXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED\nWARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\nDISCLAIMED. IN NO EVENT SHALL ZETETIC LLC BE LIABLE FOR ANY\nDIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES\n(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;\nLOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND\nON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\nSOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.",
+          "source_license": "BSD-3-Clause",
+          "source_paths": [
+            "LICENSE.md",
+            "src"
+          ],
+          "source_repository": "https://github.com/sqlcipher/sqlcipher",
+          "source_revision": "778ab890cfc30c3631212dcceb0295498abdcd3e"
+        },
+        {
+          "embedded_paths": [
+            "libsqlite3-sys/sqlcipher/sqlite3.c",
+            "libsqlite3-sys/sqlcipher/sqlite3.h"
+          ],
+          "evidence_reference": "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md",
+          "id": "sqlite-3.51.3",
+          "name": "SQLite 3.51.3 embedded in SQLCipher 4.14.0",
+          "notice": "The SQLite source code, including all of the files in the directories\nlisted in the bullets below are \n[Public Domain](https://sqlite.org/copyright.html).\nThe authors have submitted written affidavits releasing their work to\nthe public for any use.  Every byte of the public-domain code can be\ntraced back to the original authors.  The files of this repository\nthat are public domain include the following:\n\n  *  All of the primary SQLite source code files found in the\n     [src/ directory](https://sqlite.org/src/tree/src?type=tree&expand)\n  *  All of the test cases and testing code in the\n     [test/ directory](https://sqlite.org/src/tree/test?type=tree&expand)\n  *  All of the SQLite extension source code and test cases in the\n     [ext/ directory](https://sqlite.org/src/tree/ext?type=tree&expand)\n  *  All code that ends up in the \"sqlite3.c\" and \"sqlite3.h\" build products\n     that actually implement the SQLite RDBMS.\n  *  All of the code used to compile the\n     [command-line interface](https://sqlite.org/cli.html)\n  *  All of the code used to build various utility programs such as\n     \"sqldiff\", \"sqlite3_rsync\", and \"sqlite3_analyzer\".\n\n\nThe public domain source files usually contain a header comment\nsimilar to the following to make it clear that the software is\npublic domain.\n\n> The author disclaims copyright to this source code.  In place of\n> a legal notice, here is a blessing:\n> \n>   *   May you do good and not evil.\n>   *   May you find forgiveness for yourself and forgive others.\n>   *   May you share freely, never taking more than you give.\n\nAlmost every file you find in this source repository will be\npublic domain.  But there are a small number of exceptions:\n\nNon-Public-Domain Code Included With This Source Repository AS A Convenience\n----------------------------------------------------------------------------\n\nThis repository contains a (relatively) small amount of non-public-domain\ncode used to help implement the configuration and build logic.  In other\nwords, there are some non-public-domain files used to implement:\n\n> ./configure && make\n\nIn all cases, the non-public-domain files included with this\nrepository have generous BSD-style licenses.  So anyone is free to\nuse any of the code in this source repository for any purpose, though\nattribution may be required to reuse or republish the configure and\nbuild scripts.  None of the non-public-domain code ever actually reaches\nthe build products, such as \"sqlite3.c\", however, so no attribution is\nrequired to use SQLite itself.  The non-public-domain code consists of\nscripts used to help compile SQLite.  The non-public-domain code is\ntechnically not part of SQLite.  The non-public-domain code is\nincluded in this repository as a convenience to developers, so that those\nwho want to build SQLite do not need to go download a bunch of\nthird-party build scripts in order to compile SQLite.\n\nNon-public-domain code included in this respository includes:\n\n  *  The [\"autosetup\"](http://msteveb.github.io/autosetup/) configuration\n     system that is contained (mostly) in the autosetup/ directory, but also\n     includes the \"./configure\" script at the top-level of this archive.\n     Autosetup has a separate BSD-style license.  See the\n     [autosetup/LICENSE](http://msteveb.github.io/autosetup/license/)\n     for details.\n\n  *  There are BSD-style licenses on some of the configuration\n     software found in the legacy autoconf/ directory and its\n     subdirectories.\n\nThe following unix shell command can be run from the top-level\nof this source repository in order to remove all non-public-domain\ncode:\n\n> rm -rf configure autosetup autoconf\n\nIf you unpack this source repository and then run the command above, what\nis left will be 100% public domain.",
+          "source_license": "LicenseRef-SQLite-Public-Domain",
+          "source_paths": [
+            "libsqlite3-sys/sqlcipher/sqlite3.c",
+            "libsqlite3-sys/sqlcipher/sqlite3.h"
+          ],
+          "source_repository": "https://github.com/rusqlite/rusqlite",
+          "source_revision": "e88f112bef7899234a497baed5cc3c3d553deeb8"
+        }
+      ],
+      "notice": "Copyright (c) 2014 The rusqlite developers\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.",
+      "package": {
+        "checksum": "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8",
+        "ecosystem": "cargo",
+        "name": "libsqlite3-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.38.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "libsqlite3-sys"
+      ],
+      "source_repository": "https://github.com/rusqlite/rusqlite",
+      "source_revision": "e88f112bef7899234a497baed5cc3c3d553deeb8"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-openssl-src-300.6.1-3.6.3",
+      "kind": "dependency",
+      "name": "Cargo: openssl-src 300.6.1+3.6.3",
+      "native_components": [
+        {
+          "embedded_paths": [
+            "openssl"
+          ],
+          "evidence_reference": "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md",
+          "id": "openssl-3.6.3",
+          "name": "OpenSSL 3.6.3",
+          "notice": "Apache License\n                           Version 2.0, January 2004\n                        https://www.apache.org/licenses/\n\n   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION\n\n   1. Definitions.\n\n      \"License\" shall mean the terms and conditions for use, reproduction,\n      and distribution as defined by Sections 1 through 9 of this document.\n\n      \"Licensor\" shall mean the copyright owner or entity authorized by\n      the copyright owner that is granting the License.\n\n      \"Legal Entity\" shall mean the union of the acting entity and all\n      other entities that control, are controlled by, or are under common\n      control with that entity. For the purposes of this definition,\n      \"control\" means (i) the power, direct or indirect, to cause the\n      direction or management of such entity, whether by contract or\n      otherwise, or (ii) ownership of fifty percent (50%) or more of the\n      outstanding shares, or (iii) beneficial ownership of such entity.\n\n      \"You\" (or \"Your\") shall mean an individual or Legal Entity\n      exercising permissions granted by this License.\n\n      \"Source\" form shall mean the preferred form for making modifications,\n      including but not limited to software source code, documentation\n      source, and configuration files.\n\n      \"Object\" form shall mean any form resulting from mechanical\n      transformation or translation of a Source form, including but\n      not limited to compiled object code, generated documentation,\n      and conversions to other media types.\n\n      \"Work\" shall mean the work of authorship, whether in Source or\n      Object form, made available under the License, as indicated by a\n      copyright notice that is included in or attached to the work\n      (an example is provided in the Appendix below).\n\n      \"Derivative Works\" shall mean any work, whether in Source or Object\n      form, that is based on (or derived from) the Work and for which the\n      editorial revisions, annotations, elaborations, or other modifications\n      represent, as a whole, an original work of authorship. For the purposes\n      of this License, Derivative Works shall not include works that remain\n      separable from, or merely link (or bind by name) to the interfaces of,\n      the Work and Derivative Works thereof.\n\n      \"Contribution\" shall mean any work of authorship, including\n      the original version of the Work and any modifications or additions\n      to that Work or Derivative Works thereof, that is intentionally\n      submitted to Licensor for inclusion in the Work by the copyright owner\n      or by an individual or Legal Entity authorized to submit on behalf of\n      the copyright owner. For the purposes of this definition, \"submitted\"\n      means any form of electronic, verbal, or written communication sent\n      to the Licensor or its representatives, including but not limited to\n      communication on electronic mailing lists, source code control systems,\n      and issue tracking systems that are managed by, or on behalf of, the\n      Licensor for the purpose of discussing and improving the Work, but\n      excluding communication that is conspicuously marked or otherwise\n      designated in writing by the copyright owner as \"Not a Contribution.\"\n\n      \"Contributor\" shall mean Licensor and any individual or Legal Entity\n      on behalf of whom a Contribution has been received by Licensor and\n      subsequently incorporated within the Work.\n\n   2. Grant of Copyright License. Subject to the terms and conditions of\n      this License, each Contributor hereby grants to You a perpetual,\n      worldwide, non-exclusive, no-charge, royalty-free, irrevocable\n      copyright license to reproduce, prepare Derivative Works of,\n      publicly display, publicly perform, sublicense, and distribute the\n      Work and such Derivative Works in Source or Object form.\n\n   3. Grant of Patent License. Subject to the terms and conditions of\n      this License, each Contributor hereby grants to You a perpetual,\n      worldwide, non-exclusive, no-charge, royalty-free, irrevocable\n      (except as stated in this section) patent license to make, have made,\n      use, offer to sell, sell, import, and otherwise transfer the Work,\n      where such license applies only to those patent claims licensable\n      by such Contributor that are necessarily infringed by their\n      Contribution(s) alone or by combination of their Contribution(s)\n      with the Work to which such Contribution(s) was submitted. If You\n      institute patent litigation against any entity (including a\n      cross-claim or counterclaim in a lawsuit) alleging that the Work\n      or a Contribution incorporated within the Work constitutes direct\n      or contributory patent infringement, then any patent licenses\n      granted to You under this License for that Work shall terminate\n      as of the date such litigation is filed.\n\n   4. Redistribution. You may reproduce and distribute copies of the\n      Work or Derivative Works thereof in any medium, with or without\n      modifications, and in Source or Object form, provided that You\n      meet the following conditions:\n\n      (a) You must give any other recipients of the Work or\n          Derivative Works a copy of this License; and\n\n      (b) You must cause any modified files to carry prominent notices\n          stating that You changed the files; and\n\n      (c) You must retain, in the Source form of any Derivative Works\n          that You distribute, all copyright, patent, trademark, and\n          attribution notices from the Source form of the Work,\n          excluding those notices that do not pertain to any part of\n          the Derivative Works; and\n\n      (d) If the Work includes a \"NOTICE\" text file as part of its\n          distribution, then any Derivative Works that You distribute must\n          include a readable copy of the attribution notices contained\n          within such NOTICE file, excluding those notices that do not\n          pertain to any part of the Derivative Works, in at least one\n          of the following places: within a NOTICE text file distributed\n          as part of the Derivative Works; within the Source form or\n          documentation, if provided along with the Derivative Works; or,\n          within a display generated by the Derivative Works, if and\n          wherever such third-party notices normally appear. The contents\n          of the NOTICE file are for informational purposes only and\n          do not modify the License. You may add Your own attribution\n          notices within Derivative Works that You distribute, alongside\n          or as an addendum to the NOTICE text from the Work, provided\n          that such additional attribution notices cannot be construed\n          as modifying the License.\n\n      You may add Your own copyright statement to Your modifications and\n      may provide additional or different license terms and conditions\n      for use, reproduction, or distribution of Your modifications, or\n      for any such Derivative Works as a whole, provided Your use,\n      reproduction, and distribution of the Work otherwise complies with\n      the conditions stated in this License.\n\n   5. Submission of Contributions. Unless You explicitly state otherwise,\n      any Contribution intentionally submitted for inclusion in the Work\n      by You to the Licensor shall be under the terms and conditions of\n      this License, without any additional terms or conditions.\n      Notwithstanding the above, nothing herein shall supersede or modify\n      the terms of any separate license agreement you may have executed\n      with Licensor regarding such Contributions.\n\n   6. Trademarks. This License does not grant permission to use the trade\n      names, trademarks, service marks, or product names of the Licensor,\n      except as required for reasonable and customary use in describing the\n      origin of the Work and reproducing the content of the NOTICE file.\n\n   7. Disclaimer of Warranty. Unless required by applicable law or\n      agreed to in writing, Licensor provides the Work (and each\n      Contributor provides its Contributions) on an \"AS IS\" BASIS,\n      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or\n      implied, including, without limitation, any warranties or conditions\n      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A\n      PARTICULAR PURPOSE. You are solely responsible for determining the\n      appropriateness of using or redistributing the Work and assume any\n      risks associated with Your exercise of permissions under this License.\n\n   8. Limitation of Liability. In no event and under no legal theory,\n      whether in tort (including negligence), contract, or otherwise,\n      unless required by applicable law (such as deliberate and grossly\n      negligent acts) or agreed to in writing, shall any Contributor be\n      liable to You for damages, including any direct, indirect, special,\n      incidental, or consequential damages of any character arising as a\n      result of this License or out of the use or inability to use the\n      Work (including but not limited to damages for loss of goodwill,\n      work stoppage, computer failure or malfunction, or any and all\n      other commercial damages or losses), even if such Contributor\n      has been advised of the possibility of such damages.\n\n   9. Accepting Warranty or Additional Liability. While redistributing\n      the Work or Derivative Works thereof, You may choose to offer,\n      and charge a fee for, acceptance of support, warranty, indemnity,\n      or other liability obligations and/or rights consistent with this\n      License. However, in accepting such obligations, You may act only\n      on Your own behalf and on Your sole responsibility, not on behalf\n      of any other Contributor, and only if You agree to indemnify,\n      defend, and hold each Contributor harmless for any liability\n      incurred by, or claims asserted against, such Contributor by reason\n      of your accepting any such warranty or additional liability.\n\n   END OF TERMS AND CONDITIONS",
+          "source_license": "Apache-2.0",
+          "source_paths": [
+            "LICENSE.txt",
+            "crypto",
+            "include",
+            "providers",
+            "ssl"
+          ],
+          "source_repository": "https://github.com/openssl/openssl",
+          "source_revision": "aae016bfd52fcad2bc9657c2c782cfdf73b1ed5f"
+        }
+      ],
+      "notice": "Copyright (c) 2014 Alex Crichton\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "46eb8fb9fb3b61ce1c0f8a026c4c1a0714d3a9e138e7fbde78753ce2babc3846",
+        "ecosystem": "cargo",
+        "name": "openssl-src",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "300.6.1+3.6.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src",
+        "openssl"
+      ],
+      "source_repository": "https://github.com/alexcrichton/openssl-src-rs",
+      "source_revision": "64c38cc48205400720199476aff8a780f98d167d"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-openssl-sys-0.9.117",
+      "kind": "dependency",
+      "name": "Cargo: openssl-sys 0.9.117",
+      "notice": "Copyright (c) 2014 Alex Crichton\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "b47e7e6bb2c38cd930d25a23b40fa52e068c10e85f3e03a7f5ba5aaca5713695",
+        "ecosystem": "cargo",
+        "name": "openssl-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.117"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "openssl-sys"
+      ],
+      "source_repository": "https://github.com/rust-openssl/rust-openssl",
+      "source_revision": "db9c9e2f5db2ad7b45fd894e8d297ee15bfd0c7c"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-password-hash-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: password-hash 0.6.1",
+      "notice": "Copyright (c) 2020-2026 RustCrypto Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "aab41826031698d6ffcd9cff78ef56ef998e39dc7e5067cdfebe373842d4723b",
+        "ecosystem": "cargo",
+        "name": "password-hash",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "password-hash"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "d1954d88cbde6b6ee839d3a2f78e5b03fd4eaa1d"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-phc-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: phc 0.6.1",
+      "notice": "Copyright (c) 2021-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "44dc769b75f93afdddd8c7fa12d685292ddeff1e66f7f0f3a234cf1818afe892",
+        "ecosystem": "cargo",
+        "name": "phc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "phc"
+      ],
+      "source_repository": "https://github.com/RustCrypto/formats",
+      "source_revision": "02a43929d75c8f7a515dcc240648c26d2fe4ee5f"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-pkg-config-0.3.34",
+      "kind": "dependency",
+      "name": "Cargo: pkg-config 0.3.34",
+      "notice": "Copyright (c) 2014 Alex Crichton\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548",
+        "ecosystem": "cargo",
+        "name": "pkg-config",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/pkg-config-rs",
+      "source_revision": "a8852cc148f8f7d504bf3a62444c298dcd3637f0"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-poly1305-0.9.1",
+      "kind": "dependency",
+      "name": "Cargo: poly1305 0.9.1",
+      "notice": "Copyright (c) 2015-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "6e2d0073b297041425c7c3df6eb4792d598a15323fe63346852b092eca02904c",
+        "ecosystem": "cargo",
+        "name": "poly1305",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "poly1305"
+      ],
+      "source_repository": "https://github.com/RustCrypto/universal-hashes",
+      "source_revision": "4f5691919d96ec0089ecca4492be7f1848c78fdf"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-r-efi-6.0.0",
+      "kind": "dependency",
+      "name": "Cargo: r-efi 6.0.0",
+      "notice": "LICENSE:\n        This project is triple-licensed under the MIT License, the Apache\n        License, Version 2.0, and the GNU Lesser General Public License,\n        Version 2.1+.\n\nAUTHORS-MIT:\n        Permission is hereby granted, free of charge, to any person obtaining a\n        copy of this software and associated documentation files (the\n        \"Software\"), to deal in the Software without restriction, including\n        without limitation the rights to use, copy, modify, merge, publish,\n        distribute, sublicense, and/or sell copies of the Software, and to\n        permit persons to whom the Software is furnished to do so, subject to\n        the following conditions:\n\n        The above copyright notice and this permission notice shall be included\n        in all copies or substantial portions of the Software.\n\n        THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS\n        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\nAUTHORS-ASL:\n        Licensed under the Apache License, Version 2.0 (the \"License\");\n        you may not use this file except in compliance with the License.\n        You may obtain a copy of the License at\n\n                http://www.apache.org/licenses/LICENSE-2.0\n\n        Unless required by applicable law or agreed to in writing, software\n        distributed under the License is distributed on an \"AS IS\" BASIS,\n        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n        See the License for the specific language governing permissions and\n        limitations under the License.\n\nAUTHORS-LGPL:\n        This program is free software; you can redistribute it and/or modify it\n        under the terms of the GNU Lesser General Public License as published\n        by the Free Software Foundation; either version 2.1 of the License, or\n        (at your option) any later version.\n\n        This program is distributed in the hope that it will be useful, but\n        WITHOUT ANY WARRANTY; without even the implied warranty of\n        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU\n        Lesser General Public License for more details.\n\n        You should have received a copy of the GNU Lesser General Public License\n        along with this program; If not, see <http://www.gnu.org/licenses/>.\n\nCOPYRIGHT: (ordered alphabetically)\n        Copyright (C) 2017-2023 Red Hat, Inc.\n        Copyright (C) 2019-2023 Microsoft Corporation\n        Copyright (C) 2022-2023 David Rheinsberg\n\nAUTHORS: (ordered alphabetically)\n        Alan Egerton <eggyal@gmail.com>\n        Alex James <theracermaster@gmail.com>\n        Ayush Singh <ayushsingh1325@gmail.com>\n        Boris-Chengbiao Zhou <bobo1239@web.de>\n        Bret Barkelew <bret@corthon.com>\n        Christopher Zurcher <christopher.zurcher@microsoft.com>\n        David Rheinsberg <david@readahead.eu>\n        Dmitry Mostovenko <trueberserker@gmail.com>\n        Hiroki Tokunaga <tokusan441@gmail.com>\n        Joe Richey <joerichey@google.com>\n        John Schock <joschock@microsoft.com>\n        Michael Kubacki <michael.kubacki@microsoft.com>\n        Oliver Smith-Denny <osde@microsoft.com>\n        Richard Wiedenh\u00f6ft <richard@wiedenhoeft.xyz>\n        Rob Bradford <robert.bradford@intel.com>, <rbradford@rivosinc.com>\n        Tom Gundersen <teg@jklm.no>\n        Trevor Gross <tmgross@umich.edu>",
+      "package": {
+        "checksum": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf",
+        "ecosystem": "cargo",
+        "name": "r-efi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "6.0.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/r-efi/r-efi",
+      "source_revision": "7e1b0322d31d625f81a5656096330934f9cd835d"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-rusqlite-0.40.1",
+      "kind": "dependency",
+      "name": "Cargo: rusqlite 0.40.1",
+      "notice": "Copyright (c) 2014 The rusqlite developers\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.",
+      "package": {
+        "checksum": "11438310b19e3109b6446c33d1ed5e889428cf2e278407bc7896bc4aaea43323",
+        "ecosystem": "cargo",
+        "name": "rusqlite",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.40.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rusqlite/rusqlite",
+      "source_revision": "6d3c282dc5531a57eb4e22ece3207f00c95d0fb0"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-sha2-0.11.0",
+      "kind": "dependency",
+      "name": "Cargo: sha2 0.11.0",
+      "notice": "Copyright (c) 2016-2026 The RustCrypto Project Developers\nCopyright (c) 2016 Artyom Pavlov\nCopyright (c) 2009-2013 Mozilla Foundation\nCopyright (c) 2006-2009 Graydon Hoare\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4",
+        "ecosystem": "cargo",
+        "name": "sha2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "sha2"
+      ],
+      "source_repository": "https://github.com/RustCrypto/hashes",
+      "source_revision": "ffe093984c004769747e998f77da8ff7c0e7a765"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-shlex-2.0.1",
+      "kind": "dependency",
+      "name": "Cargo: shlex 2.0.1",
+      "notice": "The MIT License (MIT)\n\nCopyright (c) 2015 Nicholas Allegra (comex).\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE.",
+      "package": {
+        "checksum": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba",
+        "ecosystem": "cargo",
+        "name": "shlex",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.0.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/comex/rust-shlex",
+      "source_revision": "e82b1411beb7c92871c2c078c9ab415bbcf207ef"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-smallvec-1.16.0",
+      "kind": "dependency",
+      "name": "Cargo: smallvec 1.16.0",
+      "notice": "Copyright (c) 2018 The Servo Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "b9be42f50aa861c555654aa3a37f52f4b1074bacf4e48fe0ef7fa584e80f1f0f",
+        "ecosystem": "cargo",
+        "name": "smallvec",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.16.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/servo/rust-smallvec",
+      "source_revision": "aa22a8ff83108228b6d941b83fc91399267d72c9"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-typenum-1.20.1",
+      "kind": "dependency",
+      "name": "Cargo: typenum 1.20.1",
+      "notice": "The MIT License (MIT)\n\nCopyright (c) 2014 Paho Lurie-Gregg\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20",
+        "ecosystem": "cargo",
+        "name": "typenum",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.20.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/paholg/typenum",
+      "source_revision": "0db9a0f731981f29266b63586c29fa07e4477b1a"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-universal-hash-0.6.1",
+      "kind": "dependency",
+      "name": "Cargo: universal-hash 0.6.1",
+      "notice": "Copyright (c) 2019-2025 RustCrypto Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "f4987bdc12753382e0bec4a65c50738ffaabc998b9cdd1f952fb5f39b0048a96",
+        "ecosystem": "cargo",
+        "name": "universal-hash",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "universal-hash"
+      ],
+      "source_repository": "https://github.com/RustCrypto/traits",
+      "source_revision": "82279a5a9ff2af5f10194b9147fe60050cda1851"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-vcpkg-0.2.15",
+      "kind": "dependency",
+      "name": "Cargo: vcpkg 0.2.15",
+      "notice": "Copyright (c) 2017 Jim McGrath\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426",
+        "ecosystem": "cargo",
+        "name": "vcpkg",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.15"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/mcgoo/vcpkg-rs",
+      "source_revision": "e7d37e095ef2aa85c80242aa3850d442832b7b54"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-zeroize-1.9.0",
+      "kind": "dependency",
+      "name": "Cargo: zeroize 1.9.0",
+      "notice": "Copyright (c) 2018-2026 The RustCrypto Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e",
+        "ecosystem": "cargo",
+        "name": "zeroize",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.9.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zeroize"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "0b715735a660a8566ccd240bf42489fe2ed98efb"
+    }
+  ],
+  "schema": "himsat.provenance-registry/v2"
+}
