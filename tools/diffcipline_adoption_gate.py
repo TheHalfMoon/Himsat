@@ -191,10 +191,15 @@ def main() -> int:
         if not isinstance(result, dict) or result.get("state") != "PASS":
             return fail(f"verification is not PASS: {result!r}")
 
-    for path, expected in EXPECTED_BLOBS.items():
-        actual = git("hash-object", path)
-        if actual != expected:
-            return fail(f"dependency adoption blob drift: {path} expected {expected} got {actual}")
+    try:
+        for path, expected in EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"dependency adoption blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve dependency adoption blob from HEAD: {exc}")
 
     print("DIFFCIPLINE 004P ADOPTION EXCEPTION PASS")
     print(f"base={args.base}")
