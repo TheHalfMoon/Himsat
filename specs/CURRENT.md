@@ -3,92 +3,126 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_FINAL_DESIGN_RECONCILIATION_FOR_004P
+PROGRAM_STATE = SPEC_004P_CLOSED_RECONCILING_B101_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
 SPEC_002_DISPOSITION = CLOSED_CANONICAL
 SPEC_003_DISPOSITION = CLOSED_CANONICAL
 SPEC_003_CLOSEOUT_MERGE = 1f14bbe004962dd164402e6e6c7f9c046cf5b489
-SPEC_003_POST_CLOSEOUT_CI = 34047579266_SUCCESS
-SPEC_004_SHAPING_MERGE = 384608c8fc13531c399f3726caa5022eb3612aa2
-SPEC_004_FIRST_REMEDIATION_MERGE = 6d1bbc9b55690939833917eebd447c361627f48a
-SPEC_004_ROUND2_REMEDIATION_MERGE = cb8511c1b420c58f714768c3561e74f04f026b3a
-SPEC_004_LEDGER_RECONCILIATION_MERGE = ea7ed384f3cadf68e6a3e82f4a3e4372c8727121
-SPEC_004_ROUND3_REMEDIATION_HEAD = 4ee8f83975dd074003df2d151e80d56bc5f1c005
-SPEC_004_ROUND3_PREMERGE_CI = 34059290985_SUCCESS
-SPEC_004_ROUND3_PREMERGE_R3 = 34059290977_SUCCESS
-SPEC_004_ROUND3_CANONICAL_MERGE = c69684df26d7c9b5c7416ad2f0ecb8fe8114fbc6
-SPEC_004_ROUND3_POSTMERGE_CI = 34059426441_SUCCESS
-SPEC_004_ROUND3_POSTMERGE_R3 = 34059426437_SUCCESS
-SPEC_004_ROUND3_FINAL_REVIEW_PR = 27
-SPEC_004_ROUND3_FINAL_REVIEW_COMMENT = 5562237044
-SPEC_004_ROUND3_FINAL_REVIEW_DISPOSITION = CHANGES_REQUIRED_B019_1
-SPEC_004_ROUND4_REMEDIATION_HEAD = 81587ab6af6ad88a1f82114dfd5ddd78767a6d47
-SPEC_004_ROUND4_PREMERGE_CI = 34060963107_SUCCESS
-SPEC_004_ROUND4_PREMERGE_R3 = 34060963141_SUCCESS
-SPEC_004_ROUND4_EXPECTED_HEAD_GUARD = PROVEN
-SPEC_004_ROUND4_CANONICAL_MERGE = 5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98
-SPEC_004_ROUND4_POSTMERGE_CI = 34061056655_SUCCESS
-SPEC_004_ROUND4_POSTMERGE_R3 = 34061056698_SUCCESS
-SPEC_004_FINAL_REVIEW_PR = 29
-SPEC_004_FINAL_REVIEW_REQUEST = 5562291428
-SPEC_004_FINAL_REVIEW_RESPONSE = 5562296249
+SPEC_004A_DESIGN_AUTHORITY = APPROVED_EXACT_CANONICAL
 SPEC_004_FINAL_REVIEWED_SHA = 5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98
 SPEC_004_FINAL_REVIEW_DISPOSITION = APPROVE
 SPEC_004_FINAL_BLOCKING_FINDINGS = NONE
-SPEC_004_FINAL_NON_BLOCKING_RECOMMENDATIONS = NONE
-SPEC_004_B019_1 = RESOLVED
-SPEC_004_B020 = RESOLVED
-SPEC_004_D001_D018 = RESOLVED_NO_REGRESSION
-SPEC_004A_DESIGN_AUTHORITY = APPROVED_EXACT_CANONICAL
-DEPENDENCY_ADOPTION_AUTHORITY = 004P_BOUNDED_SELECTION_ONLY_AFTER_THIS_RECONCILIATION_IS_CANONICAL
-SPEC_004_IMPLEMENTATION_AUTHORITY = BLOCKED_PENDING_004P_PROVENANCE_CLOSURE
+SPEC_004P_DISPOSITION = CLOSED_CANONICAL
+SPEC_004P_ADOPTION_PR = 36
+SPEC_004P_ADOPTION_HEAD = ee753debb23ac5a925a0736cec116994166953c5
+SPEC_004P_PREMERGE_CI = 34142484081_SUCCESS
+SPEC_004P_PREMERGE_R3 = 34142484053_SUCCESS
+SPEC_004P_FINAL_REVIEW_COMMENT = 5573320081
+SPEC_004P_FINAL_REVIEW_DISPOSITION = APPROVE
+SPEC_004P_FINAL_BLOCKING_FINDINGS = NONE
+SPEC_004P_EXPECTED_HEAD_GUARD = PROVEN
+SPEC_004P_CANONICAL_MERGE = a4d32ee93e0ab95af8376ba0ca09e248070c5924
+SPEC_004P_POSTMERGE_CI = 34144623816_SUCCESS
+SPEC_004P_POSTMERGE_R3 = 34144623829_SUCCESS
+P001 = CANONICAL_CLOSED
+P002 = CANONICAL_CLOSED
+P003 = CANONICAL_CLOSED
+P004 = CANONICAL_CLOSED
+P005 = CANONICAL_CLOSED
+P006 = CANONICAL_CLOSED
+DEPENDENCY_BYTES_ADOPTED_ON_MAIN = YES
+NEXT_IMPLEMENTATION_LEAF = B101_PORTABLE_VAULT_CONTRACT_SURFACE
+SPEC_004_IMPLEMENTATION_AUTHORITY = B101_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_AND_POSTMERGE_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
-PRODUCT_FEATURE_AUTHORITY = NONE
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B101_ONLY_UNDER_THE_CONDITION_ABOVE
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
 NATIVE_SPEC_GRAIN_STATE = TRACKED_REPORT_MODE_VALIDATED
 ```
 
-Live GitHub truth proves canonical `main` remains exact SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` at the start of this reconciliation leaf.
+Live GitHub truth overrides this file if repository state changes after this reconciliation is authored.
 
-Specification 003 is `CLOSED_CANONICAL`. Specification 004 design shaping and four rounds of review/remediation produced the exact canonical design now under final ledger reconciliation.
+## Canonical Specification 004A design state
 
-## Final Specification 004A design disposition
+Specification 004A has an exact independently reviewed cryptographic design. The final review-only PR #29 examined canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE`, no blocking or non-blocking findings, B019-1 resolved, B020 resolved, and D001-D018 resolved without regression.
 
-The final substantive independent review on review-only PR #29 examined exact canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned in comment `5562296249`:
+`round3-normative-contracts.md` remains controlling for recovery, bounded-blob, freshness, and rotation contracts. `round4-blob-inventory-contract.md` remains controlling for `GENERIC_ARTIFACT_BLOB` inventory semantics and complete canonical-envelope verification before plaintext release.
+
+Design approval does not approve implementation. Security-semantic changes to the reviewed surface invalidate stale review evidence for that changed surface.
+
+## Canonical Specification 004P disposition
+
+Specification 004P is closed by exact live evidence recorded in `provider-adoption-final-evidence.md`.
+
+The final adoption PR #36 used exact head `ee753debb23ac5a925a0736cec116994166953c5`. Its pre-merge CI `34142484081` and R3 `34142484053` succeeded. The final substantive CodeRabbit response in comment `5573320081` reviewed that exact SHA and returned:
 
 ```text
-REVIEWED_SHA = 5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98
 DISPOSITION = APPROVE
 BLOCKING_FINDINGS = NONE
-NON_BLOCKING_RECOMMENDATIONS = NONE
-B019_1_STATUS = RESOLVED
-B020_STATUS = RESOLVED
-D001_D018_STATUS = RESOLVED_NO_REGRESSION
+NATIVE_EVIDENCE_REFERENCE_BLOCKER = RESOLVED
+DIFFCIPLINE_REPOSITORY_POLICY_BLOCKER = RESOLVED
+DIFFCIPLINE_PROOF_PARSER_BLOCKER = RESOLVED
+DIFFCIPLINE_PROOF_TO_GIT_DIFF_BINDING_BLOCKER = RESOLVED
+DIFFCIPLINE_COMMITTED_HEAD_BLOB_BINDING_BLOCKER = RESOLVED
+004B_AUTHORITY_BOUNDARY = PRESERVED
 ```
 
-The reviewer explicitly stated that it examined the exact canonical SHA and did not use CI, R3, summaries, self-review, or older-SHA reviews as approval evidence.
+PR #36 was merged with explicit expected-head protection. Canonical merge `a4d32ee93e0ab95af8376ba0ca09e248070c5924` then passed post-merge CI `34144623816` and R3 `34144623829` on that exact canonical SHA.
 
-`round3-normative-contracts.md` remains controlling for the round-3 recovery/bounded-blob/freshness/rotation contracts. `round4-blob-inventory-contract.md` is controlling for `GENERIC_ARTIFACT_BLOB` manifest inventory semantics and requires full canonical-envelope length/hash verification before inventory acceptance and plaintext release.
+Therefore P001-P006 are `CANONICAL_CLOSED` and the selected dependency/native bytes are adopted on `main`. The machine provenance boundary remains registry v2 plus deterministic SBOM/notices and the registered-closure CI/R3 gates.
 
-The durable final-review record is `specs/004-vault-key-crypto/review-round4-final-evidence.md`.
+Older failed runs, blocking reviews, tooling incidents, and contradiction evidence remain part of the durable evidence lineage and are not erased by final closure.
 
-## Preserved negative and conflict evidence
+## Active objective
 
-Negative evidence remains part of the canonical design lineage and is not erased by the final approval.
+Canonicalize this state-only reconciliation without changing security semantics or product code. After this reconciliation itself is merged with expected-head protection and passes exact post-merge CI/R3, execute only B101 as the smallest re-bounded Specification 004B implementation leaf.
 
-- PR #12: 16 actionable findings D001-D016.
-- PR #18: D017-D018 remained blocking.
-- PR #24 comment `5561981955`: B019-B020 remained blocking.
-- PR #25 initial approval was explicitly withdrawn after focused contradiction reconciliation; response `5562034608` returned `CHANGES_REQUIRED` for B019-B020.
-- PR #27 comment `5562237044`: B020 and D001-D018 were resolved, but B019-1 remained blocking.
-- PR #29 comment `5562296249`: B019-1 resolved, B020 resolved, D001-D018 resolved with no regression, no blocking or non-blocking findings.
+B101 is limited to portable contract surface for reviewed vault identity, non-zero generation/freshness values, lock/lease state representation, capability reporting, and provider-neutral `SecretProtector` interfaces. Its exact scope and exclusions are frozen in `provider-adoption-final-evidence.md`.
+
+B101 does not authorize cryptographic operations, SQLCipher behavior, platform secure-store implementations, persistence, recovery, backup, rotation, deletion, media behavior, new dependencies, or donor-code adoption.
+
+## Specification 004 delivery chain
+
+```text
+004A reviewed cryptographic design           APPROVED_EXACT_CANONICAL
+  -> 004P provider/provenance closure         CLOSED_CANONICAL
+  -> 004P/B101 frontier reconciliation        ACTIVE
+  -> B101 portable vault contracts            NEXT_AFTER_RECONCILIATION_QUALIFICATION
+  -> B102-B105 portable behavior              BLOCKED_PENDING_PRIOR_LEAVES
+  -> B201-B206 crypto envelope foundation     BLOCKED_PENDING_PRIOR_LEAVES
+  -> B301-B307 encrypted structured store     BLOCKED_PENDING_PRIOR_LEAVES
+  -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
+  -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
+  -> exact implementation review/R3           BLOCKED_PENDING_IMPLEMENTATION
+  -> Specification 004 closeout               BLOCKED_PENDING_ALL_PRIOR_GATES
+  -> Specification 005                        BLOCKED_PENDING_SPEC_004_CLOSEOUT
+```
+
+## Active artifacts
+
+```text
+specs/004-vault-key-crypto/spec.md
+specs/004-vault-key-crypto/plan.md
+specs/004-vault-key-crypto/tasks.md
+specs/004-vault-key-crypto/round3-normative-contracts.md
+specs/004-vault-key-crypto/round4-blob-inventory-contract.md
+specs/004-vault-key-crypto/review-round4-final-evidence.md
+specs/004-vault-key-crypto/provider-provenance-selection.md
+specs/004-vault-key-crypto/provider-resolution-evidence.md
+specs/004-vault-key-crypto/provider-package-source-license-closure.md
+specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md
+specs/004-vault-key-crypto/provider-adoption-closure-evidence.md
+specs/004-vault-key-crypto/provider-adoption-final-evidence.md
+governance/provenance/policy.json
+governance/provenance/registry.json
+governance/generated/sbom.json
+```
 
 ## Preserved residual risks
 
-The final independent review preserves these limits:
+The reviewed Specification 004 limits remain unchanged:
 
 - a compromised unlocked process can access plaintext and resident secrets;
 - kernel, firmware, hardware, and physical-memory compromise remain outside this boundary;
@@ -99,77 +133,15 @@ The final independent review preserves these limits:
 - a detached recovery-enabled backup remains usable by a holder of the recovery passphrase;
 - platforms unable to prove protected persistence and atomic freshness state must fail `UnsupportedPolicy`; rollbackable-file/plaintext fallback is prohibited.
 
-## Active objective
-
-Canonicalize this final design-review reconciliation, then execute 004P dependency/provenance selection in dependency order:
-
-1. select exact established crypto provider/library strategy;
-2. select exact SQLCipher core/binding/provider/build strategy if SQLCipher remains selected;
-3. inventory every direct/transitive Cargo/native dependency and immutable source/checksum identity;
-4. verify controlling licenses/notices under `governance/provenance/policy.json`;
-5. register the complete adopted package/native closure and deterministic SBOM/notices before accepting unregistered dependency bytes;
-6. prove the resulting dependency/native graph contains no unregistered, checksum-mismatched, denied, unknown-license, or unresolved-manual component;
-7. only after P001-P006 close, re-bound the smallest 004B implementation leaf from live canonical truth.
-
-## 004P authority boundary
-
-After this reconciliation itself becomes canonical and qualifies under exact-head/post-merge CI/R3, 004P may:
-
-- inspect and select exact upstream package/native candidates;
-- freeze immutable repository/tag/commit/package/checksum identities;
-- select exact feature/provider/build strategies;
-- write provenance decisions, registry entries, deterministic SBOM/notices, and dependency-closure evidence;
-- reject candidates that cannot satisfy provenance/security/platform requirements.
-
-004P must not:
-
-- treat research identities as adopted dependencies;
-- accept unregistered external Cargo/native bytes into the canonical lockfile/build graph before the machine adoption boundary is satisfied;
-- begin 004B implementation before the exact provenance closure is complete;
-- weaken license/provenance policy to make a preferred dependency fit;
-- copy donor code or adopt model/data/asset material under this authority;
-- make release, FIPS, compliance, privacy-superiority, or benchmark-superiority claims.
-
-The Specification 002 provenance registry remains the machine adoption boundary.
-
-## Specification 004 delivery chain
-
-```text
-004A reviewed cryptographic design           APPROVED_EXACT_CANONICAL
-  -> final design-review reconciliation       ACTIVE
-  -> 004P provider/provenance choice          NEXT_AFTER_RECONCILIATION
-  -> 004B encrypted storage foundation        BLOCKED_PENDING_004P
-  -> exact implementation review/R3           BLOCKED_PENDING_004B
-  -> closeout                                  BLOCKED_PENDING_ALL_PRIOR_GATES
-  -> 005 crash-safe media journal/chunk store BLOCKED_PENDING_SPEC_004_CLOSEOUT
-```
-
-## Active artifacts
-
-```text
-specs/004-vault-key-crypto/spec.md
-specs/004-vault-key-crypto/plan.md
-specs/004-vault-key-crypto/tasks.md
-specs/004-vault-key-crypto/review-evidence.md
-specs/004-vault-key-crypto/review-round2-evidence.md
-specs/004-vault-key-crypto/review-round3-evidence.md
-specs/004-vault-key-crypto/review-round4-evidence.md
-specs/004-vault-key-crypto/review-round4-final-evidence.md
-specs/004-vault-key-crypto/round3-normative-contracts.md
-specs/004-vault-key-crypto/round4-blob-inventory-contract.md
-docs/research/2026-09-06-vault-crypto-foundation.md
-governance/provenance/policy.json
-governance/provenance/registry.json
-```
-
 ## Authority rules
 
 - Live GitHub/repository truth overrides this file if they disagree.
 - No force-push/rebase/destructive shared-history rewrite is authorized.
-- `NOT RUN`, unavailable, manual-review, unknown, absent, skipped, billing-blocked, and self-review are never independent PASS evidence.
-- Negative evidence remains evidence and must not be hidden by a later approval.
-- No custom cipher/MAC/KDF/PRNG/protocol is authorized.
+- `NOT RUN`, unavailable, manual-review, unknown, absent, skipped, billing-blocked, neutral, and self-review are never independent PASS evidence.
+- Negative evidence remains evidence and must not be hidden by later approval.
+- No custom cipher, MAC, KDF, PRNG, or protocol is authorized.
 - No plaintext key-file fallback is authorized.
 - No donor code may be copied without exact machine-readable provenance plus bounded adoption authority.
 - Model/asset/data licensing is independent of software-engine licensing.
-- Design approval does not approve implementation; security-semantic changes invalidate the final design approval for the changed surface.
+- Each implementation leaf must remain independently bounded and exact-head qualified.
+- Specification 004 is not complete until all implementation, adversarial/platform, independent implementation review, reconciliation, guarded merge, post-merge, and closeout gates are proven.
