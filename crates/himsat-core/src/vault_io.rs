@@ -207,8 +207,8 @@ mod tests {
         KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity, VaultLeaseState,
     };
     use crate::vault_keys::{
-        KEY_MATERIAL_BYTES, KeyedHandleCloser, OwnedKeyMaterial, PlaintextCache,
-        VaultKeyMaterial, VaultSessionLifetime, VaultTeardownReason,
+        KEY_MATERIAL_BYTES, KeyedHandleCloser, OwnedKeyMaterial, PlaintextCache, VaultKeyMaterial,
+        VaultSessionLifetime, VaultTeardownReason,
     };
     use crate::vault_lease::{KeyedHandleError, VaultLease};
     use std::convert::Infallible;
@@ -283,10 +283,7 @@ mod tests {
         VaultSessionLifetime::new(
             VaultLease::new(identity()),
             NoopCloser,
-            VaultKeyMaterial::new(OwnedKeyMaterial::from_bytes([
-                0x11;
-                KEY_MATERIAL_BYTES
-            ])),
+            VaultKeyMaterial::new(OwnedKeyMaterial::from_bytes([0x11; KEY_MATERIAL_BYTES])),
             NoopCache,
         )
     }
