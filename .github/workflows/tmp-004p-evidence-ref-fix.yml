@@ -11,6 +11,7 @@ permissions:
 
 env:
   PYTHONDONTWRITEBYTECODE: "1"
+  OPENSSL_RUST_USE_NASM: "0"
 
 jobs:
   repair:
