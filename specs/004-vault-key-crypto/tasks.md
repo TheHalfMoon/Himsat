@@ -95,20 +95,26 @@
 - [x] A306 Create review-only PR #29 with head pointing directly to exact canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and obtain substantive independent CodeRabbit response `5562296249`, explicitly covering B019-1, B020, and regression status for D001-D018.
 - [x] A307 Record the final no-unresolved-blocker disposition and preserved residual risks in `review-round4-final-evidence.md`; this reconciliation opens 004P only after it becomes canonical and exact-head/post-merge qualification succeeds.
 
-## Dependency/provenance decision
+## Dependency/provenance decision — canonical closed
 
-Opened only after the final design-review reconciliation becomes canonical. 004B remains blocked until P001-P006 close.
+- [x] P001 Select exact established crypto provider/library strategy from reviewed candidates.
+- [x] P002 Select exact SQLCipher core/binding/provider/build strategy, with immutable core/binding identities and exact SQLite/provider/native inputs.
+- [x] P003 Inventory every direct/transitive Cargo/native dependency, immutable source/version, package source, and checksum.
+- [x] P004 Verify controlling licenses/notices under `governance/provenance/policy.json`.
+- [x] P005 Record adopted package/native closure in provenance registry and deterministic SBOM/notices before accepting unregistered external dependency bytes.
+- [x] P006 Prove resulting lockfile/native distribution contains no unregistered, checksum-mismatched, manual-without-decision, denied, or unknown-license component.
 
-- [ ] P001 Select exact established crypto provider/library strategy from reviewed candidates.
-- [ ] P002 Select exact SQLCipher core/binding/provider/build strategy, if SQLCipher remains selected, with immutable core/binding identities and exact SQLite/provider/native inputs.
-- [ ] P003 Inventory every direct/transitive Cargo/native dependency, immutable source/version, package source, and checksum.
-- [ ] P004 Verify controlling licenses/notices under `governance/provenance/policy.json`.
-- [ ] P005 Record adopted package/native closure in provenance registry and deterministic SBOM/notices before accepting unregistered external dependency bytes.
-- [ ] P006 Prove resulting lockfile/native distribution contains no unregistered, checksum-mismatched, manual-without-decision, denied, or unknown-license component.
+## 004P closeout and B101 re-bound reconciliation
+
+- [x] P007 Exact-head qualify adoption head `ee753debb23ac5a925a0736cec116994166953c5`: CI `34142484081` SUCCESS and R3 `34142484053` SUCCESS.
+- [x] P008 Obtain substantive exact-head CodeRabbit review comment `5573320081`: `APPROVE`, `BLOCKING_FINDINGS = NONE`, all recorded adoption-gate blockers resolved, and 004B authority boundary preserved.
+- [x] P009 Reconcile PR #36 and merge with `expected_head_sha = ee753debb23ac5a925a0736cec116994166953c5`; canonical adoption merge `a4d32ee93e0ab95af8376ba0ca09e248070c5924`.
+- [x] P010 Require exact post-merge qualification on canonical adoption merge: CI `34144623816` SUCCESS and R3 `34144623829` SUCCESS.
+- [ ] P011 Canonicalize this state-only reconciliation with expected-head protection and require exact post-merge CI/R3 before B101 implementation starts.
 
 ## 004B1 portable vault contracts
 
-Blocked until review and provenance gates close and this leaf is re-bounded from live canonical truth.
+B101 is the only implementation leaf conditionally opened after P011 completes. B102-B105 remain blocked by dependency order.
 
 - [ ] B101 Add only reviewed `VaultId`, generation, freshness, lock/error, lease, and provider-neutral `SecretProtector` contract surface.
 - [ ] B102 Implement typed lock/unlock/protector/freshness errors and revocable keyed-handle lease.
