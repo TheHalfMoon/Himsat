@@ -6,8 +6,8 @@
 //! vault-root-key lifetime behavior.
 
 use crate::vault::{
-    AccessScope, HardwareBacking, KeyGeneration, ProtectorCapabilities, ProtectorError,
-    SecretProtector, UserPresencePolicy, VaultId,
+    AccessScope, KeyGeneration, ProtectorCapabilities, ProtectorError, SecretProtector,
+    UserPresencePolicy, VaultId,
 };
 
 /// Portable protector policy requested by Himsat.
@@ -20,10 +20,7 @@ pub struct ProtectorPolicy {
 impl ProtectorPolicy {
     /// Creates a portable requested policy.
     #[must_use]
-    pub const fn new(
-        access_scope: AccessScope,
-        user_presence_policy: UserPresencePolicy,
-    ) -> Self {
+    pub const fn new(access_scope: AccessScope, user_presence_policy: UserPresencePolicy) -> Self {
         Self {
             access_scope,
             user_presence_policy,
@@ -122,10 +119,16 @@ pub const fn access_scope_satisfies(actual: AccessScope, requested: AccessScope)
     match requested {
         AccessScope::AppExclusive => matches!(actual, AccessScope::AppExclusive),
         AccessScope::SameUserAccount => {
-            matches!(actual, AccessScope::AppExclusive | AccessScope::SameUserAccount)
+            matches!(
+                actual,
+                AccessScope::AppExclusive | AccessScope::SameUserAccount
+            )
         }
         AccessScope::SameUserSession => {
-            matches!(actual, AccessScope::AppExclusive | AccessScope::SameUserSession)
+            matches!(
+                actual,
+                AccessScope::AppExclusive | AccessScope::SameUserSession
+            )
         }
     }
 }
@@ -514,7 +517,10 @@ mod tests {
         )
         .expect("matching portable protector request must validate");
 
-        assert_eq!(capabilities.actual_access_scope(), AccessScope::AppExclusive);
+        assert_eq!(
+            capabilities.actual_access_scope(),
+            AccessScope::AppExclusive
+        );
         assert!(capabilities.requires_user_presence());
         assert_eq!(
             capabilities.hardware_backed_state(),
@@ -531,10 +537,8 @@ mod tests {
         };
         let expected_vault = vault(4);
         let expected_generation = generation(10);
-        let requested = ProtectorPolicy::new(
-            AccessScope::AppExclusive,
-            UserPresencePolicy::NotRequired,
-        );
+        let requested =
+            ProtectorPolicy::new(AccessScope::AppExclusive, UserPresencePolicy::NotRequired);
         let record = ProtectorRecordBinding::new(
             ProtectorOwner::HimsatApplication,
             expected_vault,
