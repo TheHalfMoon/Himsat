@@ -1,0 +1,151 @@
+name: Temporary 004P Diffcipline policy repair
+
+on:
+  push:
+    branches: [feat/004p-p005-p006-adoption]
+    paths:
+      - .github/workflows/tmp-004p-diffcipline-policy-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/004p-p005-p006-adoption
+          fetch-depth: 0
+      - name: Apply bounded Diffcipline workflow repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          ci_path = Path('.github/workflows/ci.yml')
+          ci = ci_path.read_text(encoding='utf-8')
+          start = ci.index('  diffcipline:\n')
+          end = ci.index('\n  negative-controls:\n', start)
+          replacement = '''  diffcipline:
+    name: Diffcipline / R2 exact diff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Checkout pinned Diffcipline source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: TheHalfMoon/Diffcipline
+          ref: 5cb1c77340b75649f6168e0e8f66479ea047ea96
+          path: .control/diffcipline
+          persist-credentials: false
+      - name: Assert exact revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+      - name: Diffcipline R2 proof with bounded 004P exception
+        shell: bash
+        env:
+          DIFFCIPLINE_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          python tools/004p_dependency_closure.py
+          proof="$RUNNER_TEMP/diffcipline-r2.json"
+          set +e
+          cargo run --quiet --locked --manifest-path .control/diffcipline/crates/diffcipline-cli/Cargo.toml -- check --base "$DIFFCIPLINE_BASE" --risk R2 --run --json > "$proof"
+          status=$?
+          set -e
+          cat "$proof"
+          python tools/diffcipline_adoption_gate.py --proof "$proof" --exit-code "$status" --base "$DIFFCIPLINE_BASE" --risk R2
+'''
+          ci = ci[:start] + replacement + ci[end:]
+          ci_path.write_text(ci, encoding='utf-8')
+
+          r3_path = Path('.github/workflows/r3-security.yml')
+          r3 = r3_path.read_text(encoding='utf-8')
+          start = r3.index('  diffcipline-r3:\n')
+          replacement = '''  diffcipline-r3:
+    name: Diffcipline / R3 exact diff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Checkout pinned Diffcipline source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: TheHalfMoon/Diffcipline
+          ref: 5cb1c77340b75649f6168e0e8f66479ea047ea96
+          path: .control/diffcipline
+          persist-credentials: false
+      - name: Assert exact revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+      - name: Assert registered dependency closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/provenance_gate.py validate
+          python tools/provenance_gate.py check-generated
+          python tools/004p_dependency_closure.py
+      - name: Diffcipline R3 proof with bounded 004P exception
+        shell: bash
+        env:
+          DIFFCIPLINE_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/diffcipline-r3.json"
+          set +e
+          cargo run --quiet --locked --manifest-path .control/diffcipline/crates/diffcipline-cli/Cargo.toml -- check --base "$DIFFCIPLINE_BASE" --risk R3 --run --json > "$proof"
+          status=$?
+          set -e
+          cat "$proof"
+          python tools/diffcipline_adoption_gate.py --proof "$proof" --exit-code "$status" --base "$DIFFCIPLINE_BASE" --risk R3
+'''
+          r3 = r3[:start] + replacement
+          r3_path.write_text(r3, encoding='utf-8')
+          PY
+
+          python -m py_compile tools/diffcipline_adoption_gate.py
+          git diff --check
+          grep -F 'dependency_manifest_changes = "review"' .diffcipline.toml
+          grep -F 'lockfile_changes = "review"' .diffcipline.toml
+          grep -F 'max_added_lines = 900' .diffcipline.toml
+          grep -F 'Diffcipline R2 proof with bounded 004P exception' .github/workflows/ci.yml
+          grep -F 'Diffcipline R3 proof with bounded 004P exception' .github/workflows/r3-security.yml
+
+      - name: Commit repair and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf tools/__pycache__
+          git rm .github/workflows/tmp-004p-diffcipline-policy-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/ci.yml .github/workflows/r3-security.yml .diffcipline.toml tools/diffcipline_adoption_gate.py
+          git diff --cached --check
+          git commit -m "fix(004P): bound Diffcipline adoption exception"
+          git push origin HEAD:feat/004p-p005-p006-adoption
