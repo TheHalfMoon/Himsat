@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  OPENSSL_RUST_USE_NASM: "0"
+
 concurrency:
   group: r3-security-${{ github.ref }}
   cancel-in-progress: true
@@ -33,6 +36,13 @@ jobs:
       - name: Assert exact revision
         shell: bash
         run: test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+      - name: Assert registered dependency closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/provenance_gate.py validate
+          python tools/provenance_gate.py check-generated
+          python tools/004p_dependency_closure.py
       - name: Diffcipline R3 proof
         uses: TheHalfMoon/Diffcipline@5cb1c77340b75649f6168e0e8f66479ea047ea96
         with:
