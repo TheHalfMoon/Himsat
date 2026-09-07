@@ -2,13 +2,16 @@
 //! Core provider-neutral contracts shared by Himsat runtime layers.
 //!
 //! Specification 004B1 adds portable vault contracts, revocable keyed-handle
-//! lease foundations, and portable secret-protector behavior. Cryptographic
-//! behavior, persistence, and platform secure-store implementations remain
-//! outside this module until separately authorized leaves.
+//! lease foundations, secret-protector behavior, and reviewed key-lifetime
+//! contracts. Cryptographic execution, persistence, and platform secure-store
+//! implementations remain outside this module until separately authorized leaves.
 
 /// Provider-neutral vault identity, freshness, lease identity, capability, and
 /// secret-protector contract surface.
 pub mod vault;
+
+/// B104 portable key-domain identifiers and fail-closed secret-lifetime teardown.
+pub mod vault_keys;
 
 /// B102 in-process revocable keyed-handle lease and typed access errors.
 pub mod vault_lease;
