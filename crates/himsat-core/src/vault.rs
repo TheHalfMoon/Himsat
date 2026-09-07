@@ -596,10 +596,7 @@ mod tests {
                 .get(),
             1
         );
-        assert_eq!(
-            FreshnessEpoch::new(1).expect("epoch one is valid").get(),
-            1
-        );
+        assert_eq!(FreshnessEpoch::new(1).expect("epoch one is valid").get(), 1);
     }
 
     #[test]
