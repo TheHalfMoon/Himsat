@@ -363,7 +363,7 @@ def run_native_fixture_matrix(root: Path, policy: dict[str, Any]) -> None:
                 parent_id="fixture-parent",
                 seen_ids=set(),
             )
-        except GateError as exc:
+        except (GateError, legacy.GateError) as exc:
             error = str(exc)
         if case["expected"] == "pass":
             if error is not None:
