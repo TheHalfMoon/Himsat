@@ -1,10 +1,10 @@
 #![forbid(unsafe_code)]
 //! Core provider-neutral contracts shared by Himsat runtime layers.
 //!
-//! Specification 004B1 adds portable vault contracts and revocable keyed-handle
-//! lease foundations. Cryptographic behavior, persistence, and platform
-//! secure-store implementations remain outside this module until separately
-//! authorized leaves.
+//! Specification 004B1 adds portable vault contracts, revocable keyed-handle
+//! lease foundations, and portable secret-protector behavior. Cryptographic
+//! behavior, persistence, and platform secure-store implementations remain
+//! outside this module until separately authorized leaves.
 
 /// Provider-neutral vault identity, freshness, lease identity, capability, and
 /// secret-protector contract surface.
@@ -12,6 +12,9 @@ pub mod vault;
 
 /// B102 in-process revocable keyed-handle lease and typed access errors.
 pub mod vault_lease;
+
+/// B103 portable secret-protector policy, capability, and binding validation.
+pub mod vault_protector;
 
 /// Immutable package identity exposed for repository smoke verification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
