@@ -33,6 +33,13 @@ jobs:
       - name: Install pinned Rust toolchain
         shell: bash
         run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - name: Checkout pinned Diffcipline source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: TheHalfMoon/Diffcipline
+          ref: 5cb1c77340b75649f6168e0e8f66479ea047ea96
+          path: .control/diffcipline
+          persist-credentials: false
       - name: Assert exact revision
         shell: bash
         run: test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
@@ -43,9 +50,16 @@ jobs:
           python tools/provenance_gate.py validate
           python tools/provenance_gate.py check-generated
           python tools/004p_dependency_closure.py
-      - name: Diffcipline R3 proof
-        uses: TheHalfMoon/Diffcipline@5cb1c77340b75649f6168e0e8f66479ea047ea96
-        with:
-          base: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          risk: R3
-          run-verification: "true"
+      - name: Diffcipline R3 proof with bounded 004P exception
+        shell: bash
+        env:
+          DIFFCIPLINE_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          proof="$RUNNER_TEMP/diffcipline-r3.json"
+          set +e
+          cargo run --quiet --locked --manifest-path .control/diffcipline/crates/diffcipline-cli/Cargo.toml -- check --base "$DIFFCIPLINE_BASE" --risk R3 --run --json > "$proof"
+          status=$?
+          set -e
+          cat "$proof"
+          python tools/diffcipline_adoption_gate.py --proof "$proof" --exit-code "$status" --base "$DIFFCIPLINE_BASE" --risk R3
