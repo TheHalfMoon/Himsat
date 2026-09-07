@@ -110,13 +110,16 @@
 - [x] P008 Obtain substantive exact-head CodeRabbit review comment `5573320081`: `APPROVE`, `BLOCKING_FINDINGS = NONE`, all recorded adoption-gate blockers resolved, and 004B authority boundary preserved.
 - [x] P009 Reconcile PR #36 and merge with `expected_head_sha = ee753debb23ac5a925a0736cec116994166953c5`; canonical adoption merge `a4d32ee93e0ab95af8376ba0ca09e248070c5924`.
 - [x] P010 Require exact post-merge qualification on canonical adoption merge: CI `34144623816` SUCCESS and R3 `34144623829` SUCCESS.
-- [ ] P011 Canonicalize this state-only reconciliation with expected-head protection and require exact post-merge CI/R3 before B101 implementation starts.
+- [ ] P011 Preserve the historical transport evidence limitation for PR #37: exact head `367348c2b11add2c15f7d25af92ca4679b2a19d1`, canonical merge `7ecba93ae0763a5165dd99ce0ec190cb106906de`, and post-merge CI `34146939013` / R3 `34146938921` are proven, but the historical merge API request body containing `expected_head_sha` is not reconstructible post hoc. Do not retroactively mark this transport proof PASS.
 
 ## 004B1 portable vault contracts
 
-B101 is the only implementation leaf conditionally opened after P011 completes. B102-B105 remain blocked by dependency order.
+B101 code is canonical and exact-post-merge qualified. Historical expected-head transport proof for PR #38 is not reconstructible post hoc and remains explicit negative/unknown evidence. B102 remains blocked until the B101/B102 forward-repair reconciliation below is explicitly expected-head guarded and exact-post-merge qualified.
 
-- [ ] B101 Add only reviewed `VaultId`, generation, freshness, lock/error, lease, and provider-neutral `SecretProtector` contract surface.
+- [x] B101 Add only reviewed `VaultId`, generation, freshness, lock/error, lease, and provider-neutral `SecretProtector` contract surface. Exact final head `ea82e1246095bb921dc9e7e40716076edbda41a6` passed CI `34148418394` and R3 `34148418341`; canonical merge `95cf1de6b57f26545fd3ad03d99e18c9f9dc0a5c` passed post-merge CI `34149709088` and R3 `34149708977`.
+- [ ] B101R001 Canonicalize the B101 final-evidence and B102 re-bound reconciliation without security-semantic, dependency, provenance, generated-artifact, workflow, donor, or product-runtime changes.
+- [ ] B101R002 Merge that exact reconciliation head with an explicit `expected_head_sha` guard and record the exact transport result durably.
+- [ ] B101R003 Verify canonical merge parentage and require exact post-merge CI/R3 SUCCESS before B102 implementation begins.
 - [ ] B102 Implement typed lock/unlock/protector/freshness errors and revocable keyed-handle lease.
 - [ ] B103 Implement reviewed `SecretProtector` behavior contract without pretending platform mechanics/capabilities are identical.
 - [ ] B104 Implement reviewed key hierarchy/domain separation; on lock/rotation/revocation/fatal failure revoke lease first, close handles, release VRK/Recovery KEK/purpose keys, and zeroize owned buffers where reviewed runtime support exists.
