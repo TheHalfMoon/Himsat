@@ -41,6 +41,38 @@ jobs:
           cargo --version
           rustfmt --version
           cargo clippy --version
+      - name: Select qualified Windows Perl for vendored OpenSSL
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidates = @()
+          $commands = @(Get-Command perl.exe -All -ErrorAction SilentlyContinue)
+          foreach ($command in $commands) {
+            if ($command.Source) { $candidates += $command.Source }
+          }
+          $known = @(
+            'C:\Strawberry\perl\bin\perl.exe',
+            'C:\Perl64\bin\perl.exe',
+            'C:\Perl\bin\perl.exe'
+          )
+          foreach ($candidate in $known) {
+            if (Test-Path -LiteralPath $candidate) { $candidates += $candidate }
+          }
+          $candidates = @($candidates | Select-Object -Unique)
+          if ($candidates.Count -eq 0) {
+            throw 'No Perl executable is available for the vendored OpenSSL build.'
+          }
+          foreach ($candidate in $candidates) {
+            Write-Host "Probing Perl candidate: $candidate"
+            & $candidate '-MLocale::Maketext::Simple' '-MIPC::Cmd' '-e' 'exit 0'
+            if ($LASTEXITCODE -eq 0) {
+              "OPENSSL_SRC_PERL=$candidate" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+              Write-Host "Qualified OPENSSL_SRC_PERL=$candidate"
+              exit 0
+            }
+          }
+          throw "No available Perl executable can load Locale::Maketext::Simple and IPC::Cmd. Candidates: $($candidates -join ', ')"
       - name: Formatting
         shell: bash
         run: cargo fmt --all -- --check
