@@ -65,9 +65,12 @@ def git(*args: str) -> str:
 
 
 def load_proof(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        raise ValueError("proof output is empty")
+    payload = json.loads(lines[-1])
     if not isinstance(payload, dict):
-        raise ValueError("proof must be a JSON object")
+        raise ValueError("final proof line must be a JSON object")
     return payload
 
 
