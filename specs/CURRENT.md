@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B104_CANONICAL_RECONCILING_B105_BOUND
+PROGRAM_STATE = SPEC_004_B105_CANONICAL_RECONCILING_B201_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -90,9 +90,25 @@ B104_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5576270121
 B104_CANONICAL_MERGE = 6578936f7051b548339f3cf95ca0d41e6629d8bc
 B104_POSTMERGE_CI = 34167236097_SUCCESS
 B104_POSTMERGE_R3 = 34167236079_SUCCESS
-NEXT_IMPLEMENTATION_LEAF = B105_POST_LOCK_HANDLE_IO_PROOF
-SPEC_004_IMPLEMENTATION_AUTHORITY = B105_ONLY_IF_THIS_B104_B105_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B105_ONLY_UNDER_THE_CONDITION_ABOVE
+B104_B105_RECONCILIATION_PR = 47
+B104_B105_RECONCILIATION_CANONICAL_MERGE = 623c0ad4207ecbbd5e404a2a32ba3cdb61006778
+B104_B105_RECONCILIATION_POSTMERGE_CI = 34168619451_SUCCESS
+B104_B105_RECONCILIATION_POSTMERGE_R3 = 34168619510_SUCCESS
+B105_DISPOSITION = CANONICAL_CLOSED
+B105_PR = 48
+B105_INITIAL_HEAD = 39d63bbf647f0f13aff1cefa9da0d7eb1a9fb119
+B105_INITIAL_CI = 34169460825_FAILURE_FORMATTING_NOT_PASS
+B105_HEAD = f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf
+B105_PREMERGE_CI = 34169567748_SUCCESS
+B105_PREMERGE_R3 = 34169567620_SUCCESS
+B105_PREMERGE_RECONCILIATION = PROVEN_COMMENT_5576822047
+B105_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5576824739
+B105_CANONICAL_MERGE = 73b13d38ac3e34143c813bda679e6e96ce01762e
+B105_POSTMERGE_CI = 34170861437_SUCCESS
+B105_POSTMERGE_R3 = 34170861436_SUCCESS
+NEXT_IMPLEMENTATION_LEAF = B201_HKDF_SHA256_DOMAIN_SEPARATION
+SPEC_004_IMPLEMENTATION_AUTHORITY = B201_ONLY_IF_THIS_B105_B201_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B201_ONLY_UNDER_THE_CONDITION_ABOVE
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -173,17 +189,36 @@ PR #46 was merged with explicit `expected_head_sha = e3c27cc2806feb2aa5ace7169e0
 
 Canonical B104 merge `6578936f7051b548339f3cf95ca0d41e6629d8bc` has exact parents `dec7555363c64726bc4835350ddf520fe44ff01a` and `e3c27cc2806feb2aa5ace7169e0507b9bd970a1c`. Exact push-triggered post-merge CI `34167236097` and R3 `34167236079` both reached terminal SUCCESS. Complete evidence is recorded in `b104-key-lifetime-final-evidence.md`.
 
-B104 is therefore canonical and closed only for its reviewed portable key-domain and secret-lifetime contract. Actual HKDF execution/vectors remain B201. Concrete post-lock/revocation/failure DB/blob I/O proof remains B105. SQLCipher, AEAD, Argon2id execution, native secure-store adapters, freshness persistence, backup/rotation/deletion, Specification 005 behavior, new dependency/donor adoption, and complete-memory-erasure claims remain outside B104.
+B104 is therefore canonical and closed only for its reviewed portable key-domain and secret-lifetime contract. Actual HKDF execution/vectors remain B201. Concrete post-lock/revocation/failure DB/blob I/O proof was assigned to B105. SQLCipher, AEAD, Argon2id execution, native secure-store adapters, freshness persistence, backup/rotation/deletion, Specification 005 behavior, new dependency/donor adoption, and complete-memory-erasure claims remain outside B104.
+
+## Canonical B105 disposition
+
+B105 implementation PR #48 started from exact canonical B104/B105 reconciliation merge `623c0ad4207ecbbd5e404a2a32ba3cdb61006778` and changed only:
+
+```text
+crates/himsat-core/src/lib.rs
+crates/himsat-core/src/vault_io.rs
+```
+
+Initial implementation head `39d63bbf647f0f13aff1cefa9da0d7eb1a9fb119` triggered CI `34169460825`, where Ubuntu and Windows Rust formatting failed. Their downstream lint/tests/registered-dependency-closure steps were skipped and remain NOT PASS. The failure was preserved in comment `5576654626` and repaired forward-only with no history rewrite.
+
+Final head `f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf` passed exact-head CI `34169567748` and R3 `34169567620`. The compare remained ahead-only from the canonical base (`2` ahead, `0` behind). No submitted review or review thread existed; Qodo billing-blocked and CodeRabbit auto-skip output were not counted as PASS. Durable final reconciliation comment `5576822047` records the pre-merge snapshot.
+
+PR #48 was merged with explicit `expected_head_sha = f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf`. Durable comment `5576824739` records successful guarded transport to canonical merge `73b13d38ac3e34143c813bda679e6e96ce01762e`.
+
+Canonical B105 merge `73b13d38ac3e34143c813bda679e6e96ce01762e` has exact parents `623c0ad4207ecbbd5e404a2a32ba3cdb61006778` and `f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf`; its tree matches the qualified final implementation head. Exact push-triggered post-merge CI `34170861437` and R3 `34170861436` both reached terminal SUCCESS.
+
+B105 is therefore canonical and closed only for provider-neutral lease-gated database/blob I/O authorization. Complete evidence is recorded in `b105-post-lock-io-final-evidence.md`. Process-abort cleanup gaps, runtime/compiler/register/allocator copies, swap/pagefile content, crash/core dumps, kernel/physical memory, and secrets already observed by a compromised unlocked process remain explicit residual risks.
 
 ## Active objective
 
-Canonicalize this B104 closeout/B105 rebound reconciliation without changing security semantics, product runtime behavior, dependency bytes, provenance entries, generated artifacts, workflows, donor material, or release posture.
+Canonicalize this B105 closeout/B201 rebound reconciliation without changing security semantics, product runtime behavior, dependency bytes, provenance entries, generated artifacts, workflows, donor material, or release posture.
 
-After this reconciliation itself is exact-head qualified, reconciled, merged with explicit expected-head protection, parentage-proven, and exact-post-merge qualified, execute only B105 as the next independently bounded Specification 004B1 implementation leaf.
+After this reconciliation itself is exact-head qualified, reconciled, merged with explicit expected-head protection, parentage-proven, and exact-post-merge qualified, execute only B201 as the next independently bounded Specification 004B2 implementation leaf.
 
-B105 owns the reviewed concrete proof that previously obtained database/blob handles reject reads and writes after lock, revocation, or fatal teardown, while preserving process-teardown, allocator-copy, swap, crash-dump, and compromised-unlocked-process limits as residual risk.
+B201 owns only reviewed HKDF-SHA-256 execution and deterministic derivation vectors using the already adopted `hkdf` and `sha2` dependencies: raw 16-byte `VaultId` salt, exact purpose-domain bytes plus `u64be(key_generation)` as `info`, and a 32-byte purpose-key output. It must preserve distinct structured-store, bounded-blob, and freshness-manifest domains.
 
-B105 must not implement actual HKDF-SHA-256 derivation or deterministic derivation vectors; those remain B201. B105 must not expand into SQLCipher integration or encrypted structured-store qualification; those remain B301-B307. B105 does not authorize native protector adapters, AEAD/recovery-envelope execution, freshness persistence, backup/restore/rotation/deletion implementation, Specification 005 media behavior, new dependency adoption, donor-code adoption, release, FIPS, or compliance claims.
+B201 must not expand into B202 bounded-blob AEAD/envelope work, B203 nonce generation/reservation, B204 recovery Argon2id/envelope execution, B301 SQLCipher integration, B401 native protectors, B501 freshness persistence/backup/rotation/deletion, Specification 005 media behavior, new dependency adoption, donor-code adoption, release, FIPS, or compliance claims.
 
 ## Specification 004 delivery chain
 
@@ -198,9 +233,11 @@ B105 must not implement actual HKDF-SHA-256 derivation or deterministic derivati
   -> B103 SecretProtector behavior            CANONICAL_QUALIFIED
   -> B103/B104 state reconciliation           CANONICAL_QUALIFIED
   -> B104 key hierarchy/secret lifetime       CANONICAL_QUALIFIED
-  -> B104/B105 state reconciliation           ACTIVE
-  -> B105 concrete post-lock handle proof     NEXT_AFTER_RECONCILIATION_QUALIFICATION
-  -> B201-B206 crypto envelope foundation     BLOCKED_PENDING_B105
+  -> B104/B105 state reconciliation           CANONICAL_QUALIFIED
+  -> B105 concrete post-lock handle proof     CANONICAL_QUALIFIED
+  -> B105/B201 state reconciliation           ACTIVE
+  -> B201 HKDF-SHA-256 derivation             NEXT_AFTER_RECONCILIATION_QUALIFICATION
+  -> B202-B206 crypto envelope foundation     BLOCKED_PENDING_PRIOR_LEAVES
   -> B301-B307 encrypted structured store     BLOCKED_PENDING_PRIOR_LEAVES
   -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
@@ -226,6 +263,7 @@ specs/004-vault-key-crypto/b101-portable-contracts-final-evidence.md
 specs/004-vault-key-crypto/b102-revocable-lease-final-evidence.md
 specs/004-vault-key-crypto/b103-secret-protector-final-evidence.md
 specs/004-vault-key-crypto/b104-key-lifetime-final-evidence.md
+specs/004-vault-key-crypto/b105-post-lock-io-final-evidence.md
 governance/provenance/policy.json
 governance/provenance/registry.json
 governance/generated/sbom.json
