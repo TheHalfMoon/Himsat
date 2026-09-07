@@ -336,7 +336,9 @@ mod tests {
         KEY_MATERIAL_BYTES, KeyDerivationContext, KeyPurpose, KeyedHandleCloser, OwnedKeyMaterial,
         PlaintextCache, VaultKeyMaterial, VaultSessionLifetime, VaultTeardownReason,
     };
-    use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity, VaultLeaseState};
+    use crate::vault::{
+        KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity, VaultLeaseState,
+    };
     use crate::vault_lease::{KeyedHandleError, KeyedHandleLease, VaultLease};
 
     fn identity() -> VaultLeaseIdentity {
@@ -536,7 +538,10 @@ mod tests {
 
         assert_eq!(session.teardown(VaultTeardownReason::Lock), Ok(()));
         assert_eq!(session.teardown(VaultTeardownReason::Revocation), Ok(()));
-        assert_eq!(external_handle.authorize().err(), Some(KeyedHandleError::Locked));
+        assert_eq!(
+            external_handle.authorize().err(),
+            Some(KeyedHandleError::Locked)
+        );
         assert_eq!(session.lease_state(), VaultLeaseState::Revoked);
         assert!(session.keys_released());
         assert_eq!(session.handle_closer.calls, 2);
