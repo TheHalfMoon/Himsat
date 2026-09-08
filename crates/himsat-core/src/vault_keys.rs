@@ -143,6 +143,18 @@ impl OwnedKeyMaterial {
         Self { bytes }
     }
 
+    /// Borrows the owned key bytes only for one crate-internal cryptographic operation.
+    ///
+    /// This keeps the public secret surface opaque while allowing separately
+    /// authorized in-crate providers to consume the B201-derived key without
+    /// introducing a cloneable/copyable secret getter.
+    pub(crate) fn with_bytes<T>(
+        &self,
+        operation: impl FnOnce(&[u8; KEY_MATERIAL_BYTES]) -> T,
+    ) -> T {
+        operation(&self.bytes)
+    }
+
     fn zeroize_owned(&mut self) {
         self.bytes.zeroize();
     }
