@@ -1,14 +1,14 @@
-//! B301 integration for the exact reviewed SQLCipher provider strategy.
+//! B301-B302 integration for the exact reviewed SQLCipher provider strategy.
 //!
-//! This leaf opens the already provenance-registered SQLCipher build, applies the
-//! B201 `StructuredStore` purpose key as SQLCipher raw key material, verifies the
-//! exact SQLCipher/embedded-SQLite runtime identities, and immediately places the
-//! connection behind the existing B105 lease gate.
+//! B301 opens the already provenance-registered SQLCipher build, applies the B201
+//! `StructuredStore` purpose key as SQLCipher raw key material, verifies the exact
+//! SQLCipher/embedded-SQLite runtime identities, and places the connection behind
+//! the existing B105 lease gate. B302 additionally requires the keyed connection
+//! to report encryption active before any handle can be returned.
 //!
-//! B301 deliberately does not prove that encryption is active, configure
-//! temp/WAL/journal policy, run integrity checks, exercise wrong-key/corruption
-//! fixtures, prove plaintext-spill absence, or implement migration. Those remain
-//! B302-B307 respectively.
+//! B302 deliberately does not configure temp/WAL/journal policy, run integrity
+//! checks, exercise wrong-key/corruption fixtures, prove plaintext-spill absence,
+//! or implement migration. Those remain B303-B307 respectively.
 
 use crate::vault::VaultLeaseIdentity;
 use crate::vault_io::LeaseBoundDatabaseHandle;
@@ -26,7 +26,7 @@ pub const EXPECTED_SQLCIPHER_RUNTIME_VERSION: &str = "4.14.0 community";
 /// Exact SQLite runtime identity embedded by the reviewed SQLCipher source closure.
 pub const EXPECTED_SQLITE_RUNTIME_VERSION: &str = "3.51.3";
 
-/// Typed fail-closed errors for the B301 provider-open boundary.
+/// Typed fail-closed errors for the B301-B302 provider-open boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SqlCipherOpenError {
     /// The keyed-handle lease is already locked or revoked.
@@ -43,6 +43,10 @@ pub enum SqlCipherOpenError {
     ProviderVersion,
     /// The runtime did not report the exact reviewed embedded SQLite identity.
     SqliteVersion,
+    /// The SQLCipher encryption-status query could not produce its reviewed scalar.
+    EncryptionStatus,
+    /// SQLCipher did not positively report encryption active.
+    EncryptionInactive,
 }
 
 impl fmt::Display for SqlCipherOpenError {
@@ -59,6 +63,8 @@ impl fmt::Display for SqlCipherOpenError {
             Self::SqliteVersion => {
                 "embedded SQLite runtime identity does not match the reviewed provider"
             }
+            Self::EncryptionStatus => "SQLCipher encryption-active status could not be proven",
+            Self::EncryptionInactive => "SQLCipher encryption is not active",
         };
         f.write_str(message)
     }
@@ -80,14 +86,14 @@ impl From<KeyedHandleError> for SqlCipherOpenError {
 }
 
 struct SqlCipherDatabase {
-    // B301 keeps the raw provider private. Later authorized leaves may extend the
+    // The raw provider remains private. Later authorized leaves may extend the
     // outer handle but must continue to cross the B105 lease gate for keyed I/O.
     _connection: Connection,
 }
 
-/// Lease-bound SQLCipher handle created from the reviewed structured-store key.
+/// Lease-bound SQLCipher handle created only after encryption-active proof succeeds.
 ///
-/// The raw `rusqlite::Connection` is intentionally not exposed. B302-B307 may
+/// The raw `rusqlite::Connection` is intentionally not exposed. B303-B307 may
 /// extend this type only through separately authorized, lease-gated behavior.
 pub struct SqlCipherDatabaseHandle {
     inner: LeaseBoundDatabaseHandle<SqlCipherDatabase>,
@@ -110,13 +116,14 @@ impl fmt::Debug for SqlCipherDatabaseHandle {
     }
 }
 
-/// Opens and keys the exact reviewed SQLCipher provider, then binds it to a live lease.
+/// Opens and keys the reviewed SQLCipher provider and proves encryption is active.
 ///
 /// Validation and lease authorization occur before the path is opened. The key
 /// operation uses SQLCipher's reviewed raw 32-byte key syntax so Himsat does not
 /// introduce an additional passphrase KDF. The temporary Rust SQL buffer is
 /// zeroized after the provider call; provider/runtime/compiler copies remain
-/// within the existing process-memory residual-risk boundary.
+/// within the existing process-memory residual-risk boundary. The connection is
+/// not returned unless `PRAGMA cipher_status` reports the exact active value `1`.
 pub fn open_sqlcipher_database<P: AsRef<Path>>(
     path: P,
     lease: KeyedHandleLease,
@@ -142,6 +149,7 @@ pub fn open_sqlcipher_database<P: AsRef<Path>>(
 
         apply_raw_key(&connection, &structured_key)?;
         verify_runtime_identity(&connection)?;
+        verify_encryption_active(&connection)?;
 
         SqlCipherDatabase {
             _connection: connection,
@@ -192,6 +200,19 @@ fn verify_runtime_identity(connection: &Connection) -> Result<(), SqlCipherOpenE
     Ok(())
 }
 
+fn verify_encryption_active(connection: &Connection) -> Result<(), SqlCipherOpenError> {
+    let status = connection.query_row("PRAGMA cipher_status;", [], |row| row.get::<_, i64>(0));
+    require_encryption_active(status)
+}
+
+fn require_encryption_active(status: rusqlite::Result<i64>) -> Result<(), SqlCipherOpenError> {
+    match status {
+        Ok(1) => Ok(()),
+        Ok(_) => Err(SqlCipherOpenError::EncryptionInactive),
+        Err(_) => Err(SqlCipherOpenError::EncryptionStatus),
+    }
+}
+
 fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
 
@@ -209,14 +230,15 @@ fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
 mod tests {
     use super::{
         EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION, SqlCipherOpenError,
-        open_sqlcipher_database, provider_open_flags, raw_key_pragma,
+        open_sqlcipher_database, provider_open_flags, raw_key_pragma, require_encryption_active,
+        verify_encryption_active,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
         KEY_MATERIAL_BYTES, KeyDerivationContext, KeyPurpose, OwnedKeyMaterial,
     };
     use crate::vault_lease::{KeyedHandleError, VaultLease};
-    use rusqlite::OpenFlags;
+    use rusqlite::{Connection, Error as RusqliteError, OpenFlags};
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -241,7 +263,7 @@ mod tests {
     fn unused_path(label: &str) -> PathBuf {
         let sequence = NEXT_PATH.fetch_add(1, Ordering::Relaxed);
         std::env::temp_dir().join(format!(
-            "himsat-b301-{label}-{}-{sequence}.db",
+            "himsat-b302-{label}-{}-{sequence}.db",
             std::process::id()
         ))
     }
@@ -269,7 +291,7 @@ mod tests {
     }
 
     #[test]
-    fn exact_reviewed_sqlcipher_runtime_opens_behind_lease_gate() {
+    fn exact_reviewed_sqlcipher_runtime_opens_only_after_encryption_active_proof() {
         let identity = identity();
         let lease = VaultLease::new(identity);
         let handle = open_sqlcipher_database(
@@ -278,11 +300,42 @@ mod tests {
             context(KeyPurpose::StructuredStore),
             &vrk(),
         )
-        .expect("reviewed SQLCipher provider must open with exact runtime identities");
+        .expect("reviewed SQLCipher provider must positively report encryption active");
 
         assert_eq!(handle.identity(), identity);
         assert_eq!(EXPECTED_SQLCIPHER_RUNTIME_VERSION, "4.14.0 community");
         assert_eq!(EXPECTED_SQLITE_RUNTIME_VERSION, "3.51.3");
+    }
+
+    #[test]
+    fn exact_unkeyed_sqlcipher_provider_reports_encryption_inactive() {
+        let connection = Connection::open_in_memory().expect("test SQLCipher connection must open");
+
+        assert_eq!(
+            verify_encryption_active(&connection),
+            Err(SqlCipherOpenError::EncryptionInactive)
+        );
+    }
+
+    #[test]
+    fn encryption_status_accepts_only_exact_active_scalar() {
+        assert_eq!(require_encryption_active(Ok(1)), Ok(()));
+        assert_eq!(
+            require_encryption_active(Ok(0)),
+            Err(SqlCipherOpenError::EncryptionInactive)
+        );
+        assert_eq!(
+            require_encryption_active(Ok(2)),
+            Err(SqlCipherOpenError::EncryptionInactive)
+        );
+    }
+
+    #[test]
+    fn encryption_status_query_error_fails_closed() {
+        assert_eq!(
+            require_encryption_active(Err(RusqliteError::InvalidQuery)),
+            Err(SqlCipherOpenError::EncryptionStatus)
+        );
     }
 
     #[test]
