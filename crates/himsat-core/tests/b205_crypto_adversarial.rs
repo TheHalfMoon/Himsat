@@ -7,9 +7,9 @@
 
 use himsat_core::vault::{KeyGeneration, VaultId};
 use himsat_core::vault_blob::{
-    BOUNDED_BLOB_HEADER_BYTES, BOUNDED_BLOB_MAX_ENVELOPE_BYTES,
-    BOUNDED_BLOB_MAX_PLAINTEXT_BYTES, BOUNDED_BLOB_MIN_ENVELOPE_BYTES, BoundedBlobContext,
-    BoundedBlobError, decrypt_bounded_blob, encrypt_bounded_blob,
+    BOUNDED_BLOB_HEADER_BYTES, BOUNDED_BLOB_MAX_ENVELOPE_BYTES, BOUNDED_BLOB_MAX_PLAINTEXT_BYTES,
+    BOUNDED_BLOB_MIN_ENVELOPE_BYTES, BoundedBlobContext, BoundedBlobError, decrypt_bounded_blob,
+    encrypt_bounded_blob,
 };
 use himsat_core::vault_keys::OwnedKeyMaterial;
 use himsat_core::vault_nonce::{
@@ -46,9 +46,8 @@ const RECOVERY_CIPHERTEXT_LENGTH_OFFSET: usize = 115;
 const RECOVERY_CIPHERTEXT_OFFSET: usize = 119;
 
 const TEST_VRK: [u8; 32] = [
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
-    0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
-    0x1e, 0x1f,
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
 ];
 const BLOB_VAULT: [u8; 16] = [0x11; 16];
 const BLOB_ARTIFACT: [u8; 16] = [0x22; 16];
@@ -125,7 +124,10 @@ fn bounded_blob_fixed_structure_rejects_each_identifier_and_malformed_length() {
 
     for (offset, expected) in [
         (0, BoundedBlobError::InvalidDomain),
-        (BLOB_VERSION_OFFSET + 1, BoundedBlobError::UnsupportedVersion),
+        (
+            BLOB_VERSION_OFFSET + 1,
+            BoundedBlobError::UnsupportedVersion,
+        ),
         (
             BLOB_SUITE_OFFSET + 1,
             BoundedBlobError::UnsupportedCipherSuite,
@@ -255,10 +257,7 @@ fn bounded_blob_zero_max_max_plus_one_and_overflow_sized_lengths_are_safe() {
         "exact maximum public lengths must pass bounds arithmetic and then require the exact body without allocating it"
     );
 
-    for rejected_length in [
-        (BOUNDED_BLOB_MAX_PLAINTEXT_BYTES as u64) + 1,
-        u64::MAX,
-    ] {
+    for rejected_length in [(BOUNDED_BLOB_MAX_PLAINTEXT_BYTES as u64) + 1, u64::MAX] {
         let mut oversized = original.clone();
         oversized[BLOB_PLAINTEXT_LENGTH_OFFSET..BLOB_PLAINTEXT_LENGTH_OFFSET + 8]
             .copy_from_slice(&rejected_length.to_be_bytes());
@@ -323,12 +322,7 @@ fn recovery_structure_policy_and_kdf_parameters_fail_before_authentication() {
         noncanonical[RECOVERY_MEMORY_OFFSET..RECOVERY_MEMORY_OFFSET + 4]
             .copy_from_slice(&memory_kib.to_be_bytes());
         assert_eq!(
-            decrypt_recovery_envelope(
-                recovery_context(),
-                RECOVERY_PASSPHRASE,
-                &noncanonical,
-            )
-            .err(),
+            decrypt_recovery_envelope(recovery_context(), RECOVERY_PASSPHRASE, &noncanonical).err(),
             Some(RecoveryEnvelopeError::InvalidArgon2Parameters),
             "weaker and larger recovery profiles must both fail before KDF allocation"
         );
@@ -337,12 +331,7 @@ fn recovery_structure_policy_and_kdf_parameters_fail_before_authentication() {
     let mut zero_generation = original.clone();
     zero_generation[RECOVERY_GENERATION_OFFSET..RECOVERY_GENERATION_OFFSET + 8].fill(0);
     assert_eq!(
-        decrypt_recovery_envelope(
-            recovery_context(),
-            RECOVERY_PASSPHRASE,
-            &zero_generation,
-        )
-        .err(),
+        decrypt_recovery_envelope(recovery_context(), RECOVERY_PASSPHRASE, &zero_generation).err(),
         Some(RecoveryEnvelopeError::InvalidGeneration)
     );
 
@@ -374,12 +363,7 @@ fn recovery_structure_policy_and_kdf_parameters_fail_before_authentication() {
 fn recovery_wrong_passphrase_aad_inputs_ciphertext_tag_and_transplants_fail_uniformly() {
     let original = from_hex(RECOVERY_ENVELOPE_HEX);
     assert_eq!(
-        decrypt_recovery_envelope(
-            recovery_context(),
-            "wrong horse battery staple",
-            &original,
-        )
-        .err(),
+        decrypt_recovery_envelope(recovery_context(), "wrong horse battery staple", &original).err(),
         Some(RecoveryEnvelopeError::RecoveryAuthenticationFailed)
     );
 
