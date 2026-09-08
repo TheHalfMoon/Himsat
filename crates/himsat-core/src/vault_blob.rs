@@ -511,11 +511,7 @@ mod tests {
     #[test]
     fn malformed_lengths_truncation_and_trailing_data_fail_closed() {
         assert_eq!(
-            decrypt_bounded_blob(
-                &vrk(),
-                context(),
-                &[0_u8; BOUNDED_BLOB_HEADER_BYTES - 1]
-            ),
+            decrypt_bounded_blob(&vrk(), context(), &[0_u8; BOUNDED_BLOB_HEADER_BYTES - 1]),
             Err(BoundedBlobError::TruncatedEnvelope)
         );
 
