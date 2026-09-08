@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B304_CANONICAL_RECONCILING_B305_BOUND
+PROGRAM_STATE = SPEC_004_B305_CANONICAL_RECONCILING_B306_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -36,10 +36,12 @@ B302_B303_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
 B303_DISPOSITION = CANONICAL_CLOSED
 B303_B304_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
 B304_DISPOSITION = CANONICAL_CLOSED
-B304_B305_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B305_WRONG_KEY_CORRUPTION_UNSUPPORTED_PROVIDER_VERSION_FIXTURES_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B305_ONLY_IF_THIS_B304_B305_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B305_SQLCIPHER_NEGATIVE_FIXTURES_ONLY_UNDER_THE_CONDITION_ABOVE
+B304_B305_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
+B305_DISPOSITION = CANONICAL_CLOSED
+B305_B306_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B306_PLAINTEXT_SPILL_MARKER_LOGICAL_ID_FILENAME_QUALIFICATION_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B306_ONLY_IF_THIS_B305_B306_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B306_SQLCIPHER_PLAINTEXT_SPILL_QUALIFICATION_ONLY_UNDER_THE_CONDITION_ABOVE
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -416,11 +418,21 @@ Exact push-triggered post-merge CI `34283841909` and R3 `34283842070` both reach
 
 B304 is therefore canonical and closed only for the lease-gated normal SQLite integrity and SQLCipher cipher/page-authentication integrity boundary.
 
+## Canonical B304/B305 reconciliation disposition
+
+The B304/B305 reconciliation PR #67 exact head `bfc9bea223975edf4a0f71812e38c58de6ed8443` passed CI `34285446663` and R3 `34285446650`, was reconciled by repository-owner review `5147723088`, merged with explicit expected-head transport comment `5592820085` as canonical `5806adb8aa7c0d4cdf8b8f74fe3c3503e204e4be`, has exact parentage `bfba47dd43d2b1c8ca94a9a1fb0c7d0c94a142e7` + `bfc9bea223975edf4a0f71812e38c58de6ed8443`, and passed exact push-triggered CI `34286770543` plus R3 `34286770579`.
+
+## Canonical B305 disposition
+
+B305 implementation PR #68 exact head `55f512820d82100c1f60f6bc7bb79450a9b6181f` changed only `crates/himsat-core/src/vault_sqlcipher.rs`. It adds genuine wrong-key and persisted encrypted-page corruption fixtures plus private exact provider/version validator tests. Pre-merge CI `34288208755` and R3 `34288208747` succeeded on attempt 1. Repository-owner reconciliation review `5147906837` is governance evidence only and does not satisfy Q009. Guarded transport comment `5593093765` bound `expected_head_sha` to the exact final head.
+
+Canonical merge `e27a0b2921af2661037b7af581f6be737c1352de` has exact parents `5806adb8aa7c0d4cdf8b8f74fe3c3503e204e4be` + `55f512820d82100c1f60f6bc7bb79450a9b6181f` and tree `2c7d73ca294bb6fe7970e258f0ed99c628a5ef8a`. Exact push-triggered CI `34289111683` and R3 `34289111736` succeeded on attempt 1. Byte-identical duplicate PR #69 was closed without merge and is not qualification evidence. Complete evidence is recorded in `b305-negative-fixtures-final-evidence.md`.
+
 ## Active reconciliation objective
 
-Canonicalize B304 final evidence and bind the next implementation frontier to B305 without changing security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
+Canonicalize B305 final evidence and bind the next implementation frontier to B306 without changing security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, B307 migration, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
 
-This B304/B305 reconciliation must itself:
+This B305/B306 reconciliation must itself:
 
 1. pass exact-head CI and R3;
 2. be reconciled against live reviews, review threads, comments, exact diff, `main`, and mergeability;
@@ -428,28 +440,15 @@ This B304/B305 reconciliation must itself:
 4. prove exact canonical parentage; and
 5. pass exact push-triggered post-merge CI and R3.
 
-Only after all five conditions are proven may B305 work begin from the resulting exact canonical `main`.
+Only after all five conditions are proven may B306 work begin from the resulting exact canonical `main`.
 
-## B305 bounded scope after reconciliation qualification
+## B306 bounded scope after reconciliation qualification
 
-B305 owns only wrong-key, corruption, unsupported-provider, and unsupported-version fixtures for the exact adopted SQLCipher provider path.
+B306 owns only plaintext-spill qualification for the already reviewed SQLCipher path: semantic fixture markers and logical IDs must be absent from encrypted DB/WAL/rollback-journal/file-backed-temp bytes and from public filenames under the qualified configuration.
 
-The fixtures must preserve the existing fail-closed production boundaries and prove negative behavior without introducing a fallback provider, weakening version/provider identity checks, exposing raw keyed connection state, or treating skipped/unsupported evidence as PASS.
+Qualification must use genuine file-backed WAL and rollback-journal behavior where those sidecars exist, retain `temp_store = MEMORY`, avoid putting the tested semantic marker or logical ID into the qualification filename itself, and treat unavailable evidence as NOT PROVEN rather than PASS.
 
-B305 may extend bounded test helpers as necessary to exercise the existing provider-open and integrity failure surfaces, but production semantics may change only if a fixture proves the current fail-closed path is incomplete and the repair remains within B305 authority.
-
-B305 must not absorb:
-
-- B306 plaintext-spill, logical-ID, semantic-marker, file-backed-temp, or public-filename qualification;
-- B307 copy-verify-publish migration;
-- B401-B406 platform protector implementation;
-- B501-B506 freshness/backup/rotation/deletion;
-- Q009 independent substantive crypto/security review;
-- Specification 005 behavior;
-- new donor/dependency adoption; or
-- release, FIPS, or compliance claims.
-
-Any unsupported provider/version, wrong key, or corruption condition that cannot be represented with genuine evidence must remain NOT PROVEN rather than being simulated as a passing qualification result.
+B306 must not absorb B307 copy-verify-publish migration, B401-B406 platform protectors, B501-B506 freshness/backup/rotation/deletion, Q009 independent review, Specification 005 behavior, new donor/dependency adoption, or release/FIPS/compliance claims.
 
 ## Specification 004 delivery chain
 
@@ -467,8 +466,10 @@ Any unsupported provider/version, wrong key, or corruption condition that cannot
   -> B303 provider/temp/journal posture       CANONICAL_QUALIFIED
   -> B303/B304 state reconciliation           CANONICAL_QUALIFIED
   -> B304 normal/cipher integrity             CANONICAL_QUALIFIED
-  -> B304/B305 state reconciliation           ACTIVE
-  -> B305-B307 encrypted structured store     B305_NEXT_AFTER_RECONCILIATION_QUALIFICATION
+  -> B304/B305 state reconciliation           CANONICAL_QUALIFIED
+  -> B305 negative SQLCipher fixtures          CANONICAL_QUALIFIED
+  -> B305/B306 state reconciliation           ACTIVE
+  -> B306-B307 encrypted structured store     B306_NEXT_AFTER_RECONCILIATION_QUALIFICATION
   -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
