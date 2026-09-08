@@ -316,7 +316,9 @@ fn derive_recovery_kek(
         return Err(map_argon2_error(error));
     }
 
-    Ok(OwnedKeyMaterial::from_bytes(output))
+    let recovery_kek = OwnedKeyMaterial::from_bytes(output);
+    output.zeroize();
+    Ok(recovery_kek)
 }
 
 fn encrypt_with_material(
@@ -462,7 +464,9 @@ pub fn decrypt_recovery_envelope(
     let mut vrk = [0_u8; KEY_MATERIAL_BYTES];
     vrk.copy_from_slice(&plaintext);
     plaintext.fill(0);
-    Ok(OwnedKeyMaterial::from_bytes(vrk))
+    let owned_vrk = OwnedKeyMaterial::from_bytes(vrk);
+    vrk.zeroize();
+    Ok(owned_vrk)
 }
 
 #[cfg(test)]
