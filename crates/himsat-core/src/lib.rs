@@ -4,9 +4,12 @@
 //! Specification 004B1 adds portable vault contracts, revocable keyed-handle
 //! lease foundations, secret-protector behavior, reviewed key-lifetime
 //! contracts, and lease-gated database/blob I/O proof. B201 adds reviewed
-//! HKDF-SHA-256 purpose-key derivation. B202 adds only the reviewed bounded-blob
-//! XChaCha20-Poly1305 envelope. Persistence providers and platform secure-store
-//! implementations remain outside this module until separately authorized leaves.
+//! HKDF-SHA-256 purpose-key derivation. B202 adds the reviewed bounded-blob
+//! XChaCha20-Poly1305 envelope. B203 adds the reviewed OS-CSPRNG nonce lifecycle
+//! and in-process reservation/collision discipline without implementing manifest
+//! persistence or freshness anchoring. Persistence providers and platform
+//! secure-store implementations remain outside this module until separately
+//! authorized leaves.
 
 /// Provider-neutral vault identity, freshness, lease identity, capability, and
 /// secret-protector contract surface.
@@ -23,6 +26,9 @@ pub mod vault_keys;
 
 /// B102 in-process revocable keyed-handle lease and typed access errors.
 pub mod vault_lease;
+
+/// B203 OS-CSPRNG nonce generation, reservation, retry, restore, and collision policy.
+pub mod vault_nonce;
 
 /// B103 portable secret-protector policy, capability, and binding validation.
 pub mod vault_protector;
