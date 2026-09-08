@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B301_CANONICAL_RECONCILING_B302_BOUND
+PROGRAM_STATE = SPEC_004_B302_CANONICAL_RECONCILING_B303_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -30,10 +30,12 @@ B205_DISPOSITION = CANONICAL_CLOSED
 B206_DISPOSITION = CLOSED_SCOPE_BOUNDARY_SPEC_005
 B301_DISPOSITION = CANONICAL_CLOSED
 B205_B301_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
-B301_B302_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B302_ENCRYPTION_ACTIVE_PROOF_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B302_ONLY_IF_THIS_B301_B302_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B302_SQLCIPHER_ENCRYPTION_ACTIVE_PROOF_ONLY_UNDER_THE_CONDITION_ABOVE
+B301_B302_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
+B302_DISPOSITION = CANONICAL_CLOSED
+B302_B303_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B303_TEMP_WAL_JOURNAL_PROVIDER_BUILD_SETTINGS_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B303_ONLY_IF_THIS_B302_B303_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B303_SQLCIPHER_TEMP_WAL_JOURNAL_PROVIDER_BUILD_SETTINGS_ONLY_UNDER_THE_CONDITION_ABOVE
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -50,9 +52,9 @@ Specification 004P is closed canonically. The reviewed dependency closure alread
 
 `P011` remains unchecked in `tasks.md`. Historical PR #37 has exact head, canonical merge, parentage, and post-merge CI/R3 evidence, but the historical merge API request body containing the exact `expected_head_sha` argument is not reconstructible post hoc. The repository does not fabricate or retroactively upgrade that missing transport evidence.
 
-Q009 also remains unsatisfied. Repository-owner evidence, implementation tests, CI/R3 automation, billing-blocked/skipped review bots, or neutral automation do not substitute for the required independent substantive crypto/security review of the exact implementation revision.
+Q009 also remains unsatisfied. Repository-owner evidence, implementation tests, CI/R3 automation, billing-blocked/skipped review bots, Cubic neutral output, or other automation do not substitute for the required genuinely independent substantive crypto/security review of the exact implementation revision.
 
-## Canonical implementation lineage through B301
+## Canonical implementation lineage through B302
 
 ```text
 B101_CANONICAL_MERGE = 95cf1de6b57f26545fd3ad03d99e18c9f9dc0a5c
@@ -76,9 +78,11 @@ B204_B205_RECONCILIATION = 854373dc4fd44cc496b9e52f9f14804cdbf750aa
 B205_CANONICAL_MERGE = 4b8a40fff9f42be87fdd7d00c9f9f58a511cc1cf
 B205_B301_RECONCILIATION = c002bc21706bd90622586d453cb9ed9722d53fbb
 B301_CANONICAL_MERGE = 6c30399da307b1b5ea23988a99edf540872cad42
+B301_B302_RECONCILIATION = 8af8ddfa4084f98655e692c149e972edf7f7368b
+B302_CANONICAL_MERGE = 001e274a321cd0f6c472ce768f1a9910165598fe
 ```
 
-Complete leaf evidence remains under `specs/004-vault-key-crypto/`, including `b201-hkdf-final-evidence.md`, `b202-bounded-blob-final-evidence.md`, `b203-nonce-lifecycle-final-evidence.md`, `b204-recovery-envelope-final-evidence.md`, `b205-crypto-adversarial-final-evidence.md`, and `b301-sqlcipher-provider-final-evidence.md` once this reconciliation becomes canonical.
+Complete leaf evidence remains under `specs/004-vault-key-crypto/`, including `b201-hkdf-final-evidence.md`, `b202-bounded-blob-final-evidence.md`, `b203-nonce-lifecycle-final-evidence.md`, `b204-recovery-envelope-final-evidence.md`, `b205-crypto-adversarial-final-evidence.md`, `b301-sqlcipher-provider-final-evidence.md`, and `b302-encryption-active-final-evidence.md` once this reconciliation becomes canonical.
 
 ## Canonical B205/B301 reconciliation disposition
 
@@ -102,8 +106,6 @@ POSTMERGE_R3 = 34255936283 / run #131 / SUCCESS
 ```
 
 Durable repository-owner pre-merge reconciliation review: `5144845278`. Durable guarded-transport comment: `5589030694`. Durable post-merge reconciliation comment: `5589241065`.
-
-The prior task ledger left B205R001-B205R003 unchecked despite this proven live evidence. This reconciliation repairs that state forward-only; it does not alter historical commits or upgrade unavailable evidence.
 
 ## Canonical B301 disposition
 
@@ -143,9 +145,7 @@ a2243bee1a4c3adbe704cf594f925ff7a947ab36
 
 No predecessor run was rerun or retroactively reclassified.
 
-Final exact head `630ca6ccd545a49d81efbdb08cb1efbab9cab0e4` passed CI `34258332677` and R3 `34258332704`. Exact-head Ubuntu execution observed `70 + 3 + 6 + 10` passing tests with zero failures; all six B301 unit tests passed, including the exact reviewed SQLCipher runtime-open check.
-
-No inline review thread blocked the merge. Qodo billing-blocked and CodeRabbit auto-skipped outputs were NOT PASS. Repository-owner reconciliation review `5145171484` is durable evidence but is not an independent substantive crypto/security approval and does not satisfy Q009.
+Final exact head `630ca6ccd545a49d81efbdb08cb1efbab9cab0e4` passed CI `34258332677` and R3 `34258332704`. No inline review thread blocked the merge. Qodo billing-blocked and CodeRabbit auto-skipped outputs were NOT PASS. Repository-owner reconciliation review `5145171484` is durable evidence but is not an independent substantive crypto/security approval and does not satisfy Q009.
 
 Guarded transport used:
 
@@ -168,13 +168,84 @@ MERGE_TREE = c358119aa50b9da1fedb64355dc0c24a64ddae4b
 
 Exact push-triggered post-merge CI `34259707758` and R3 `34259707773` both reached terminal SUCCESS on exact canonical merge `6c30399da307b1b5ea23988a99edf540872cad42`.
 
-B301 is therefore canonical and closed only for the reviewed SQLCipher provider/keying integration boundary. It does not prove encryption-active state; that remains B302.
+B301 is therefore canonical and closed only for the reviewed SQLCipher provider/keying integration boundary.
+
+## Canonical B301/B302 reconciliation disposition
+
+The B301/B302 evidence-state reconciliation was exact-head qualified before B302 began:
+
+```text
+PR = 61
+BASE = 6c30399da307b1b5ea23988a99edf540872cad42
+HEAD = a2121a3f886f293118705d57b25d27918043a32a
+PREMERGE_CI = 34261574985 / run #160 / SUCCESS
+PREMERGE_R3 = 34261574889 / run #137 / SUCCESS
+EXPECTED_HEAD_SHA = a2121a3f886f293118705d57b25d27918043a32a
+EXPECTED_HEAD_TRANSPORT = PROVEN_COMMENT_5589866661
+MERGE_METHOD = merge
+CANONICAL_MERGE = 8af8ddfa4084f98655e692c149e972edf7f7368b
+PARENT_1 = 6c30399da307b1b5ea23988a99edf540872cad42
+PARENT_2 = a2121a3f886f293118705d57b25d27918043a32a
+MERGE_TREE = a3a8a5cc456cd4884257cc425248b7c10dedee4d
+POSTMERGE_CI = 34262792084 / run #161 / SUCCESS
+POSTMERGE_R3 = 34262791999 / run #138 / SUCCESS
+```
+
+Durable repository-owner pre-merge reconciliation review: `5145470026`. Durable guarded-transport comment: `5589866661`. Durable post-merge reconciliation comment: `5589995041`.
+
+The prior task ledger left B301R001-B301R003 unchecked despite this proven live evidence. This reconciliation repairs that state forward-only; it does not alter historical commits or upgrade unavailable evidence.
+
+## Canonical B302 disposition
+
+B302 implementation PR #62 started from exact canonical B301/B302 reconciliation merge `8af8ddfa4084f98655e692c149e972edf7f7368b` and changed only:
+
+```text
+crates/himsat-core/src/vault_sqlcipher.rs
+```
+
+B302 proves encryption active after the existing B301 keying and runtime-identity checks. The exact reviewed SQLCipher 4.14.0 status surface returns textual `"1"` or `"0"`; the accepted implementation returns a keyed handle only for exact textual `"1"`. Textual `"0"` or any other text fails closed as `EncryptionInactive`; status query/type failure fails closed as `EncryptionStatus`.
+
+The initial implementation head remains NOT PASS:
+
+```text
+HEAD = d1fd6e11ba4e53b798323a232feef448cb00ffe6
+CI = 34264057007 / run #162 / CANCELLED_NOT_PASS
+CI_OBSERVED_BEFORE_CANCELLATION = UBUNTU_AND_MACOS_TEST_FAILURE_NOT_PASS
+R3 = 34264057122 / run #139 / FAILURE_NOT_PASS
+```
+
+That head attempted integer extraction from `PRAGMA cipher_status`. It was not rerun or reclassified. The accepted repair was forward-only.
+
+Final exact head `c926c6656417b54e42c09925d8e0f02180bd0de9` passed CI `34264516523` and R3 `34264516517`. No inline review thread existed. Qodo billing-blocked and CodeRabbit auto-skipped outputs were NOT PASS. Repository-owner reconciliation evidence does not satisfy Q009.
+
+Guarded transport used:
+
+```text
+EXPECTED_HEAD_SHA = c926c6656417b54e42c09925d8e0f02180bd0de9
+MERGE_METHOD = merge
+MERGED = true
+CANONICAL_MERGE = 001e274a321cd0f6c472ce768f1a9910165598fe
+```
+
+Durable transport-result comment: `5590297048`.
+
+Canonical parentage is exact:
+
+```text
+PARENT_1 = 8af8ddfa4084f98655e692c149e972edf7f7368b
+PARENT_2 = c926c6656417b54e42c09925d8e0f02180bd0de9
+MERGE_TREE = 0bc9ef082ab75eed417868e0a55c33785df0a76f
+```
+
+Exact push-triggered post-merge CI `34266303513` and R3 `34266303537` both reached terminal SUCCESS on exact canonical merge `001e274a321cd0f6c472ce768f1a9910165598fe`. Durable post-merge reconciliation comment: `5590420286`.
+
+B302 is therefore canonical and closed only for the reviewed SQLCipher encryption-active proof boundary.
 
 ## Active reconciliation objective
 
-Canonicalize B301 final evidence and bind the next implementation frontier to B302 without changing security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
+Canonicalize B302 final evidence and bind the next implementation frontier to B303 without changing security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
 
-This B301/B302 reconciliation must itself:
+This B302/B303 reconciliation must itself:
 
 1. pass exact-head CI and R3;
 2. be reconciled against live reviews, review threads, comments, exact diff, `main`, and mergeability;
@@ -182,20 +253,41 @@ This B301/B302 reconciliation must itself:
 4. prove exact canonical parentage; and
 5. pass exact push-triggered post-merge CI and R3.
 
-Only after all five conditions are proven may B302 work begin from the resulting exact canonical `main`.
+Only after all five conditions are proven may B303 work begin from the resulting exact canonical `main`.
 
-## B302 bounded scope after reconciliation qualification
+## B303 bounded scope after reconciliation qualification
 
-B302 owns only the encryption-active proof on the already reviewed SQLCipher handle after successful B301 keying.
+B303 owns only enforcement and qualification of the already reviewed SQLCipher temp/WAL/journal/provider/build posture. It does not select a new provider, dependency, or journal policy.
 
-The canonical requirement is fail closed unless the opened handle proves encryption is active. The adopted SQLCipher provider supports the reviewed status surface required for this proof. B302 may add only the minimum lease-gated provider query/error state and tests needed to establish positive active state and fail-closed inactive/error state.
+The live reviewed provider record freezes:
 
-B302 must not absorb:
+```text
+RUSQLITE_PACKAGE = 0.40.1
+LIBSQLITE3_SYS_PACKAGE = 0.38.2
+RUSQLITE_FEATURE = bundled-sqlcipher-vendored-openssl
+SQLCIPHER_VERSION = 4.14.0
+SQLCIPHER_EMBEDDED_SQLITE_VERSION = 3.51.3
+OPENSSL_UPSTREAM_VERSION = 3.6.3
+```
 
-- B303 runtime temp/WAL/journal/provider/build setting enforcement;
+The selected bundled SQLCipher compile posture includes:
+
+```text
+SQLITE_HAS_CODEC
+SQLITE_TEMP_STORE=2
+SQLITE_EXTRA_INIT=sqlcipher_extra_init
+SQLITE_EXTRA_SHUTDOWN=sqlcipher_extra_shutdown
+```
+
+Android uses the selected binding's additional `SQLITE_TEMP_STORE=3` path. Qualified builds must remain on the reviewed vendored SQLCipher/vendored OpenSSL path and must not silently switch to system SQLCipher/OpenSSL, host package discovery, or unreviewed environment redirects.
+
+B303 must enforce the specification requirement that file-backed temporary data is disabled for sensitive operations and must intentionally qualify WAL and rollback-journal behavior against the exact reviewed provider/build truth. It must not invent a journal mode that is not prescribed by canonical contracts. The implementation leaf must reread the exact provider source/build path and canonical specification before selecting the minimum runtime assertions/tests needed to prove those requirements.
+
+B303 must not absorb:
+
 - B304 normal SQLite and SQLCipher cipher/page-authentication integrity checks;
 - B305 wrong-key/corruption/unsupported-provider/version fixture expansion;
-- B306 plaintext-spill/file-name qualification;
+- B306 plaintext-spill/logical-ID/public-filename qualification;
 - B307 copy-verify-publish migration;
 - B401-B406 platform protector implementation;
 - B501-B506 freshness/backup/rotation/deletion;
@@ -204,7 +296,7 @@ B302 must not absorb:
 - new donor/dependency adoption; or
 - release, FIPS, or compliance claims.
 
-If encryption-active state cannot be positively proven on the exact reviewed provider, B302 must fail closed rather than continue with an unproven structured-store handle.
+If the exact reviewed provider/build posture cannot be positively established or a required temp/WAL/journal property cannot be proven, B303 must fail closed rather than silently weaken or substitute configuration.
 
 ## Specification 004 delivery chain
 
@@ -216,8 +308,10 @@ If encryption-active state cannot be positively proven on the exact reviewed pro
   -> B206 Specification 005 boundary          CLOSED_SCOPE_BOUNDARY
   -> B205/B301 state reconciliation           CANONICAL_QUALIFIED
   -> B301 reviewed SQLCipher integration      CANONICAL_QUALIFIED
-  -> B301/B302 state reconciliation           ACTIVE
-  -> B302-B307 encrypted structured store     B302_NEXT_AFTER_RECONCILIATION_QUALIFICATION
+  -> B301/B302 state reconciliation           CANONICAL_QUALIFIED
+  -> B302 encryption-active proof             CANONICAL_QUALIFIED
+  -> B302/B303 state reconciliation           ACTIVE
+  -> B303-B307 encrypted structured store     B303_NEXT_AFTER_RECONCILIATION_QUALIFICATION
   -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
@@ -228,7 +322,7 @@ If encryption-active state cannot be positively proven on the exact reviewed pro
 ## Residual blockers and non-claims
 
 - `P011` remains unchecked because historical expected-head transport proof is not reconstructible post hoc.
-- Q009 remains unsatisfied and requires a genuine independent substantive crypto/security review of the exact implementation revision.
+- Q009 remains unsatisfied and requires a genuinely independent substantive crypto/security review of the exact implementation revision.
 - Specification 005 remains blocked pending genuine Specification 004 `CLOSED_CANONICAL` closeout.
 - No new donor/dependency adoption is authorized by this reconciliation.
 - No release, FIPS, compliance, universal app-exclusive, universal user-presence, universal atomic-anchor, or universal hardware-backed claim is authorized.
