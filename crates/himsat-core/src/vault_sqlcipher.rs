@@ -91,7 +91,9 @@ impl fmt::Display for SqlCipherOpenError {
             }
             Self::EncryptionStatus => "SQLCipher encryption-active status could not be proven",
             Self::EncryptionInactive => "SQLCipher encryption is not active",
-            Self::CryptoProvider => "SQLCipher crypto-provider identity is not the reviewed OpenSSL provider",
+            Self::CryptoProvider => {
+                "SQLCipher crypto-provider identity is not the reviewed OpenSSL provider"
+            }
             Self::CryptoProviderVersion => {
                 "SQLCipher crypto-provider runtime version is not the reviewed OpenSSL version"
             }
@@ -377,7 +379,8 @@ mod tests {
         let structured_key = context(KeyPurpose::StructuredStore).derive_purpose_key(&vrk());
         apply_raw_key(&connection, &structured_key).expect("test raw key operation must succeed");
         verify_runtime_identity(&connection).expect("reviewed runtime identities must match");
-        verify_encryption_active(&connection).expect("test connection must report encryption active");
+        verify_encryption_active(&connection)
+            .expect("test connection must report encryption active");
         enforce_b303_provider_and_temp_posture(&connection)
             .expect("reviewed B303 provider/temp posture must be enforced");
         connection
