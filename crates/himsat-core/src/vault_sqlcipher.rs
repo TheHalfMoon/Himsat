@@ -14,7 +14,7 @@ use crate::vault::VaultLeaseIdentity;
 use crate::vault_io::LeaseBoundDatabaseHandle;
 use crate::vault_keys::{KEY_MATERIAL_BYTES, KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
 use crate::vault_lease::{KeyedHandleError, KeyedHandleLease};
-use rusqlite::Connection;
+use rusqlite::{Connection, OpenFlags};
 use std::error::Error;
 use std::fmt;
 use std::path::Path;
@@ -132,7 +132,8 @@ pub fn open_sqlcipher_database<P: AsRef<Path>>(
 
     let backend = {
         let _permit = lease.authorize()?;
-        let connection = Connection::open(path).map_err(|_| SqlCipherOpenError::Open)?;
+        let connection = Connection::open_with_flags(path, provider_open_flags())
+            .map_err(|_| SqlCipherOpenError::Open)?;
         let structured_key = context.derive_purpose_key(vrk);
 
         apply_raw_key(&connection, &structured_key)?;
@@ -146,6 +147,15 @@ pub fn open_sqlcipher_database<P: AsRef<Path>>(
     Ok(SqlCipherDatabaseHandle {
         inner: LeaseBoundDatabaseHandle::new(lease, backend),
     })
+}
+
+fn provider_open_flags() -> OpenFlags {
+    // Deliberately omit SQLITE_OPEN_URI so an ordinary Himsat path cannot acquire
+    // URI query semantics. NO_MUTEX matches rusqlite's compile-time thread-safety
+    // model while keeping the reviewed provider behind one lease-bound handle.
+    OpenFlags::SQLITE_OPEN_READ_WRITE
+        | OpenFlags::SQLITE_OPEN_CREATE
+        | OpenFlags::SQLITE_OPEN_NO_MUTEX
 }
 
 fn apply_raw_key(
@@ -193,13 +203,14 @@ fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
 mod tests {
     use super::{
         EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION,
-        SqlCipherOpenError, open_sqlcipher_database, raw_key_pragma,
+        SqlCipherOpenError, open_sqlcipher_database, provider_open_flags, raw_key_pragma,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
         KEY_MATERIAL_BYTES, KeyDerivationContext, KeyPurpose, OwnedKeyMaterial,
     };
     use crate::vault_lease::{KeyedHandleError, VaultLease};
+    use rusqlite::OpenFlags;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -227,6 +238,15 @@ mod tests {
             "himsat-b301-{label}-{}-{sequence}.db",
             std::process::id()
         ))
+    }
+
+    #[test]
+    fn provider_open_flags_do_not_enable_uri_filename_semantics() {
+        let flags = provider_open_flags();
+        assert!(flags.contains(OpenFlags::SQLITE_OPEN_READ_WRITE));
+        assert!(flags.contains(OpenFlags::SQLITE_OPEN_CREATE));
+        assert!(flags.contains(OpenFlags::SQLITE_OPEN_NO_MUTEX));
+        assert!(!flags.contains(OpenFlags::SQLITE_OPEN_URI));
     }
 
     #[test]
