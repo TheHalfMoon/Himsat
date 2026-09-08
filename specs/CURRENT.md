@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B105_CANONICAL_RECONCILING_B201_BOUND
+PROGRAM_STATE = SPEC_004_B201_CANONICAL_RECONCILING_B202_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -31,91 +31,41 @@ P011_POSTMERGE_R3 = 34146938921_SUCCESS
 P011_EXPECTED_HEAD_TRANSPORT_PROOF = NOT_RECONSTRUCTIBLE_POST_HOC
 DEPENDENCY_BYTES_ADOPTED_ON_MAIN = YES
 B101_DISPOSITION = CANONICAL_CLOSED
-B101_PR = 38
-B101_HEAD = ea82e1246095bb921dc9e7e40716076edbda41a6
-B101_CANONICAL_MERGE = 95cf1de6b57f26545fd3ad03d99e18c9f9dc0a5c
-B101_POSTMERGE_CI = 34149709088_SUCCESS
-B101_POSTMERGE_R3 = 34149708977_SUCCESS
-B101_EXPECTED_HEAD_TRANSPORT_PROOF = NOT_RECONSTRUCTIBLE_POST_HOC
-B101_B102_RECONCILIATION_PR = 40
-B101_B102_RECONCILIATION_HEAD = d99ceb841d834324d06774753b661bdf108f354b
-B101_B102_RECONCILIATION_CANONICAL_MERGE = 0252bb31764c9178e270694f4087e8ac701271a0
-B101_B102_RECONCILIATION_POSTMERGE_CI = 34153492791_SUCCESS
-B101_B102_RECONCILIATION_POSTMERGE_R3 = 34153492769_SUCCESS
 B102_DISPOSITION = CANONICAL_CLOSED
-B102_PRE_AUTHORITY_PR = 39_CLOSED_UNMERGED
-B102_PR = 41
-B102_HEAD = 40b9705258a302a4e71340f4dd0a28746e86c8a7
-B102_CANONICAL_MERGE = 4b27ede7d9bf17caac163b7607c331056634fc95
-B102_POSTMERGE_CI = 34155726527_SUCCESS
-B102_POSTMERGE_R3 = 34155726505_SUCCESS
-B102_B103_RECONCILIATION_PR = 42
-B102_B103_RECONCILIATION_HEAD = 47710251ade64e48741e94b4c23d784f04cbe809
-B102_B103_RECONCILIATION_CANONICAL_MERGE = 9ed7ccd960cbf92a9718d424421dd40b71cfe0de
-B102_B103_RECONCILIATION_POSTMERGE_CI = 34157271018_SUCCESS
-B102_B103_RECONCILIATION_POSTMERGE_R3 = 34157271044_SUCCESS
 B103_DISPOSITION = CANONICAL_CLOSED
-B103_PR = 43
-B103_INITIAL_HEAD = cbbf1d3a8e9c995f33cd5a375e583dea9950207d
-B103_INITIAL_CI = 34159354566_FAILURE_FORMATTING_NOT_PASS
-B103_HEAD = 47b8ed78705774d5e55f2eb1145385c725e325c0
-B103_PREMERGE_CI = 34159489786_SUCCESS
-B103_PREMERGE_R3 = 34159489849_SUCCESS
-B103_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5575437514
-B103_CANONICAL_MERGE = ead22ea8c0b248431a2f8a50264f6acdbc9f7a72
-B103_POSTMERGE_CI = 34160202949_SUCCESS
-B103_POSTMERGE_R3 = 34160202961_SUCCESS
-B103_B104_RECONCILIATION_PR = 44
-B103_B104_RECONCILIATION_HEAD = f348330a52cec6eb46772529fbcb82fb52eb43d4
-B103_B104_RECONCILIATION_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5575629798
-B103_B104_RECONCILIATION_CANONICAL_MERGE = 57217a6614c07ac5e8a00d85114dd06eee1a0120
-B103_B104_RECONCILIATION_POSTMERGE_CI = 34161857768_SUCCESS
-B103_B104_RECONCILIATION_POSTMERGE_R3 = 34161857755_SUCCESS
-VOICE_PLAN_PR = 45
-VOICE_PLAN_CANONICAL_MERGE = dec7555363c64726bc4835350ddf520fe44ff01a
-VOICE_PLAN_POSTMERGE_CI = 34165435937_SUCCESS
-VOICE_PLAN_POSTMERGE_R3 = 34165435931_SUCCESS
-VOICE_PLAN_AUTHORITY_EFFECT = NONE_ON_SPEC_004_B104
 B104_DISPOSITION = CANONICAL_CLOSED
-B104_PR = 46
-B104_INITIAL_HEAD = 87455b97547b76855a5d68a4eb196ec4041ba70f
-B104_INITIAL_CI = 34166444702_CANCELLED_OVERALL_AFTER_HEAD_ADVANCE
-B104_INITIAL_WINDOWS_FORMAT = FAILURE_NOT_PASS
-B104_INITIAL_WINDOWS_LINT = SKIPPED_NOT_PASS
-B104_INITIAL_WINDOWS_TESTS = SKIPPED_NOT_PASS
-B104_HEAD = e3c27cc2806feb2aa5ace7169e0507b9bd970a1c
-B104_PREMERGE_CI = 34166549041_SUCCESS
-B104_PREMERGE_R3 = 34166549045_SUCCESS
-B104_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5576270121
-B104_CANONICAL_MERGE = 6578936f7051b548339f3cf95ca0d41e6629d8bc
-B104_POSTMERGE_CI = 34167236097_SUCCESS
-B104_POSTMERGE_R3 = 34167236079_SUCCESS
-B104_B105_RECONCILIATION_PR = 47
-B104_B105_RECONCILIATION_CANONICAL_MERGE = 623c0ad4207ecbbd5e404a2a32ba3cdb61006778
-B104_B105_RECONCILIATION_POSTMERGE_CI = 34168619451_SUCCESS
-B104_B105_RECONCILIATION_POSTMERGE_R3 = 34168619510_SUCCESS
 B105_DISPOSITION = CANONICAL_CLOSED
-B105_PR = 48
-B105_INITIAL_HEAD = 39d63bbf647f0f13aff1cefa9da0d7eb1a9fb119
-B105_INITIAL_CI = 34169460825_FAILURE_FORMATTING_NOT_PASS
-B105_HEAD = f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf
-B105_PREMERGE_CI = 34169567748_SUCCESS
-B105_PREMERGE_R3 = 34169567620_SUCCESS
-B105_PREMERGE_RECONCILIATION = PROVEN_COMMENT_5576822047
-B105_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5576824739
-B105_CANONICAL_MERGE = 73b13d38ac3e34143c813bda679e6e96ce01762e
-B105_POSTMERGE_CI = 34170861437_SUCCESS
-B105_POSTMERGE_R3 = 34170861436_SUCCESS
-NEXT_IMPLEMENTATION_LEAF = B201_HKDF_SHA256_DOMAIN_SEPARATION
-SPEC_004_IMPLEMENTATION_AUTHORITY = B201_ONLY_IF_THIS_B105_B201_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B201_ONLY_UNDER_THE_CONDITION_ABOVE
+B105_B201_RECONCILIATION_PR = 49
+B105_B201_RECONCILIATION_HEAD = 267351bcad78434b612c929d3165bc03ad1fb08c
+B105_B201_RECONCILIATION_PREMERGE_CI = 34171637803_SUCCESS
+B105_B201_RECONCILIATION_PREMERGE_R3 = 34171637800_SUCCESS
+B105_B201_RECONCILIATION_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5577099576
+B105_B201_RECONCILIATION_CANONICAL_MERGE = 33fc791443d25dba0ed7a5958710cb52ebb5bfad
+B105_B201_RECONCILIATION_POSTMERGE_CI = 34172683259_SUCCESS
+B105_B201_RECONCILIATION_POSTMERGE_R3 = 34172683357_SUCCESS
+B201_DISPOSITION = CANONICAL_CLOSED
+B201_PR = 50
+B201_BASE = 33fc791443d25dba0ed7a5958710cb52ebb5bfad
+B201_HEAD = 3c1706dfd0dfc7c745e19b81d19f31e4beb39e38
+B201_PREMERGE_CI = 34173364034_SUCCESS
+B201_PREMERGE_R3 = 34173364032_SUCCESS
+B201_PREMERGE_RECONCILIATION = PROVEN_COMMENT_5577286248
+B201_EXPECTED_HEAD_TRANSPORT_PROOF = PROVEN_COMMENT_5577371979
+B201_CANONICAL_MERGE = 3785561963b6eadab219b330367a9b6295755939
+B201_POSTMERGE_CI = 34174517394_SUCCESS
+B201_POSTMERGE_R3 = 34174517397_SUCCESS
+B201_POSTMERGE_EVIDENCE = PROVEN_COMMENT_5577459951
+B201_B202_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B202_VERSIONED_BOUNDED_BLOB_XCHACHA20_POLY1305_ENVELOPE
+SPEC_004_IMPLEMENTATION_AUTHORITY = B202_ONLY_IF_THIS_B201_B202_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B202_ONLY_UNDER_THE_CONDITION_ABOVE
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
 NATIVE_SPEC_GRAIN_STATE = TRACKED_REPORT_MODE_VALIDATED
 ```
 
-Live GitHub truth overrides this file if repository state changes after this reconciliation is authored.
+Live GitHub/repository truth overrides this file if repository state changes after this reconciliation is authored.
 
 ## Canonical Specification 004A design state
 
@@ -129,96 +79,108 @@ Design approval does not approve implementation. Security-semantic changes to th
 
 Specification 004P is closed by exact live evidence recorded in `provider-adoption-final-evidence.md`. Canonical merge `a4d32ee93e0ab95af8376ba0ca09e248070c5924` passed post-merge CI `34144623816` and R3 `34144623829`. P001-P006 are `CANONICAL_CLOSED`; selected dependency/native bytes are adopted on `main`; registry v2 plus deterministic SBOM/notices and registered-closure CI/R3 remain the machine provenance boundary.
 
-Older failed runs, blocking reviews, tooling incidents, contradiction evidence, and unavailable review outputs remain part of the durable evidence lineage and are not erased by final closure.
+The currently adopted cryptographic dependency closure already contains the reviewed `hkdf`, `sha2`, `chacha20poly1305`, `getrandom`, and `argon2` providers needed by the authorized Specification 004 leaves. No new dependency adoption is implied by this state file.
+
+Older failed runs, blocking reviews, tooling incidents, contradiction evidence, and unavailable review outputs remain part of the durable evidence lineage and are not erased by later closure.
 
 ## Historical transport evidence limitation
 
 P011 reconciliation PR #37 and B101 PR #38 have exact head, canonical merge parentage, and exact pre/post-merge qualification evidence. Their historical merge API request bodies are not exposed by durable GitHub state, and no repository artifact records the exact historical `expected_head_sha` argument for those two merges. The repository does not reconstruct or retroactively promote that unavailable transport proof to PASS.
 
-The frontier was repaired forward-only by reconciliation PR #40, whose exact head `d99ceb841d834324d06774753b661bdf108f354b` passed CI `34152839411` and R3 `34152839424`, was explicitly expected-head guarded, merged as `0252bb31764c9178e270694f4087e8ac701271a0`, and passed post-merge CI `34153492791` and R3 `34153492769`.
+The B101 frontier was repaired forward-only by reconciliation PR #40, whose exact head `d99ceb841d834324d06774753b661bdf108f354b` passed CI `34152839411` and R3 `34152839424`, was explicitly expected-head guarded, merged as `0252bb31764c9178e270694f4087e8ac701271a0`, and passed post-merge CI `34153492791` and R3 `34153492769`.
 
-## Canonical B102 disposition
+`P011` therefore remains unchecked in `tasks.md`.
 
-Pre-authority PR #39 is preserved as closed, unmerged negative history. The accepted B102 lineage was PR #41 from exact canonical base `0252bb31764c9178e270694f4087e8ac701271a0`.
+## Canonical 004B1 lineage
 
-B102 final head `40b9705258a302a4e71340f4dd0a28746e86c8a7` passed CI `34154993507` and R3 `34154993537`. Earlier CI `34154807417` was cancelled after a head change and remains stale negative evidence, not PASS. PR #41 merged through explicit expected-head transport as canonical `4b27ede7d9bf17caac163b7607c331056634fc95`, then passed exact post-merge CI `34155726527` and R3 `34155726505`.
-
-The B102/B103 reconciliation PR #42 exact head `47710251ade64e48741e94b4c23d784f04cbe809` passed CI `34156621024` and R3 `34156621129`, was expected-head guarded into canonical merge `9ed7ccd960cbf92a9718d424421dd40b71cfe0de`, and passed exact post-merge CI `34157271018` and R3 `34157271044` before accepted B103 work began.
-
-## Canonical B103 disposition
-
-B103 implementation PR #43 started from exact canonical base `9ed7ccd960cbf92a9718d424421dd40b71cfe0de` and changed only:
+The accepted 004B1 implementation and reconciliation line is closed through B105:
 
 ```text
-crates/himsat-core/src/lib.rs
-crates/himsat-core/src/vault_protector.rs
+B101_CANONICAL_MERGE = 95cf1de6b57f26545fd3ad03d99e18c9f9dc0a5c
+B101_B102_RECONCILIATION = 0252bb31764c9178e270694f4087e8ac701271a0
+B102_CANONICAL_MERGE = 4b27ede7d9bf17caac163b7607c331056634fc95
+B102_B103_RECONCILIATION = 9ed7ccd960cbf92a9718d424421dd40b71cfe0de
+B103_CANONICAL_MERGE = ead22ea8c0b248431a2f8a50264f6acdbc9f7a72
+B103_B104_RECONCILIATION = 57217a6614c07ac5e8a00d85114dd06eee1a0120
+B104_CANONICAL_MERGE = 6578936f7051b548339f3cf95ca0d41e6629d8bc
+B104_B105_RECONCILIATION = 623c0ad4207ecbbd5e404a2a32ba3cdb61006778
+B105_CANONICAL_MERGE = 73b13d38ac3e34143c813bda679e6e96ce01762e
+B105_B201_RECONCILIATION = 33fc791443d25dba0ed7a5958710cb52ebb5bfad
 ```
 
-The initial implementation head `cbbf1d3a8e9c995f33cd5a375e583dea9950207d` failed CI `34159354566` on rustfmt only. That failure remains negative evidence. A forward-only formatting repair produced final head `47b8ed78705774d5e55f2eb1145385c725e325c0`.
+Complete per-leaf evidence remains in:
 
-The final head passed CI `34159489786` and R3 `34159489849`. No submitted review or review thread existed; Qodo billing-blocked and CodeRabbit auto-skip output were not counted as PASS.
+- `b101-portable-contracts-final-evidence.md`;
+- `b102-revocable-lease-final-evidence.md`;
+- `b103-secret-protector-final-evidence.md`;
+- `b104-key-lifetime-final-evidence.md`; and
+- `b105-post-lock-io-final-evidence.md`.
 
-PR #43 was merged with explicit `expected_head_sha = 47b8ed78705774d5e55f2eb1145385c725e325c0`; durable comment `5575437514` records the successful transport and canonical merge SHA `ead22ea8c0b248431a2f8a50264f6acdbc9f7a72`.
+The B105/B201 reconciliation PR #49 exact head `267351bcad78434b612c929d3165bc03ad1fb08c` passed CI `34171637803` and R3 `34171637800`, was merged with explicit expected-head protection as `33fc791443d25dba0ed7a5958710cb52ebb5bfad`, has exact parents `73b13d38ac3e34143c813bda679e6e96ce01762e` and `267351bcad78434b612c929d3165bc03ad1fb08c`, and passed post-merge CI `34172683259` and R3 `34172683357`.
 
-Canonical B103 merge `ead22ea8c0b248431a2f8a50264f6acdbc9f7a72` has exact parents `9ed7ccd960cbf92a9718d424421dd40b71cfe0de` and `47b8ed78705774d5e55f2eb1145385c725e325c0`. Exact push qualification then succeeded: CI `34160202949` and R3 `34160202961` both reached terminal SUCCESS on that exact canonical SHA.
+The prior task-ledger omission that left `B105R001`-`B105R003` unchecked is repaired forward-only by this reconciliation from live evidence. No historical state is rewritten.
 
-B103 is therefore canonical, exact-head qualified, guarded-merged, parentage-proven, and exact-post-merge qualified. Complete evidence is recorded in `b103-secret-protector-final-evidence.md`.
+## Canonical B201 disposition
 
-## Canonical B103/B104 reconciliation disposition
-
-PR #44 exact reconciliation head `f348330a52cec6eb46772529fbcb82fb52eb43d4` passed CI `34161105524` and R3 `34161105501`. Durable comment `5575629798` records explicit expected-head guarded transport to canonical merge `57217a6614c07ac5e8a00d85114dd06eee1a0120`.
-
-Canonical reconciliation parentage is exact: parent 1 is B103 canonical merge `ead22ea8c0b248431a2f8a50264f6acdbc9f7a72`; parent 2 is reconciliation head `f348330a52cec6eb46772529fbcb82fb52eb43d4`. Exact push-triggered CI `34161857768` and R3 `34161857755` both succeeded before B104 implementation began.
-
-Planning-only PR #45 then merged as `dec7555363c64726bc4835350ddf520fe44ff01a` and passed post-merge CI `34165435937` and R3 `34165435931`. Its source-roadmap/provenance authorization documentation did not expand Specification 004 B104 implementation authority or adopt new code/dependencies.
-
-## Canonical B104 disposition
-
-B104 implementation PR #46 started from exact canonical base `dec7555363c64726bc4835350ddf520fe44ff01a` and changed only:
+B201 implementation PR #50 started from exact canonical B105/B201 reconciliation merge `33fc791443d25dba0ed7a5958710cb52ebb5bfad` and changed only:
 
 ```text
-crates/himsat-core/src/lib.rs
 crates/himsat-core/src/vault_keys.rs
 ```
 
-Initial head `87455b97547b76855a5d68a4eb196ec4041ba70f` triggered CI `34166444702`. The Windows Rust job failed at formatting; its lint/tests were skipped and are not PASS. The overall workflow was later cancelled only after a forward-only formatting repair advanced the PR head. That negative evidence remains preserved.
+The accepted exact head `3c1706dfd0dfc7c745e19b81d19f31e4beb39e38` passed CI `34173364034` and R3 `34173364032`. Observed exact-head tests were `36 passed; 0 failed` for `himsat-core` and `10 passed; 0 failed` for `himsat-events`, including deterministic HKDF vectors and purpose/vault/generation separation proof.
 
-Final head `e3c27cc2806feb2aa5ace7169e0507b9bd970a1c` passed exact-head CI `34166549041` and R3 `34166549045`. The compare was ahead-only from the canonical base (`4` ahead, `0` behind), with exactly two changed files. No submitted review or review thread existed; Qodo billing-blocked and CodeRabbit auto-skip output were not counted as PASS. Durable comment `5576267748` records the final pre-merge reconciliation.
+No submitted review or review thread existed. Qodo billing-blocked and CodeRabbit auto-skip output were not counted as PASS. Durable final pre-merge reconciliation comment: `5577286248`.
 
-PR #46 was merged with explicit `expected_head_sha = e3c27cc2806feb2aa5ace7169e0507b9bd970a1c`. Durable comment `5576270121` records the actual successful transport and canonical merge `6578936f7051b548339f3cf95ca0d41e6629d8bc`.
+PR #50 was merged with explicit `expected_head_sha = 3c1706dfd0dfc7c745e19b81d19f31e4beb39e38`. Durable comment `5577371979` records successful guarded transport to canonical merge `3785561963b6eadab219b330367a9b6295755939`.
 
-Canonical B104 merge `6578936f7051b548339f3cf95ca0d41e6629d8bc` has exact parents `dec7555363c64726bc4835350ddf520fe44ff01a` and `e3c27cc2806feb2aa5ace7169e0507b9bd970a1c`. Exact push-triggered post-merge CI `34167236097` and R3 `34167236079` both reached terminal SUCCESS. Complete evidence is recorded in `b104-key-lifetime-final-evidence.md`.
+Canonical B201 merge parentage is exact: parent 1 is `33fc791443d25dba0ed7a5958710cb52ebb5bfad`; parent 2 is `3c1706dfd0dfc7c745e19b81d19f31e4beb39e38`. Exact push-triggered post-merge CI `34174517394` and R3 `34174517397` both reached terminal SUCCESS. Durable post-merge comment: `5577459951`.
 
-B104 is therefore canonical and closed only for its reviewed portable key-domain and secret-lifetime contract. Actual HKDF execution/vectors remain B201. Concrete post-lock/revocation/failure DB/blob I/O proof was assigned to B105. SQLCipher, AEAD, Argon2id execution, native secure-store adapters, freshness persistence, backup/rotation/deletion, Specification 005 behavior, new dependency/donor adoption, and complete-memory-erasure claims remain outside B104.
+B201 is therefore canonical and closed only for the reviewed HKDF-SHA-256 purpose-key derivation contract. Complete evidence is recorded in `b201-hkdf-final-evidence.md`.
 
-## Canonical B105 disposition
-
-B105 implementation PR #48 started from exact canonical B104/B105 reconciliation merge `623c0ad4207ecbbd5e404a2a32ba3cdb61006778` and changed only:
-
-```text
-crates/himsat-core/src/lib.rs
-crates/himsat-core/src/vault_io.rs
-```
-
-Initial implementation head `39d63bbf647f0f13aff1cefa9da0d7eb1a9fb119` triggered CI `34169460825`, where Ubuntu and Windows Rust formatting failed. Their downstream lint/tests/registered-dependency-closure steps were skipped and remain NOT PASS. The failure was preserved in comment `5576654626` and repaired forward-only with no history rewrite.
-
-Final head `f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf` passed exact-head CI `34169567748` and R3 `34169567620`. The compare remained ahead-only from the canonical base (`2` ahead, `0` behind). No submitted review or review thread existed; Qodo billing-blocked and CodeRabbit auto-skip output were not counted as PASS. Durable final reconciliation comment `5576822047` records the pre-merge snapshot.
-
-PR #48 was merged with explicit `expected_head_sha = f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf`. Durable comment `5576824739` records successful guarded transport to canonical merge `73b13d38ac3e34143c813bda679e6e96ce01762e`.
-
-Canonical B105 merge `73b13d38ac3e34143c813bda679e6e96ce01762e` has exact parents `623c0ad4207ecbbd5e404a2a32ba3cdb61006778` and `f39e39e67e01ea3e145591e87ceb1ccfcdbbfeaf`; its tree matches the qualified final implementation head. Exact push-triggered post-merge CI `34170861437` and R3 `34170861436` both reached terminal SUCCESS.
-
-B105 is therefore canonical and closed only for provider-neutral lease-gated database/blob I/O authorization. Complete evidence is recorded in `b105-post-lock-io-final-evidence.md`. Process-abort cleanup gaps, runtime/compiler/register/allocator copies, swap/pagefile content, crash/core dumps, kernel/physical memory, and secrets already observed by a compromised unlocked process remain explicit residual risks.
+Provider-internal temporary state, compiler/runtime/register/allocator copies, swap/pagefile content, crash/core dumps, kernel memory, and physical memory remain outside the owned-buffer erasure guarantee.
 
 ## Active objective
 
-Canonicalize this B105 closeout/B201 rebound reconciliation without changing security semantics, product runtime behavior, dependency bytes, provenance entries, generated artifacts, workflows, donor material, or release posture.
+Canonicalize this B201 closeout/B202 rebound reconciliation without changing security semantics, product runtime behavior, dependency bytes, provenance entries, generated artifacts, workflows, donor material, or release posture.
 
-After this reconciliation itself is exact-head qualified, reconciled, merged with explicit expected-head protection, parentage-proven, and exact-post-merge qualified, execute only B201 as the next independently bounded Specification 004B2 implementation leaf.
+B202 remains blocked until this exact reconciliation is itself:
 
-B201 owns only reviewed HKDF-SHA-256 execution and deterministic derivation vectors using the already adopted `hkdf` and `sha2` dependencies: raw 16-byte `VaultId` salt, exact purpose-domain bytes plus `u64be(key_generation)` as `info`, and a 32-byte purpose-key output. It must preserve distinct structured-store, bounded-blob, and freshness-manifest domains.
+1. exact-head CI and R3 qualified;
+2. reconciled against live reviews, threads, comments, exact diff, `main`, and mergeability;
+3. merged with explicit `expected_head_sha` protection;
+4. parentage-proven; and
+5. exact push-triggered post-merge CI and R3 qualified.
 
-B201 must not expand into B202 bounded-blob AEAD/envelope work, B203 nonce generation/reservation, B204 recovery Argon2id/envelope execution, B301 SQLCipher integration, B401 native protectors, B501 freshness persistence/backup/rotation/deletion, Specification 005 media behavior, new dependency adoption, donor-code adoption, release, FIPS, or compliance claims.
+Only then may B202 begin from the resulting exact canonical `main`.
+
+## B202 bounded scope after reconciliation qualification
+
+B202 owns only the already reviewed versioned `GENERIC_ARTIFACT_BLOB` XChaCha20-Poly1305 envelope execution/parsing contract.
+
+Its v1 public envelope remains controlling exactly as defined in `round3-normative-contracts.md`:
+
+```text
+domain("HIMSAT/BLOB/ENVELOPE/v1")
+u16(1)                         # envelope_version
+u16(1)                         # cipher_suite = XChaCha20-Poly1305
+u16(1)                         # object_purpose = GENERIC_ARTIFACT_BLOB
+id128(VaultId)
+id128(ArtifactId)
+u64(key_generation)              # non-zero
+u64(plaintext_length_bytes)     # 0..67_108_864
+bytes24(nonce)
+u32(ciphertext_and_tag_length) # exactly plaintext_length_bytes + 16
+bytes(ciphertext_and_tag)
+```
+
+The fixed public header before ciphertext/tag is 107 bytes. The complete envelope is 123..67,108,987 bytes inclusive. Parser arithmetic must be checked before allocation or AEAD. No plaintext may be released before successful authentication.
+
+The exact v1 AAD must authenticate every public context/allocation field defined by the reviewed contract.
+
+B202 must accept an explicit 24-byte nonce supplied by its caller. It must not generate, reserve, retry, restore, or classify nonce collisions; those semantics belong to B203.
+
+B202 must not expand into B203 nonce lifecycle, B204 recovery Argon2id/envelope execution, B301 SQLCipher, B401 native protectors, B501 freshness/backup/rotation/deletion, Specification 005 media behavior, new dependency adoption, donor-code adoption, release, FIPS, or compliance claims.
 
 ## Specification 004 delivery chain
 
@@ -235,9 +197,11 @@ B201 must not expand into B202 bounded-blob AEAD/envelope work, B203 nonce gener
   -> B104 key hierarchy/secret lifetime       CANONICAL_QUALIFIED
   -> B104/B105 state reconciliation           CANONICAL_QUALIFIED
   -> B105 concrete post-lock handle proof     CANONICAL_QUALIFIED
-  -> B105/B201 state reconciliation           ACTIVE
-  -> B201 HKDF-SHA-256 derivation             NEXT_AFTER_RECONCILIATION_QUALIFICATION
-  -> B202-B206 crypto envelope foundation     BLOCKED_PENDING_PRIOR_LEAVES
+  -> B105/B201 state reconciliation           CANONICAL_QUALIFIED
+  -> B201 HKDF-SHA-256 derivation             CANONICAL_QUALIFIED
+  -> B201/B202 state reconciliation           ACTIVE
+  -> B202 bounded-blob envelope               NEXT_AFTER_RECONCILIATION_QUALIFICATION
+  -> B203-B206 remaining crypto foundation    BLOCKED_PENDING_PRIOR_LEAVES
   -> B301-B307 encrypted structured store     BLOCKED_PENDING_PRIOR_LEAVES
   -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
@@ -264,6 +228,7 @@ specs/004-vault-key-crypto/b102-revocable-lease-final-evidence.md
 specs/004-vault-key-crypto/b103-secret-protector-final-evidence.md
 specs/004-vault-key-crypto/b104-key-lifetime-final-evidence.md
 specs/004-vault-key-crypto/b105-post-lock-io-final-evidence.md
+specs/004-vault-key-crypto/b201-hkdf-final-evidence.md
 governance/provenance/policy.json
 governance/provenance/registry.json
 governance/generated/sbom.json
