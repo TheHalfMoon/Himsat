@@ -7,7 +7,10 @@
 //! authorized manifest/freshness work.
 
 use crate::vault::{KeyGeneration, VaultId};
-use crate::vault_blob::{BOUNDED_BLOB_NONCE_BYTES, BoundedBlobContext};
+use crate::vault_blob::{
+    BOUNDED_BLOB_NONCE_BYTES, BoundedBlobContext, BoundedBlobError, encrypt_bounded_blob,
+};
+use crate::vault_keys::OwnedKeyMaterial;
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
@@ -101,6 +104,68 @@ impl fmt::Display for NonceLifecycleError {
 
 impl Error for NonceLifecycleError {}
 
+/// Failure returned by the B203 production bounded-blob encryption path.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FreshBoundedBlobError {
+    /// Nonce generation or reservation failed before encryption could complete.
+    Nonce(NonceLifecycleError),
+    /// The already reviewed B202 bounded-blob envelope operation failed.
+    Envelope(BoundedBlobError),
+}
+
+impl fmt::Display for FreshBoundedBlobError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Nonce(error) => write!(f, "bounded-blob nonce lifecycle failed: {error}"),
+            Self::Envelope(error) => write!(f, "bounded-blob envelope operation failed: {error}"),
+        }
+    }
+}
+
+impl Error for FreshBoundedBlobError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Nonce(error) => Some(error),
+            Self::Envelope(error) => Some(error),
+        }
+    }
+}
+
+/// One freshly encrypted B202 envelope plus the exact B203 reservation that must
+/// be represented by the later authenticated canonical inventory before publication.
+#[derive(Debug, Eq, PartialEq)]
+pub struct FreshBoundedBlob {
+    reservation: NonceReservation,
+    envelope: Vec<u8>,
+}
+
+impl FreshBoundedBlob {
+    fn new(reservation: NonceReservation, envelope: Vec<u8>) -> Self {
+        Self {
+            reservation,
+            envelope,
+        }
+    }
+
+    /// Returns the exact nonce reservation associated with this candidate envelope.
+    #[must_use]
+    pub const fn reservation(&self) -> NonceReservation {
+        self.reservation
+    }
+
+    /// Returns the complete canonical B202 envelope bytes.
+    #[must_use]
+    pub fn envelope(&self) -> &[u8] {
+        &self.envelope
+    }
+
+    /// Consumes the candidate and returns its reservation and canonical envelope.
+    #[must_use]
+    pub fn into_parts(self) -> (NonceReservation, Vec<u8>) {
+        (self.reservation, self.envelope)
+    }
+}
+
 /// In-process view of authenticated canonical reservations plus every candidate
 /// consumed by the current write/retry lifecycle.
 ///
@@ -151,8 +216,8 @@ impl NonceReservationLedger {
         self.vault_id
     }
 
-    /// Returns the number of distinct canonical, pending, or abandoned reservations
-    /// currently protected from reuse by this ledger.
+    /// Returns the number of canonical, pending, or abandoned reservations that
+    /// this ledger currently protects from reuse.
     #[must_use]
     pub fn reservation_count(&self) -> usize {
         self.reservations.len()
@@ -229,11 +294,34 @@ impl NonceReservationLedger {
         if vault_id != self.vault_id {
             return Err(NonceLifecycleError::VaultMismatch);
         }
-        self.reserve_fresh_with(
-            NoncePurpose::FreshnessManifest,
-            key_generation,
-            |nonce| getrandom::fill(nonce).map_err(|_| ()),
-        )
+        self.reserve_fresh_with(NoncePurpose::FreshnessManifest, key_generation, |nonce| {
+            getrandom::fill(nonce).map_err(|_| ())
+        })
+    }
+
+    /// Production B203 entry point for a new bounded-blob encryption attempt.
+    ///
+    /// The nonce is reserved before B202 encryption. If B202 then fails, the nonce
+    /// intentionally remains reserved as an abandoned candidate so a retry cannot
+    /// reuse it. Successful publication remains the responsibility of the later
+    /// authenticated manifest/inventory layer.
+    ///
+    /// # Errors
+    ///
+    /// Returns the exact nonce-lifecycle or B202 envelope failure. No fallback nonce
+    /// source is attempted.
+    pub fn encrypt_fresh_bounded_blob(
+        &mut self,
+        vrk: &OwnedKeyMaterial,
+        context: BoundedBlobContext,
+        plaintext: &[u8],
+    ) -> Result<FreshBoundedBlob, FreshBoundedBlobError> {
+        let reservation = self
+            .reserve_fresh_blob_nonce(context)
+            .map_err(FreshBoundedBlobError::Nonce)?;
+        let envelope = encrypt_bounded_blob(vrk, context, reservation.nonce(), plaintext)
+            .map_err(FreshBoundedBlobError::Envelope)?;
+        Ok(FreshBoundedBlob::new(reservation, envelope))
     }
 
     fn reserve_fresh_with<F>(
@@ -248,8 +336,7 @@ impl NonceReservationLedger {
         loop {
             let mut nonce = [0_u8; VAULT_NONCE_BYTES];
             fill(&mut nonce).map_err(|()| NonceLifecycleError::RandomnessUnavailable)?;
-            let reservation =
-                NonceReservation::new(self.vault_id, purpose, key_generation, nonce);
+            let reservation = NonceReservation::new(self.vault_id, purpose, key_generation, nonce);
             if self.reservations.insert(reservation) {
                 return Ok(reservation);
             }
@@ -260,6 +347,8 @@ impl NonceReservationLedger {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vault_blob::decrypt_bounded_blob;
+    use crate::vault_keys::{KEY_MATERIAL_BYTES, OwnedKeyMaterial};
 
     const VAULT_A: [u8; 16] = [0x11; 16];
     const VAULT_B: [u8; 16] = [0x22; 16];
@@ -296,16 +385,29 @@ mod tests {
     }
 
     #[test]
+    fn production_encrypt_path_uses_a_reserved_fresh_nonce() {
+        let vrk = OwnedKeyMaterial::from_bytes([0x66; KEY_MATERIAL_BYTES]);
+        let context = blob_context(1);
+        let mut ledger = NonceReservationLedger::new(vault_a());
+        let candidate = ledger
+            .encrypt_fresh_bounded_blob(&vrk, context, b"b203 production path")
+            .unwrap();
+
+        assert!(ledger.contains(candidate.reservation()));
+        assert_eq!(candidate.reservation().purpose(), NoncePurpose::BoundedBlob);
+        assert_eq!(
+            decrypt_bounded_blob(&vrk, context, candidate.envelope()).unwrap(),
+            b"b203 production path"
+        );
+    }
+
+    #[test]
     fn randomness_failure_is_fail_closed_and_does_not_reserve_partial_candidate() {
         let mut ledger = NonceReservationLedger::new(vault_a());
-        let result = ledger.reserve_fresh_with(
-            NoncePurpose::BoundedBlob,
-            generation(1),
-            |nonce| {
-                nonce[..8].fill(0xaa);
-                Err(())
-            },
-        );
+        let result = ledger.reserve_fresh_with(NoncePurpose::BoundedBlob, generation(1), |nonce| {
+            nonce[..8].fill(0xaa);
+            Err(())
+        });
 
         assert_eq!(result, Err(NonceLifecycleError::RandomnessUnavailable));
         assert_eq!(ledger.reservation_count(), 0);
@@ -313,18 +415,13 @@ mod tests {
 
     #[test]
     fn collision_is_discarded_and_regenerated_before_reservation() {
-        let existing = NonceReservation::new(
+        let existing =
+            NonceReservation::new(vault_a(), NoncePurpose::BoundedBlob, generation(1), NONCE_A);
+        let mut ledger = NonceReservationLedger::from_authenticated_canonical_reservations(
             vault_a(),
-            NoncePurpose::BoundedBlob,
-            generation(1),
-            NONCE_A,
-        );
-        let mut ledger =
-            NonceReservationLedger::from_authenticated_canonical_reservations(
-                vault_a(),
-                [existing],
-            )
-            .unwrap();
+            [existing],
+        )
+        .unwrap();
         let candidates = [NONCE_A, NONCE_B];
         let mut index = 0_usize;
 
@@ -368,12 +465,8 @@ mod tests {
 
     #[test]
     fn restore_records_exact_authenticated_nonce_without_generation() {
-        let restored = NonceReservation::new(
-            vault_a(),
-            NoncePurpose::BoundedBlob,
-            generation(7),
-            NONCE_A,
-        );
+        let restored =
+            NonceReservation::new(vault_a(), NoncePurpose::BoundedBlob, generation(7), NONCE_A);
         let mut ledger = NonceReservationLedger::new(vault_a());
 
         ledger
@@ -387,12 +480,8 @@ mod tests {
 
     #[test]
     fn exact_duplicate_canonical_blob_nonce_is_corrupt_or_tampered() {
-        let duplicate = NonceReservation::new(
-            vault_a(),
-            NoncePurpose::BoundedBlob,
-            generation(1),
-            NONCE_A,
-        );
+        let duplicate =
+            NonceReservation::new(vault_a(), NoncePurpose::BoundedBlob, generation(1), NONCE_A);
 
         assert_eq!(
             NonceReservationLedger::from_authenticated_canonical_reservations(
@@ -424,20 +513,38 @@ mod tests {
     }
 
     #[test]
+    fn manifest_collision_is_discarded_and_regenerated() {
+        let existing = NonceReservation::new(
+            vault_a(),
+            NoncePurpose::FreshnessManifest,
+            generation(3),
+            NONCE_A,
+        );
+        let mut ledger = NonceReservationLedger::from_authenticated_canonical_reservations(
+            vault_a(),
+            [existing],
+        )
+        .unwrap();
+        let candidates = [NONCE_A, NONCE_B];
+        let mut index = 0_usize;
+
+        let reservation = ledger
+            .reserve_fresh_with(NoncePurpose::FreshnessManifest, generation(3), |nonce| {
+                *nonce = candidates[index];
+                index += 1;
+                Ok(())
+            })
+            .unwrap();
+
+        assert_eq!(reservation.nonce(), NONCE_B);
+        assert_eq!(index, 2);
+    }
+
+    #[test]
     fn same_nonce_is_allowed_across_distinct_generation_or_purpose_keys() {
         let reservations = [
-            NonceReservation::new(
-                vault_a(),
-                NoncePurpose::BoundedBlob,
-                generation(1),
-                NONCE_A,
-            ),
-            NonceReservation::new(
-                vault_a(),
-                NoncePurpose::BoundedBlob,
-                generation(2),
-                NONCE_A,
-            ),
+            NonceReservation::new(vault_a(), NoncePurpose::BoundedBlob, generation(1), NONCE_A),
+            NonceReservation::new(vault_a(), NoncePurpose::BoundedBlob, generation(2), NONCE_A),
             NonceReservation::new(
                 vault_a(),
                 NoncePurpose::FreshnessManifest,
@@ -456,12 +563,8 @@ mod tests {
 
     #[test]
     fn cross_vault_reservation_fails_closed() {
-        let reservation = NonceReservation::new(
-            vault_b(),
-            NoncePurpose::BoundedBlob,
-            generation(1),
-            NONCE_A,
-        );
+        let reservation =
+            NonceReservation::new(vault_b(), NoncePurpose::BoundedBlob, generation(1), NONCE_A);
         let mut ledger = NonceReservationLedger::new(vault_a());
 
         assert_eq!(
