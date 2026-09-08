@@ -363,7 +363,8 @@ fn recovery_structure_policy_and_kdf_parameters_fail_before_authentication() {
 fn recovery_wrong_passphrase_aad_inputs_ciphertext_tag_and_transplants_fail_uniformly() {
     let original = from_hex(RECOVERY_ENVELOPE_HEX);
     assert_eq!(
-        decrypt_recovery_envelope(recovery_context(), "wrong horse battery staple", &original).err(),
+        decrypt_recovery_envelope(recovery_context(), "wrong horse battery staple", &original)
+            .err(),
         Some(RecoveryEnvelopeError::RecoveryAuthenticationFailed)
     );
 
