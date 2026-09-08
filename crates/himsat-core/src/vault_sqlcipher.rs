@@ -1,4 +1,4 @@
-//! B301-B303 integration for the exact reviewed SQLCipher provider strategy.
+//! B301-B304 integration for the exact reviewed SQLCipher provider strategy.
 //!
 //! B301 opens the already provenance-registered SQLCipher build, applies the B201
 //! `StructuredStore` purpose key as SQLCipher raw key material, verifies the exact
@@ -7,15 +7,16 @@
 //! to report encryption active before any handle can be returned. B303 pins the
 //! reviewed OpenSSL provider/runtime identity, verifies the selected target-specific
 //! SQLCipher temp-store compile posture, and disables file-backed temporary data.
+//! B304 adds lease-gated normal SQLite integrity and SQLCipher cipher/page-
+//! authentication integrity checks using the exact pinned provider semantics.
 //!
 //! B303 deliberately does not select one permanent journal mode. Qualification
 //! exercises both WAL and rollback-journal operation because canonical contracts
-//! require both families to work under the reviewed provider. Integrity checks,
-//! wrong-key/corruption fixtures, plaintext-spill qualification, and migration
-//! remain B304-B307 respectively.
+//! require both families to work under the reviewed provider. Wrong-key/corruption
+//! fixtures, plaintext-spill qualification, and migration remain B305-B307.
 
 use crate::vault::VaultLeaseIdentity;
-use crate::vault_io::LeaseBoundDatabaseHandle;
+use crate::vault_io::{KeyedIoError, LeaseBoundDatabaseHandle};
 use crate::vault_keys::{KEY_MATERIAL_BYTES, KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
 use crate::vault_lease::{KeyedHandleError, KeyedHandleLease};
 use rusqlite::{Connection, OpenFlags};
@@ -121,6 +122,43 @@ impl From<KeyedHandleError> for SqlCipherOpenError {
     }
 }
 
+/// Typed fail-closed errors for B304 integrity verification.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SqlCipherIntegrityError {
+    /// The B105 keyed-handle lease rejected the integrity operation.
+    Access(KeyedHandleError),
+    /// SQLCipher cipher/page-authentication integrity could not be queried.
+    CipherIntegrityQuery,
+    /// SQLCipher returned one or more cipher-integrity diagnostic rows.
+    CipherIntegrityFailed,
+    /// SQLite integrity could not be queried or decoded as the reviewed text shape.
+    SqliteIntegrityQuery,
+    /// SQLite did not return exactly one row containing exact text `ok`.
+    SqliteIntegrityFailed,
+}
+
+impl fmt::Display for SqlCipherIntegrityError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::Access(error) => return write!(f, "SQLCipher integrity access rejected: {error}"),
+            Self::CipherIntegrityQuery => "SQLCipher cipher integrity could not be proven",
+            Self::CipherIntegrityFailed => "SQLCipher cipher integrity check failed",
+            Self::SqliteIntegrityQuery => "SQLite integrity could not be proven",
+            Self::SqliteIntegrityFailed => "SQLite integrity check failed",
+        };
+        f.write_str(message)
+    }
+}
+
+impl Error for SqlCipherIntegrityError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Access(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
 struct SqlCipherDatabase {
     // The raw provider remains private. Later authorized leaves may extend the
     // outer handle but must continue to cross the B105 lease gate for keyed I/O.
@@ -140,6 +178,23 @@ impl SqlCipherDatabaseHandle {
     #[must_use]
     pub fn identity(&self) -> VaultLeaseIdentity {
         self.inner.identity()
+    }
+
+    /// Runs the B304 SQLCipher and SQLite integrity checks under one B105 read permit.
+    ///
+    /// Clean SQLCipher cipher integrity is exactly zero result rows. Clean SQLite
+    /// integrity is exactly one text row equal to `ok`. Any other shape, any
+    /// diagnostic row, or any query/type/execution failure fails closed. The raw
+    /// connection is never exposed.
+    pub fn verify_integrity(&self) -> Result<(), SqlCipherIntegrityError> {
+        match self
+            .inner
+            .read(|backend| verify_b304_integrity(&backend._connection))
+        {
+            Ok(()) => Ok(()),
+            Err(KeyedIoError::Access(error)) => Err(SqlCipherIntegrityError::Access(error)),
+            Err(KeyedIoError::Backend(error)) => Err(error),
+        }
     }
 }
 
@@ -307,6 +362,58 @@ fn force_memory_temp_store(connection: &Connection) -> Result<(), SqlCipherOpenE
     Ok(())
 }
 
+fn verify_b304_integrity(connection: &Connection) -> Result<(), SqlCipherIntegrityError> {
+    verify_cipher_integrity(connection)?;
+    verify_sqlite_integrity(connection)
+}
+
+fn verify_cipher_integrity(connection: &Connection) -> Result<(), SqlCipherIntegrityError> {
+    let mut statement = connection
+        .prepare("PRAGMA cipher_integrity_check;")
+        .map_err(|_| SqlCipherIntegrityError::CipherIntegrityQuery)?;
+    let mut rows = statement
+        .query([])
+        .map_err(|_| SqlCipherIntegrityError::CipherIntegrityQuery)?;
+
+    match rows
+        .next()
+        .map_err(|_| SqlCipherIntegrityError::CipherIntegrityQuery)?
+    {
+        None => Ok(()),
+        Some(_) => Err(SqlCipherIntegrityError::CipherIntegrityFailed),
+    }
+}
+
+fn verify_sqlite_integrity(connection: &Connection) -> Result<(), SqlCipherIntegrityError> {
+    let mut statement = connection
+        .prepare("PRAGMA integrity_check;")
+        .map_err(|_| SqlCipherIntegrityError::SqliteIntegrityQuery)?;
+    let mut rows = statement
+        .query([])
+        .map_err(|_| SqlCipherIntegrityError::SqliteIntegrityQuery)?;
+
+    let first = rows
+        .next()
+        .map_err(|_| SqlCipherIntegrityError::SqliteIntegrityQuery)?
+        .ok_or(SqlCipherIntegrityError::SqliteIntegrityFailed)?;
+    let value = first
+        .get::<_, String>(0)
+        .map_err(|_| SqlCipherIntegrityError::SqliteIntegrityQuery)?;
+    if value != "ok" {
+        return Err(SqlCipherIntegrityError::SqliteIntegrityFailed);
+    }
+
+    if rows
+        .next()
+        .map_err(|_| SqlCipherIntegrityError::SqliteIntegrityQuery)?
+        .is_some()
+    {
+        return Err(SqlCipherIntegrityError::SqliteIntegrityFailed);
+    }
+
+    Ok(())
+}
+
 fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
 
@@ -324,10 +431,11 @@ fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
 mod tests {
     use super::{
         EXPECTED_OPENSSL_RUNTIME_VERSION, EXPECTED_SQLCIPHER_CRYPTO_PROVIDER,
-        EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION, SqlCipherOpenError,
-        apply_raw_key, enforce_b303_provider_and_temp_posture, open_sqlcipher_database,
-        provider_open_flags, raw_key_pragma, require_encryption_active, verify_encryption_active,
-        verify_runtime_identity,
+        EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION, SqlCipherIntegrityError,
+        SqlCipherOpenError, apply_raw_key, enforce_b303_provider_and_temp_posture,
+        open_sqlcipher_database, provider_open_flags, raw_key_pragma, require_encryption_active,
+        verify_cipher_integrity, verify_encryption_active, verify_runtime_identity,
+        verify_sqlite_integrity,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
@@ -500,6 +608,75 @@ mod tests {
         assert_eq!(temp_store, super::TEMP_STORE_MEMORY);
 
         drop(connection);
+        remove_database_files(&path);
+    }
+
+    #[test]
+    fn b304_file_backed_database_passes_exact_integrity_shapes() {
+        let path = unused_path("integrity");
+        {
+            let connection = keyed_test_connection(&path);
+            connection
+                .execute_batch(
+                    "CREATE TABLE integrity_probe (value INTEGER NOT NULL); INSERT INTO integrity_probe VALUES (1);",
+                )
+                .expect("integrity probe must create persistent encrypted pages");
+        }
+
+        let lease = VaultLease::new(identity());
+        let handle = open_sqlcipher_database(
+            &path,
+            lease.keyed_handle_lease(),
+            context(KeyPurpose::StructuredStore),
+            &vrk(),
+        )
+        .expect("reviewed SQLCipher provider must reopen the integrity fixture");
+
+        assert_eq!(handle.verify_integrity(), Ok(()));
+
+        drop(handle);
+        remove_database_files(&path);
+    }
+
+    #[test]
+    fn b304_in_memory_cipher_integrity_diagnostic_fails_closed() {
+        let connection = Connection::open_in_memory().expect("test SQLCipher connection must open");
+        let structured_key = context(KeyPurpose::StructuredStore).derive_purpose_key(&vrk());
+        apply_raw_key(&connection, &structured_key).expect("test raw key operation must succeed");
+
+        assert_eq!(
+            verify_cipher_integrity(&connection),
+            Err(SqlCipherIntegrityError::CipherIntegrityFailed)
+        );
+        assert_eq!(verify_sqlite_integrity(&connection), Ok(()));
+    }
+
+    #[test]
+    fn b304_revoked_handle_rejects_integrity_before_backend_query() {
+        let path = unused_path("integrity-revoked");
+        {
+            let connection = keyed_test_connection(&path);
+            connection
+                .execute_batch("CREATE TABLE integrity_probe (value INTEGER NOT NULL);")
+                .expect("integrity probe must create persistent encrypted pages");
+        }
+
+        let lease = VaultLease::new(identity());
+        let handle = open_sqlcipher_database(
+            &path,
+            lease.keyed_handle_lease(),
+            context(KeyPurpose::StructuredStore),
+            &vrk(),
+        )
+        .expect("reviewed SQLCipher provider must reopen the integrity fixture");
+        assert!(lease.revoke());
+
+        assert_eq!(
+            handle.verify_integrity(),
+            Err(SqlCipherIntegrityError::Access(KeyedHandleError::Revoked))
+        );
+
+        drop(handle);
         remove_database_files(&path);
     }
 
