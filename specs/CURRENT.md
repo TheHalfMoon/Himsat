@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B305_CANONICAL_RECONCILING_B306_BOUND
+PROGRAM_STATE = SPEC_004_B305_CANONICAL_RECOVERING_B306_TRANSPORT_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -38,10 +38,11 @@ B303_B304_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
 B304_DISPOSITION = CANONICAL_CLOSED
 B304_B305_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
 B305_DISPOSITION = CANONICAL_CLOSED
-B305_B306_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+B305_B306_RECONCILIATION_DISPOSITION = CANONICAL_MERGED_TRANSPORT_PROOF_NOT_RECONSTRUCTIBLE_NOT_QUALIFIED
+B305_B306_TRANSPORT_RECOVERY_STATE = ACTIVE_NOT_YET_CANONICAL
 NEXT_IMPLEMENTATION_LEAF = B306_PLAINTEXT_SPILL_MARKER_LOGICAL_ID_FILENAME_QUALIFICATION_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B306_ONLY_IF_THIS_B305_B306_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B306_SQLCIPHER_PLAINTEXT_SPILL_QUALIFICATION_ONLY_UNDER_THE_CONDITION_ABOVE
+SPEC_004_IMPLEMENTATION_AUTHORITY = B306_ONLY_IF_THIS_B305_B306_TRANSPORT_RECOVERY_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B306_SQLCIPHER_PLAINTEXT_SPILL_QUALIFICATION_ONLY_UNDER_THE_RECOVERY_CONDITION_ABOVE
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -428,19 +429,25 @@ B305 implementation PR #68 exact head `55f512820d82100c1f60f6bc7bb79450a9b6181f`
 
 Canonical merge `e27a0b2921af2661037b7af581f6be737c1352de` has exact parents `5806adb8aa7c0d4cdf8b8f74fe3c3503e204e4be` + `55f512820d82100c1f60f6bc7bb79450a9b6181f` and tree `2c7d73ca294bb6fe7970e258f0ed99c628a5ef8a`. Exact push-triggered CI `34289111683` and R3 `34289111736` succeeded on attempt 1. Byte-identical duplicate PR #69 was closed without merge and is not qualification evidence. Complete evidence is recorded in `b305-negative-fixtures-final-evidence.md`.
 
-## Active reconciliation objective
+## B305/B306 reconciliation transport gap
 
-Canonicalize B305 final evidence and bind the next implementation frontier to B306 without changing security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, B307 migration, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
+PR #70 exact head `954948554b371d80d9473a155a48ea7f31edcdf7` passed exact-head CI `34290128656` and R3 `34290128652` on attempt 1 and merged as canonical `7cdb8154ec90c59b64b2b47b37111cb491489e92`. Canonical parentage is exact: `e27a0b2921af2661037b7af581f6be737c1352de` + `954948554b371d80d9473a155a48ea7f31edcdf7`, tree `b58acfdae5d9df89833d30413623130c80b67461`. Push-triggered CI `34291064751` and R3 `34291064716` both succeeded on attempt 1; durable disposition comment `5593473838`.
 
-This B305/B306 reconciliation must itself:
+Transport-intent comments `5593348515` and `5593354365` bound the intended merge to exact head `954948554b371d80d9473a155a48ea7f31edcdf7`, but GitHub's post-merge surfaces do not expose the merge API request body. Because the actual concurrent merge request cannot be reconstructed, the repository does not infer that `expected_head_sha` was supplied from intent, exact parentage, or successful workflows. B305R002 therefore remains unchecked and PR #70 does not itself open B306.
+
+## Active transport-recovery objective
+
+Recover the B305/B306 transition forward-only without rewriting PR #70 or upgrading unavailable evidence. The recovery is documentation/evidence/state-only and must not change security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, B307 migration, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
+
+This B305/B306 transport recovery must itself:
 
 1. pass exact-head CI and R3;
 2. be reconciled against live reviews, review threads, comments, exact diff, `main`, and mergeability;
-3. merge only with explicit `expected_head_sha` protection;
+3. be merged by an observed merge action using explicit `expected_head_sha` protection;
 4. prove exact canonical parentage; and
 5. pass exact push-triggered post-merge CI and R3.
 
-Only after all five conditions are proven may B306 work begin from the resulting exact canonical `main`.
+Only after all five recovery conditions are proven may B306 work begin from the resulting exact canonical `main`.
 
 ## B306 bounded scope after reconciliation qualification
 
@@ -468,8 +475,9 @@ B306 must not absorb B307 copy-verify-publish migration, B401-B406 platform prot
   -> B304 normal/cipher integrity             CANONICAL_QUALIFIED
   -> B304/B305 state reconciliation           CANONICAL_QUALIFIED
   -> B305 negative SQLCipher fixtures          CANONICAL_QUALIFIED
-  -> B305/B306 state reconciliation           ACTIVE
-  -> B306-B307 encrypted structured store     B306_NEXT_AFTER_RECONCILIATION_QUALIFICATION
+  -> B305/B306 state reconciliation           CANONICAL_MERGED_TRANSPORT_PROOF_NOT_PROVEN
+  -> B305/B306 transport recovery             ACTIVE
+  -> B306-B307 encrypted structured store     B306_NEXT_AFTER_TRANSPORT_RECOVERY_QUALIFICATION
   -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
