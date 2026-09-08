@@ -466,7 +466,9 @@ mod tests {
             .expect("journal probe table must be created");
 
         let wal_mode = connection
-            .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get::<_, String>(0))
+            .query_row("PRAGMA journal_mode = WAL;", [], |row| {
+                row.get::<_, String>(0)
+            })
             .expect("reviewed SQLCipher provider must enter WAL mode");
         assert_eq!(wal_mode, "wal");
         connection
@@ -487,7 +489,9 @@ mod tests {
             .expect("encrypted rollback-journal transaction must commit");
 
         let row_count = connection
-            .query_row("SELECT COUNT(*) FROM journal_probe;", [], |row| row.get::<_, i64>(0))
+            .query_row("SELECT COUNT(*) FROM journal_probe;", [], |row| {
+                row.get::<_, i64>(0)
+            })
             .expect("journal probe row count must be readable");
         assert_eq!(row_count, 2);
         let temp_store = connection
