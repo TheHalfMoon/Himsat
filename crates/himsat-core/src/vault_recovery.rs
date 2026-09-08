@@ -511,7 +511,9 @@ mod tests {
     fn from_hex(hex: &str) -> Vec<u8> {
         assert_eq!(hex.len() % 2, 0);
         hex.as_bytes()
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|pair| {
                 let high = char::from(pair[0]).to_digit(16).expect("valid fixture hex");
                 let low = char::from(pair[1]).to_digit(16).expect("valid fixture hex");
