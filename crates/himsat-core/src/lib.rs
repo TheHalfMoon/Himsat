@@ -6,10 +6,11 @@
 //! contracts, and lease-gated database/blob I/O proof. B201 adds reviewed
 //! HKDF-SHA-256 purpose-key derivation. B202 adds the reviewed bounded-blob
 //! XChaCha20-Poly1305 envelope. B203 adds the reviewed OS-CSPRNG nonce lifecycle
-//! and in-process reservation/collision discipline without implementing manifest
-//! persistence or freshness anchoring. Persistence providers and platform
-//! secure-store implementations remain outside this module until separately
-//! authorized leaves.
+//! and in-process reservation/collision discipline. B204 adds the fixed reviewed
+//! Argon2id v1 recovery envelope without implementing backup publication,
+//! freshness anchoring, protector integration, rotation, or Specification 005.
+//! Persistence providers and platform secure-store implementations remain
+//! outside this module until separately authorized leaves.
 
 /// Provider-neutral vault identity, freshness, lease identity, capability, and
 /// secret-protector contract surface.
@@ -32,6 +33,9 @@ pub mod vault_nonce;
 
 /// B103 portable secret-protector policy, capability, and binding validation.
 pub mod vault_protector;
+
+/// B204 fixed Argon2id v1 recovery-envelope execution/parsing.
+pub mod vault_recovery;
 
 /// Immutable package identity exposed for repository smoke verification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
