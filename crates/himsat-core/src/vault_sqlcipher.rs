@@ -201,13 +201,13 @@ fn verify_runtime_identity(connection: &Connection) -> Result<(), SqlCipherOpenE
 }
 
 fn verify_encryption_active(connection: &Connection) -> Result<(), SqlCipherOpenError> {
-    let status = connection.query_row("PRAGMA cipher_status;", [], |row| row.get::<_, i64>(0));
+    let status = connection.query_row("PRAGMA cipher_status;", [], |row| row.get::<_, String>(0));
     require_encryption_active(status)
 }
 
-fn require_encryption_active(status: rusqlite::Result<i64>) -> Result<(), SqlCipherOpenError> {
+fn require_encryption_active(status: rusqlite::Result<String>) -> Result<(), SqlCipherOpenError> {
     match status {
-        Ok(1) => Ok(()),
+        Ok(value) if value == "1" => Ok(()),
         Ok(_) => Err(SqlCipherOpenError::EncryptionInactive),
         Err(_) => Err(SqlCipherOpenError::EncryptionStatus),
     }
@@ -318,16 +318,14 @@ mod tests {
     }
 
     #[test]
-    fn encryption_status_accepts_only_exact_active_scalar() {
-        assert_eq!(require_encryption_active(Ok(1)), Ok(()));
-        assert_eq!(
-            require_encryption_active(Ok(0)),
-            Err(SqlCipherOpenError::EncryptionInactive)
-        );
-        assert_eq!(
-            require_encryption_active(Ok(2)),
-            Err(SqlCipherOpenError::EncryptionInactive)
-        );
+    fn encryption_status_accepts_only_exact_active_text() {
+        assert_eq!(require_encryption_active(Ok("1".to_owned())), Ok(()));
+        for inactive in ["0", "2", "01", "true", ""] {
+            assert_eq!(
+                require_encryption_active(Ok(inactive.to_owned())),
+                Err(SqlCipherOpenError::EncryptionInactive)
+            );
+        }
     }
 
     #[test]
