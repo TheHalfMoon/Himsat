@@ -1,11 +1,14 @@
-//! Portable key-domain and secret-lifetime contracts for Specification 004B1 B104.
+//! Portable key-domain, derivation, and secret-lifetime contracts for Specification 004.
 //!
-//! This module freezes the reviewed derivation-domain identifiers and teardown
-//! ordering only. It does not execute HKDF, AEAD, Argon2id, SQLCipher, native
+//! B104 freezes the reviewed derivation-domain identifiers and teardown ordering.
+//! B201 executes only the reviewed HKDF-SHA-256 purpose-key derivation over those
+//! frozen inputs. This module does not execute AEAD, Argon2id, SQLCipher, native
 //! protector operations, or concrete database/blob I/O.
 
 use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity, VaultLeaseState};
 use crate::vault_lease::{KeyedHandleLease, VaultLease};
+use hkdf::Hkdf;
+use sha2::Sha256;
 use std::fmt;
 use std::mem::size_of;
 use zeroize::Zeroize;
@@ -17,7 +20,7 @@ const STRUCTURED_DOMAIN: &[u8] = b"HIMSAT/004/STRUCTURED/v1";
 const BLOB_DOMAIN: &[u8] = b"HIMSAT/004/BLOB/v1";
 const MANIFEST_DOMAIN: &[u8] = b"HIMSAT/004/MANIFEST/v1";
 
-/// Reviewed v1 key purpose used only to construct an HKDF `info` value.
+/// Reviewed v1 key purpose used to construct an HKDF `info` value.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum KeyPurpose {
     /// Structured-store purpose key.
@@ -38,10 +41,10 @@ impl KeyPurpose {
     }
 }
 
-/// Provider-neutral input values for the reviewed B104 domain-separation contract.
+/// Inputs for the reviewed B104/B201 domain-separation contract.
 ///
-/// B104 exposes only the public HKDF salt/info bytes. Actual HKDF-SHA-256
-/// execution and deterministic derivation vectors remain B201.
+/// B104 freezes the public HKDF salt/info bytes. B201 executes HKDF-SHA-256 over
+/// an already-owned 32-byte VRK and returns a new opaque `OwnedKeyMaterial`.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct KeyDerivationContext {
     vault_id: VaultId,
@@ -81,6 +84,29 @@ impl KeyDerivationContext {
         info
     }
 
+    /// Derives the reviewed 32-byte v1 purpose key with HKDF-SHA-256.
+    ///
+    /// The HKDF salt is the raw 16-byte `VaultId`; the `info` value is the
+    /// purpose-specific ASCII domain followed by `key_generation` as `u64be`.
+    /// The returned secret stays opaque and inherits `OwnedKeyMaterial`'s owned
+    /// buffer zeroization and redacted-debug behavior.
+    ///
+    /// Provider-internal temporary state is outside the owned-buffer erasure
+    /// guarantee and remains covered by the existing runtime/compiler/register/
+    /// allocator/swap/crash-dump residual-risk boundary.
+    #[must_use]
+    pub fn derive_purpose_key(self, vrk: &OwnedKeyMaterial) -> OwnedKeyMaterial {
+        let salt = self.hkdf_salt();
+        let info = self.hkdf_info();
+        let hkdf = Hkdf::<Sha256>::new(Some(salt.as_slice()), vrk.bytes.as_slice());
+        let mut output = [0_u8; KEY_MATERIAL_BYTES];
+
+        hkdf.expand(info.as_slice(), &mut output)
+            .expect("32-byte HKDF-SHA-256 output is within the RFC 5869 expansion limit");
+
+        OwnedKeyMaterial::from_bytes(output)
+    }
+
     /// Returns the public vault identity bound to the context.
     #[must_use]
     pub const fn vault_id(self) -> VaultId {
@@ -112,8 +138,6 @@ pub struct OwnedKeyMaterial {
 
 impl OwnedKeyMaterial {
     /// Takes ownership of one already-produced 32-byte key value.
-    ///
-    /// B104 does not generate or derive this material.
     #[must_use]
     pub const fn from_bytes(bytes: [u8; KEY_MATERIAL_BYTES]) -> Self {
         Self { bytes }
@@ -139,8 +163,9 @@ impl Drop for OwnedKeyMaterial {
 /// Owned secret objects associated with one live vault-key generation.
 ///
 /// `release_all` drops every owned object, invoking `OwnedKeyMaterial` zeroization
-/// for each present buffer. Purpose keys are values supplied by later authorized
-/// crypto execution; B104 never derives them.
+/// for each present buffer. Purpose keys may be populated by the reviewed B201
+/// derivation path; later cryptographic leaves consume them without changing the
+/// B104 lifetime contract.
 pub struct VaultKeyMaterial {
     vrk: Option<OwnedKeyMaterial>,
     recovery_kek: Option<OwnedKeyMaterial>,
@@ -352,8 +377,26 @@ mod tests {
         OwnedKeyMaterial::from_bytes([byte; KEY_MATERIAL_BYTES])
     }
 
+    fn vector_vrk() -> OwnedKeyMaterial {
+        OwnedKeyMaterial::from_bytes(std::array::from_fn(|index| index as u8))
+    }
+
+    fn vector_vault_id() -> VaultId {
+        VaultId::from_bytes(std::array::from_fn(|index| index as u8))
+    }
+
+    fn to_hex(bytes: &[u8]) -> String {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut output = String::with_capacity(bytes.len() * 2);
+        for byte in bytes {
+            output.push(char::from(HEX[usize::from(byte >> 4)]));
+            output.push(char::from(HEX[usize::from(byte & 0x0f)]));
+        }
+        output
+    }
+
     #[test]
-    fn derivation_context_freezes_exact_salt_and_domain_info_bytes_without_hkdf() {
+    fn derivation_context_freezes_exact_salt_and_domain_info_bytes() {
         let identity = identity();
         let cases = [
             (
@@ -379,6 +422,67 @@ mod tests {
             assert_eq!(context.key_generation(), identity.key_generation());
             assert_eq!(context.purpose(), purpose);
         }
+    }
+
+    #[test]
+    fn hkdf_sha256_matches_independent_deterministic_vectors_for_all_v1_purposes() {
+        let vrk = vector_vrk();
+        let generation =
+            KeyGeneration::new(0x0102_0304_0506_0708).expect("test generation is non-zero");
+        let cases = [
+            (
+                KeyPurpose::StructuredStore,
+                "0a6857ca8e7804d89a825e7e5bc515bb4cad0e87f2ee6d0b67e54f0313d0808f",
+            ),
+            (
+                KeyPurpose::BoundedBlob,
+                "602177c7d772ff6a69462540eb6612b105ec9b9f18115a024c3a410b0008e476",
+            ),
+            (
+                KeyPurpose::FreshnessManifest,
+                "19540379cb9fd9b63cad8f3be133c0a985339bcfeb323c26b1bd95e20202d019",
+            ),
+        ];
+
+        for (purpose, expected_hex) in cases {
+            let context = KeyDerivationContext::new(vector_vault_id(), generation, purpose);
+            let derived = context.derive_purpose_key(&vrk);
+            assert_eq!(to_hex(&derived.bytes), expected_hex);
+        }
+    }
+
+    #[test]
+    fn hkdf_domain_separates_purpose_vault_and_generation() {
+        let vrk = vector_vrk();
+        let vault_id = vector_vault_id();
+        let generation =
+            KeyGeneration::new(0x0102_0304_0506_0708).expect("test generation is non-zero");
+        let next_generation =
+            KeyGeneration::new(0x0102_0304_0506_0709).expect("test generation is non-zero");
+
+        let structured =
+            KeyDerivationContext::new(vault_id, generation, KeyPurpose::StructuredStore)
+                .derive_purpose_key(&vrk);
+        let blob = KeyDerivationContext::new(vault_id, generation, KeyPurpose::BoundedBlob)
+            .derive_purpose_key(&vrk);
+        let manifest =
+            KeyDerivationContext::new(vault_id, generation, KeyPurpose::FreshnessManifest)
+                .derive_purpose_key(&vrk);
+        let other_vault = KeyDerivationContext::new(
+            VaultId::from_bytes([0xa5; VAULT_ID_BYTES]),
+            generation,
+            KeyPurpose::StructuredStore,
+        )
+        .derive_purpose_key(&vrk);
+        let other_generation =
+            KeyDerivationContext::new(vault_id, next_generation, KeyPurpose::StructuredStore)
+                .derive_purpose_key(&vrk);
+
+        assert_ne!(structured.bytes, blob.bytes);
+        assert_ne!(structured.bytes, manifest.bytes);
+        assert_ne!(blob.bytes, manifest.bytes);
+        assert_ne!(structured.bytes, other_vault.bytes);
+        assert_ne!(structured.bytes, other_generation.bytes);
     }
 
     #[test]
