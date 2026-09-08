@@ -1,4 +1,4 @@
-//! B301-B304 integration for the exact reviewed SQLCipher provider strategy.
+//! B301-B305 integration for the exact reviewed SQLCipher provider strategy.
 //!
 //! B301 opens the already provenance-registered SQLCipher build, applies the B201
 //! `StructuredStore` purpose key as SQLCipher raw key material, verifies the exact
@@ -8,12 +8,14 @@
 //! reviewed OpenSSL provider/runtime identity, verifies the selected target-specific
 //! SQLCipher temp-store compile posture, and disables file-backed temporary data.
 //! B304 adds lease-gated normal SQLite integrity and SQLCipher cipher/page-
-//! authentication integrity checks using the exact pinned provider semantics.
+//! authentication integrity checks using the exact pinned provider semantics. B305
+//! adds genuine wrong-key/corruption fixtures plus bounded mismatch tests for the
+//! same production provider/version validators.
 //!
 //! B303 deliberately does not select one permanent journal mode. Qualification
 //! exercises both WAL and rollback-journal operation because canonical contracts
-//! require both families to work under the reviewed provider. Wrong-key/corruption
-//! fixtures, plaintext-spill qualification, and migration remain B305-B307.
+//! require both families to work under the reviewed provider. Plaintext-spill
+//! qualification and migration remain B306-B307.
 
 use crate::vault::VaultLeaseIdentity;
 use crate::vault_io::{KeyedIoError, LeaseBoundDatabaseHandle};
@@ -280,20 +282,30 @@ fn verify_runtime_identity(connection: &Connection) -> Result<(), SqlCipherOpenE
     let sqlcipher_version = connection
         .query_row("PRAGMA cipher_version;", [], |row| row.get::<_, String>(0))
         .map_err(|_| SqlCipherOpenError::ProviderVersion)?;
-    if sqlcipher_version != EXPECTED_SQLCIPHER_RUNTIME_VERSION {
-        return Err(SqlCipherOpenError::ProviderVersion);
-    }
+    require_sqlcipher_runtime_version(&sqlcipher_version)?;
 
     let sqlite_version = connection
         .query_row("SELECT sqlite_version();", [], |row| {
             row.get::<_, String>(0)
         })
         .map_err(|_| SqlCipherOpenError::SqliteVersion)?;
-    if sqlite_version != EXPECTED_SQLITE_RUNTIME_VERSION {
-        return Err(SqlCipherOpenError::SqliteVersion);
-    }
+    require_sqlite_runtime_version(&sqlite_version)
+}
 
-    Ok(())
+fn require_sqlcipher_runtime_version(version: &str) -> Result<(), SqlCipherOpenError> {
+    if version == EXPECTED_SQLCIPHER_RUNTIME_VERSION {
+        Ok(())
+    } else {
+        Err(SqlCipherOpenError::ProviderVersion)
+    }
+}
+
+fn require_sqlite_runtime_version(version: &str) -> Result<(), SqlCipherOpenError> {
+    if version == EXPECTED_SQLITE_RUNTIME_VERSION {
+        Ok(())
+    } else {
+        Err(SqlCipherOpenError::SqliteVersion)
+    }
 }
 
 fn verify_encryption_active(connection: &Connection) -> Result<(), SqlCipherOpenError> {
@@ -321,20 +333,30 @@ fn verify_crypto_provider_identity(connection: &Connection) -> Result<(), SqlCip
     let provider = connection
         .query_row("PRAGMA cipher_provider;", [], |row| row.get::<_, String>(0))
         .map_err(|_| SqlCipherOpenError::CryptoProvider)?;
-    if provider != EXPECTED_SQLCIPHER_CRYPTO_PROVIDER {
-        return Err(SqlCipherOpenError::CryptoProvider);
-    }
+    require_crypto_provider(&provider)?;
 
     let provider_version = connection
         .query_row("PRAGMA cipher_provider_version;", [], |row| {
             row.get::<_, String>(0)
         })
         .map_err(|_| SqlCipherOpenError::CryptoProviderVersion)?;
-    if provider_version != EXPECTED_OPENSSL_RUNTIME_VERSION {
-        return Err(SqlCipherOpenError::CryptoProviderVersion);
-    }
+    require_crypto_provider_version(&provider_version)
+}
 
-    Ok(())
+fn require_crypto_provider(provider: &str) -> Result<(), SqlCipherOpenError> {
+    if provider == EXPECTED_SQLCIPHER_CRYPTO_PROVIDER {
+        Ok(())
+    } else {
+        Err(SqlCipherOpenError::CryptoProvider)
+    }
+}
+
+fn require_crypto_provider_version(version: &str) -> Result<(), SqlCipherOpenError> {
+    if version == EXPECTED_OPENSSL_RUNTIME_VERSION {
+        Ok(())
+    } else {
+        Err(SqlCipherOpenError::CryptoProviderVersion)
+    }
 }
 
 fn verify_temp_store_compile_posture(connection: &Connection) -> Result<(), SqlCipherOpenError> {
@@ -436,8 +458,10 @@ mod tests {
         EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION,
         SqlCipherIntegrityError, SqlCipherOpenError, apply_raw_key,
         enforce_b303_provider_and_temp_posture, open_sqlcipher_database, provider_open_flags,
-        raw_key_pragma, require_encryption_active, verify_cipher_integrity,
-        verify_encryption_active, verify_runtime_identity, verify_sqlite_integrity,
+        raw_key_pragma, require_crypto_provider, require_crypto_provider_version,
+        require_encryption_active, require_sqlcipher_runtime_version,
+        require_sqlite_runtime_version, verify_cipher_integrity, verify_encryption_active,
+        verify_runtime_identity, verify_sqlite_integrity,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
@@ -680,6 +704,124 @@ mod tests {
 
         drop(handle);
         remove_database_files(&path);
+    }
+
+    #[test]
+    fn b305_wrong_key_file_fixture_fails_closed() {
+        let path = unused_path("wrong-key");
+        {
+            let connection = keyed_test_connection(&path);
+            connection
+                .execute_batch(
+                    "CREATE TABLE wrong_key_probe (value INTEGER NOT NULL); INSERT INTO wrong_key_probe VALUES (7);",
+                )
+                .expect("wrong-key fixture must persist encrypted content");
+        }
+
+        let wrong_lease = VaultLease::new(identity());
+        let wrong_vrk = OwnedKeyMaterial::from_bytes([0x53; KEY_MATERIAL_BYTES]);
+        if let Ok(handle) = open_sqlcipher_database(
+            &path,
+            wrong_lease.keyed_handle_lease(),
+            context(KeyPurpose::StructuredStore),
+            &wrong_vrk,
+        ) {
+            assert!(
+                handle.verify_integrity().is_err(),
+                "wrong key must never produce a healthy integrity result"
+            );
+        }
+
+        let correct_lease = VaultLease::new(identity());
+        let correct_handle = open_sqlcipher_database(
+            &path,
+            correct_lease.keyed_handle_lease(),
+            context(KeyPurpose::StructuredStore),
+            &vrk(),
+        )
+        .expect("wrong-key attempt must not rewrite or downgrade the encrypted database");
+        assert_eq!(correct_handle.verify_integrity(), Ok(()));
+
+        drop(correct_handle);
+        remove_database_files(&path);
+    }
+
+    #[test]
+    fn b305_corrupted_encrypted_page_fails_closed() {
+        let path = unused_path("corruption");
+        {
+            let connection = keyed_test_connection(&path);
+            connection
+                .execute_batch(
+                    "CREATE TABLE corruption_probe (payload BLOB NOT NULL); INSERT INTO corruption_probe VALUES (zeroblob(16384));",
+                )
+                .expect("corruption fixture must span multiple encrypted pages");
+        }
+
+        let mut bytes =
+            std::fs::read(&path).expect("encrypted corruption fixture must be readable");
+        assert!(
+            bytes.len() > 8192,
+            "corruption fixture must contain multiple encrypted pages"
+        );
+        let offset = bytes.len() / 2;
+        bytes[offset] ^= 0x01;
+        std::fs::write(&path, bytes).expect("corruption fixture mutation must persist");
+
+        let lease = VaultLease::new(identity());
+        if let Ok(handle) = open_sqlcipher_database(
+            &path,
+            lease.keyed_handle_lease(),
+            context(KeyPurpose::StructuredStore),
+            &vrk(),
+        ) {
+            assert!(
+                handle.verify_integrity().is_err(),
+                "corrupted encrypted page must never produce a healthy integrity result"
+            );
+        }
+
+        remove_database_files(&path);
+    }
+
+    #[test]
+    fn b305_unsupported_runtime_versions_fail_closed() {
+        assert_eq!(
+            require_sqlcipher_runtime_version(EXPECTED_SQLCIPHER_RUNTIME_VERSION),
+            Ok(())
+        );
+        assert_eq!(
+            require_sqlcipher_runtime_version("4.14.1 community"),
+            Err(SqlCipherOpenError::ProviderVersion)
+        );
+        assert_eq!(
+            require_sqlite_runtime_version(EXPECTED_SQLITE_RUNTIME_VERSION),
+            Ok(())
+        );
+        assert_eq!(
+            require_sqlite_runtime_version("3.51.4"),
+            Err(SqlCipherOpenError::SqliteVersion)
+        );
+    }
+
+    #[test]
+    fn b305_unsupported_crypto_provider_or_version_fails_closed() {
+        assert_eq!(
+            require_crypto_provider(EXPECTED_SQLCIPHER_CRYPTO_PROVIDER),
+            Ok(())
+        );
+        assert_eq!(
+            require_crypto_provider("commoncrypto"),
+            Err(SqlCipherOpenError::CryptoProvider)
+        );
+        assert_eq!(
+            require_crypto_provider_version(EXPECTED_OPENSSL_RUNTIME_VERSION),
+            Ok(())
+        );
+        assert_eq!(
+            require_crypto_provider_version("OpenSSL 3.6.4 1 Sep 2026"),
+            Err(SqlCipherOpenError::CryptoProviderVersion)
+        );
     }
 
     #[test]
