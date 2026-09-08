@@ -140,7 +140,9 @@ pub enum SqlCipherIntegrityError {
 impl fmt::Display for SqlCipherIntegrityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
-            Self::Access(error) => return write!(f, "SQLCipher integrity access rejected: {error}"),
+            Self::Access(error) => {
+                return write!(f, "SQLCipher integrity access rejected: {error}");
+            }
             Self::CipherIntegrityQuery => "SQLCipher cipher integrity could not be proven",
             Self::CipherIntegrityFailed => "SQLCipher cipher integrity check failed",
             Self::SqliteIntegrityQuery => "SQLite integrity could not be proven",
@@ -431,11 +433,11 @@ fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
 mod tests {
     use super::{
         EXPECTED_OPENSSL_RUNTIME_VERSION, EXPECTED_SQLCIPHER_CRYPTO_PROVIDER,
-        EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION, SqlCipherIntegrityError,
-        SqlCipherOpenError, apply_raw_key, enforce_b303_provider_and_temp_posture,
-        open_sqlcipher_database, provider_open_flags, raw_key_pragma, require_encryption_active,
-        verify_cipher_integrity, verify_encryption_active, verify_runtime_identity,
-        verify_sqlite_integrity,
+        EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION,
+        SqlCipherIntegrityError, SqlCipherOpenError, apply_raw_key,
+        enforce_b303_provider_and_temp_posture, open_sqlcipher_database, provider_open_flags,
+        raw_key_pragma, require_encryption_active, verify_cipher_integrity,
+        verify_encryption_active, verify_runtime_identity, verify_sqlite_integrity,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
