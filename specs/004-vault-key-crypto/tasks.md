@@ -19,7 +19,7 @@
 
 - [x] R001 Prepare review-only PR #12 with base `1f14bbe004962dd164402e6e6c7f9c046cf5b489` and head pointing directly to exact canonical design `384608c8fc13531c399f3726caa5022eb3612aa2`.
 - [x] R002 Obtain substantive independent CodeRabbit review `PRR_kwDOUQPwRs8AAAABMYy3gw` on the exact canonical design; GitHub state `COMMENTED`, submitted 2026-09-06T18:47:41Z, 16 actionable findings.
-- [x] R003 Classify all 16 actionable findings as blocking 004B implementation; record exact SHA, reviewer identity, state, evidence limitations, and Himsat governance disposition `CHANGES_REQUIRED` in `review-evidence.md`.
+- [x] R003 Classify all 16 actionable findings as blocking 004B implementation; record exact SHA, reviewer identity, review state, evidence limitations, and Himsat governance disposition `CHANGES_REQUIRED` in `review-evidence.md`.
 - [x] R004 Merge forward remediation D001-D016 in PR #16 with expected-head protection; canonical merge `6d1bbc9b55690939833917eebd447c361627f48a` contains exact remediation head `befb5026a778491f20dce456fdb9b855d4a6377a`.
 - [x] R005 Obtain second substantive independent CodeRabbit review on review-only PR #18 for exact canonical SHA `6d1bbc9b55690939833917eebd447c361627f48a`.
 - [x] R006 Record second-review `CHANGES_REQUIRED` disposition, two blockers D017-D018, non-blocking recommendations, and residual risks in `review-round2-evidence.md`; old review/self-review/CI/skipped/billing-blocked output are not substitutes.
