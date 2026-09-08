@@ -218,9 +218,7 @@ fn parse_recovery_envelope(
     if parse_u16(envelope, CIPHER_SUITE_OFFSET) != CIPHER_SUITE_XCHACHA20_POLY1305 {
         return Err(RecoveryEnvelopeError::UnsupportedCipherSuite);
     }
-    if parse_u16(envelope, RECOVERY_POLICY_OFFSET)
-        != RECOVERY_POLICY_ARGON2ID_RFC9106_64M_V1
-    {
+    if parse_u16(envelope, RECOVERY_POLICY_OFFSET) != RECOVERY_POLICY_ARGON2ID_RFC9106_64M_V1 {
         return Err(RecoveryEnvelopeError::InvalidRecoveryPolicy);
     }
     if parse_u16(envelope, ARGON2_VERSION_OFFSET) != ARGON2_VERSION
@@ -415,11 +413,12 @@ pub fn encrypt_recovery_envelope(
 /// Authenticates one exact reviewed v1 recovery envelope and returns its VRK.
 ///
 /// Public envelope structure and the complete fixed Argon2id policy are checked
-/// before KDF allocation. The expected vault/generation context, not the parsed
-/// envelope context, is used to rebuild recovery AAD. Consequently a valid
-/// envelope transplanted to another vault or generation reaches the same
-/// externally visible `RecoveryAuthenticationFailed` result as a wrong
-/// passphrase or AEAD/tag failure. No partial VRK is released.
+/// before KDF allocation. Recovery AAD is rebuilt from the parsed public
+/// vault/generation context so every public cryptographic-context field remains
+/// authenticated. Only after AEAD succeeds is that authenticated context compared
+/// with the caller's expected vault/generation. A mismatch is returned as the same
+/// externally visible `RecoveryAuthenticationFailed` result as a wrong passphrase
+/// or AEAD/tag failure. No partial VRK is released.
 ///
 /// # Errors
 ///
@@ -434,7 +433,7 @@ pub fn decrypt_recovery_envelope(
     let parsed = parse_recovery_envelope(envelope)?;
     validate_authentication_passphrase(passphrase)?;
     let recovery_kek = derive_recovery_kek(passphrase, &parsed.salt)?;
-    let aad = build_recovery_aad(expected_context, &parsed.salt, &parsed.nonce);
+    let aad = build_recovery_aad(parsed.context, &parsed.salt, &parsed.nonce);
     let nonce_ref = <&XNonce>::try_from(parsed.nonce.as_slice())
         .expect("parsed B204 recovery nonce is statically exactly 24 bytes");
     let mut plaintext = recovery_kek
@@ -451,6 +450,10 @@ pub fn decrypt_recovery_envelope(
         })
         .map_err(|_| RecoveryEnvelopeError::RecoveryAuthenticationFailed)?;
 
+    if parsed.context != expected_context {
+        plaintext.fill(0);
+        return Err(RecoveryEnvelopeError::RecoveryAuthenticationFailed);
+    }
     if plaintext.len() != KEY_MATERIAL_BYTES {
         plaintext.fill(0);
         return Err(RecoveryEnvelopeError::RecoveryAuthenticationFailed);
@@ -510,8 +513,8 @@ mod tests {
         hex.as_bytes()
             .chunks_exact(2)
             .map(|pair| {
-                let high = (pair[0] as char).to_digit(16).expect("valid fixture hex");
-                let low = (pair[1] as char).to_digit(16).expect("valid fixture hex");
+                let high = char::from(pair[0]).to_digit(16).expect("valid fixture hex");
+                let low = char::from(pair[1]).to_digit(16).expect("valid fixture hex");
                 u8::try_from((high << 4) | low).expect("one fixture byte")
             })
             .collect()
@@ -573,7 +576,10 @@ mod tests {
 
         for (offset, expected) in [
             (2, RecoveryEnvelopeError::InvalidDomain),
-            (VERSION_OFFSET + 1, RecoveryEnvelopeError::UnsupportedVersion),
+            (
+                VERSION_OFFSET + 1,
+                RecoveryEnvelopeError::UnsupportedVersion,
+            ),
             (
                 ENVELOPE_TYPE_OFFSET + 1,
                 RecoveryEnvelopeError::UnsupportedEnvelopeType,
@@ -625,17 +631,24 @@ mod tests {
     }
 
     #[test]
-    fn wrong_passphrase_tag_failure_and_transplant_are_uniform() {
+    fn wrong_passphrase_tag_public_context_and_transplant_fail_uniformly() {
         let original = from_hex(EXPECTED_ENVELOPE_HEX);
         assert_eq!(
             decrypt_recovery_envelope(context(), "wrong horse battery staple", &original).err(),
             Some(RecoveryEnvelopeError::RecoveryAuthenticationFailed)
         );
 
-        let mut tampered = original.clone();
-        tampered[RECOVERY_ENVELOPE_BYTES - 1] ^= 1;
+        let mut tampered_tag = original.clone();
+        tampered_tag[RECOVERY_ENVELOPE_BYTES - 1] ^= 1;
         assert_eq!(
-            decrypt_recovery_envelope(context(), TEST_PASSPHRASE, &tampered).err(),
+            decrypt_recovery_envelope(context(), TEST_PASSPHRASE, &tampered_tag).err(),
+            Some(RecoveryEnvelopeError::RecoveryAuthenticationFailed)
+        );
+
+        let mut tampered_public_context = original.clone();
+        tampered_public_context[VAULT_ID_OFFSET] ^= 1;
+        assert_eq!(
+            decrypt_recovery_envelope(context(), TEST_PASSPHRASE, &tampered_public_context).err(),
             Some(RecoveryEnvelopeError::RecoveryAuthenticationFailed)
         );
 
@@ -665,7 +678,10 @@ mod tests {
                 Err(())
             }
         });
-        assert_eq!(result.err(), Some(RecoveryEnvelopeError::RandomnessUnavailable));
+        assert_eq!(
+            result.err(),
+            Some(RecoveryEnvelopeError::RandomnessUnavailable)
+        );
         assert_eq!(calls, 2);
     }
 
@@ -682,7 +698,7 @@ mod tests {
     }
 
     #[test]
-    fn aad_is_exact_reviewed_length_and_uses_expected_context() {
+    fn aad_is_exact_reviewed_length_and_uses_context() {
         let aad = build_recovery_aad(context(), &TEST_SALT, &TEST_NONCE);
         assert_eq!(aad.len(), RECOVERY_AAD_BYTES);
         assert_eq!(&aad[..AAD_DOMAIN_PREFIX.len()], AAD_DOMAIN_PREFIX);
@@ -699,7 +715,7 @@ mod tests {
     }
 
     #[test]
-    fn parsed_public_context_is_retained_but_not_pre_auth_compared() {
+    fn parsed_public_context_is_retained_for_authenticated_aad() {
         let original = from_hex(EXPECTED_ENVELOPE_HEX);
         let parsed = parse_recovery_envelope(&original).expect("fixture envelope is canonical");
         assert_eq!(parsed.context, context());
