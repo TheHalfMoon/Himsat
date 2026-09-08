@@ -53,8 +53,12 @@ impl fmt::Display for SqlCipherOpenError {
             Self::PurposeMismatch => "SQLCipher derivation purpose is not StructuredStore",
             Self::Open => "SQLCipher connection open failed",
             Self::Key => "SQLCipher raw-key operation failed",
-            Self::ProviderVersion => "SQLCipher runtime identity does not match the reviewed provider",
-            Self::SqliteVersion => "embedded SQLite runtime identity does not match the reviewed provider",
+            Self::ProviderVersion => {
+                "SQLCipher runtime identity does not match the reviewed provider"
+            }
+            Self::SqliteVersion => {
+                "embedded SQLite runtime identity does not match the reviewed provider"
+            }
         };
         f.write_str(message)
     }
@@ -177,7 +181,9 @@ fn verify_runtime_identity(connection: &Connection) -> Result<(), SqlCipherOpenE
     }
 
     let sqlite_version = connection
-        .query_row("SELECT sqlite_version();", [], |row| row.get::<_, String>(0))
+        .query_row("SELECT sqlite_version();", [], |row| {
+            row.get::<_, String>(0)
+        })
         .map_err(|_| SqlCipherOpenError::SqliteVersion)?;
     if sqlite_version != EXPECTED_SQLITE_RUNTIME_VERSION {
         return Err(SqlCipherOpenError::SqliteVersion);
@@ -202,8 +208,8 @@ fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION,
-        SqlCipherOpenError, open_sqlcipher_database, provider_open_flags, raw_key_pragma,
+        EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION, SqlCipherOpenError,
+        open_sqlcipher_database, provider_open_flags, raw_key_pragma,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
@@ -308,13 +314,9 @@ mod tests {
             KeyPurpose::StructuredStore,
         );
 
-        let error = open_sqlcipher_database(
-            &path,
-            lease.keyed_handle_lease(),
-            other_context,
-            &vrk(),
-        )
-        .expect_err("identity mismatch must fail closed");
+        let error =
+            open_sqlcipher_database(&path, lease.keyed_handle_lease(), other_context, &vrk())
+                .expect_err("identity mismatch must fail closed");
 
         assert_eq!(error, SqlCipherOpenError::IdentityMismatch);
         assert!(!path.exists());
