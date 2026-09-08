@@ -514,7 +514,7 @@ mod tests {
             decrypt_bounded_blob(
                 &vrk(),
                 context(),
-                &vec![0_u8; BOUNDED_BLOB_HEADER_BYTES - 1]
+                &[0_u8; BOUNDED_BLOB_HEADER_BYTES - 1]
             ),
             Err(BoundedBlobError::TruncatedEnvelope)
         );
