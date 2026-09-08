@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B303_CANONICAL_RECONCILING_B304_BOUND
+PROGRAM_STATE = SPEC_004_B304_CANONICAL_RECONCILING_B305_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -34,10 +34,12 @@ B301_B302_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
 B302_DISPOSITION = CANONICAL_CLOSED
 B302_B303_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
 B303_DISPOSITION = CANONICAL_CLOSED
-B303_B304_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B304_NORMAL_AND_CIPHER_INTEGRITY_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B304_ONLY_IF_THIS_B303_B304_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B304_SQLCIPHER_NORMAL_AND_CIPHER_INTEGRITY_ONLY_UNDER_THE_CONDITION_ABOVE
+B303_B304_RECONCILIATION_DISPOSITION = CANONICAL_CLOSED
+B304_DISPOSITION = CANONICAL_CLOSED
+B304_B305_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B305_WRONG_KEY_CORRUPTION_UNSUPPORTED_PROVIDER_VERSION_FIXTURES_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B305_ONLY_IF_THIS_B304_B305_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B305_SQLCIPHER_NEGATIVE_FIXTURES_ONLY_UNDER_THE_CONDITION_ABOVE
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -56,7 +58,7 @@ Specification 004P is closed canonically. The reviewed dependency closure alread
 
 Q009 also remains unsatisfied. Repository-owner evidence, implementation tests, CI/R3 automation, billing-blocked/skipped review bots, Cubic neutral output, or other automation do not substitute for the required genuinely independent substantive crypto/security review of the exact implementation revision.
 
-## Canonical implementation lineage through B303
+## Canonical implementation lineage through B304
 
 ```text
 B101_CANONICAL_MERGE = 95cf1de6b57f26545fd3ad03d99e18c9f9dc0a5c
@@ -84,9 +86,11 @@ B301_B302_RECONCILIATION = 8af8ddfa4084f98655e692c149e972edf7f7368b
 B302_CANONICAL_MERGE = 001e274a321cd0f6c472ce768f1a9910165598fe
 B302_B303_RECONCILIATION = 407d79dc6bc872088423569e9265ea32a094e101
 B303_CANONICAL_MERGE = b3d4c7de77ec7a072fdcdd09d2d798519236db34
+B303_B304_RECONCILIATION = 76f6a3ccacc56d58daf4bd9f40d21234a6e50002
+B304_CANONICAL_MERGE = bfba47dd43d2b1c8ca94a9a1fb0c7d0c94a142e7
 ```
 
-Complete leaf evidence remains under `specs/004-vault-key-crypto/`, including `b201-hkdf-final-evidence.md`, `b202-bounded-blob-final-evidence.md`, `b203-nonce-lifecycle-final-evidence.md`, `b204-recovery-envelope-final-evidence.md`, `b205-crypto-adversarial-final-evidence.md`, `b301-sqlcipher-provider-final-evidence.md`, `b302-encryption-active-final-evidence.md`, and `b303-provider-temp-journal-final-evidence.md` once this reconciliation becomes canonical.
+Complete leaf evidence remains under `specs/004-vault-key-crypto/`, including `b201-hkdf-final-evidence.md`, `b202-bounded-blob-final-evidence.md`, `b203-nonce-lifecycle-final-evidence.md`, `b204-recovery-envelope-final-evidence.md`, `b205-crypto-adversarial-final-evidence.md`, `b301-sqlcipher-provider-final-evidence.md`, `b302-encryption-active-final-evidence.md`, `b303-provider-temp-journal-final-evidence.md`, and `b304-integrity-final-evidence.md`. The new B304 evidence becomes canonical only when this reconciliation completes its own guarded merge and post-merge qualification.
 
 ## Canonical B205/B301 reconciliation disposition
 
@@ -334,11 +338,89 @@ Exact push-triggered post-merge CI `34276275141` and R3 `34276275137` both reach
 
 B303 is therefore canonical and closed only for the reviewed SQLCipher/OpenSSL provider, temp-store, and WAL/rollback-journal qualification boundary.
 
+## Canonical B303/B304 reconciliation disposition
+
+The B303/B304 evidence-state reconciliation was exact-head qualified before B304 began:
+
+```text
+PR = 65
+BASE = b3d4c7de77ec7a072fdcdd09d2d798519236db34
+HEAD = 798fe493e99c9524b76dfaf065de4514ac511acf
+PREMERGE_CI = 34278147166 / run #171 / SUCCESS / attempt 1
+PREMERGE_R3 = 34278147198 / run #148 / SUCCESS / attempt 1
+OWNER_RECONCILIATION_REVIEW = 5147061700
+EXPECTED_HEAD_SHA = 798fe493e99c9524b76dfaf065de4514ac511acf
+EXPECTED_HEAD_TRANSPORT = PROVEN_COMMENT_5591956575
+MERGE_METHOD = merge
+CANONICAL_MERGE = 76f6a3ccacc56d58daf4bd9f40d21234a6e50002
+PARENT_1 = b3d4c7de77ec7a072fdcdd09d2d798519236db34
+PARENT_2 = 798fe493e99c9524b76dfaf065de4514ac511acf
+MERGE_TREE = ade65b8f172c559341cbe1177b9c9a20f975ff4e
+POSTMERGE_CI = 34279419817 / run #172 / SUCCESS / attempt 1 / push
+POSTMERGE_R3 = 34279419704 / run #149 / SUCCESS / attempt 1 / push
+POSTMERGE_RECONCILIATION_COMMENT = 5592110972
+```
+
+The prior task ledger left B303R001-B303R003 unchecked despite this proven live evidence. This reconciliation repairs that state forward-only; it does not alter historical commits or upgrade unavailable evidence.
+
+## Canonical B304 disposition
+
+B304 implementation PR #66 started from exact canonical B303/B304 reconciliation merge `76f6a3ccacc56d58daf4bd9f40d21234a6e50002` and changed only:
+
+```text
+crates/himsat-core/src/vault_sqlcipher.rs
+```
+
+The accepted implementation adds typed fail-closed normal SQLite and SQLCipher cipher/page-authentication integrity verification behind one B105 operation-scoped read permit. The raw `rusqlite::Connection` remains private.
+
+Canonical clean-result semantics are:
+
+```text
+SQLCIPHER_INTEGRITY_SUCCESS = ZERO_ROWS
+SQLITE_INTEGRITY_SUCCESS = EXACTLY_ONE_ROW_WITH_TEXT_ok
+```
+
+Initial head `4841362fac8ea62c4de01ce18ef1465557881a9c` remains permanently NOT PASS:
+
+```text
+CI = 34280979977 / run #173 / FAILURE_NOT_PASS / attempt 1
+R3 = 34280979912 / run #150 / FAILURE_NOT_PASS / attempt 1
+OBSERVED = UBUNTU_MACOS_WINDOWS_FORMATTING_FAILURE_NOT_PASS
+```
+
+The R3 run nevertheless executed clippy and tests successfully, including B304 tests, but its terminal verdict remained FAILURE and is not upgraded. The failed head was not rerun, rewritten, rebased, or force-pushed. The accepted successor applied only the exact pinned-rustfmt deltas forward-only.
+
+Final exact head `751a02c13129face0fb5ca828ccf846a483e4941` passed CI `34281346220` and R3 `34281346213`, both attempt 1. No inline review thread existed. Qodo billing-blocked and CodeRabbit auto-skipped outputs were NOT PASS. Repository-owner exact-head reconciliation review `5147456689` is durable governance evidence but does not satisfy Q009.
+
+Guarded transport used:
+
+```text
+EXPECTED_HEAD_SHA = 751a02c13129face0fb5ca828ccf846a483e4941
+MERGE_METHOD = merge
+MERGED = true
+CANONICAL_MERGE = bfba47dd43d2b1c8ca94a9a1fb0c7d0c94a142e7
+EXPECTED_HEAD_TRANSPORT = PROVEN_COMMENT_5592463767
+```
+
+Canonical parentage is exact:
+
+```text
+PARENT_1 = 76f6a3ccacc56d58daf4bd9f40d21234a6e50002
+PARENT_2 = 751a02c13129face0fb5ca828ccf846a483e4941
+MERGE_TREE = 5b17fae1ea71f90f3293f94733de76bc6f497851
+```
+
+Durable parentage comment: `5592503089`.
+
+Exact push-triggered post-merge CI `34283841909` and R3 `34283842070` both reached terminal SUCCESS on exact canonical merge `bfba47dd43d2b1c8ca94a9a1fb0c7d0c94a142e7`, attempt 1. Durable post-merge qualification comment: `5592582109`.
+
+B304 is therefore canonical and closed only for the lease-gated normal SQLite integrity and SQLCipher cipher/page-authentication integrity boundary.
+
 ## Active reconciliation objective
 
-Canonicalize B303 final evidence and bind the next implementation frontier to B304 without changing security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
+Canonicalize B304 final evidence and bind the next implementation frontier to B305 without changing security semantics, production/runtime behavior, Cargo manifest/lockfile, dependency bytes, provenance entries, generated artifacts, workflows, donor material, platform protector implementation, freshness/backup/rotation/deletion behavior, Specification 005 behavior, Q009 disposition, release posture, FIPS claim, or compliance claim.
 
-This B303/B304 reconciliation must itself:
+This B304/B305 reconciliation must itself:
 
 1. pass exact-head CI and R3;
 2. be reconciled against live reviews, review threads, comments, exact diff, `main`, and mergeability;
@@ -346,44 +428,19 @@ This B303/B304 reconciliation must itself:
 4. prove exact canonical parentage; and
 5. pass exact push-triggered post-merge CI and R3.
 
-Only after all five conditions are proven may B304 work begin from the resulting exact canonical `main`.
+Only after all five conditions are proven may B305 work begin from the resulting exact canonical `main`.
 
-## B304 bounded scope after reconciliation qualification
+## B305 bounded scope after reconciliation qualification
 
-B304 owns only normal SQLite integrity checking and SQLCipher cipher/page-authentication integrity checking on the exact adopted provider, behind the existing B105 lease gate.
+B305 owns only wrong-key, corruption, unsupported-provider, and unsupported-version fixtures for the exact adopted SQLCipher provider path.
 
-The exact adopted SQLCipher source is:
+The fixtures must preserve the existing fail-closed production boundaries and prove negative behavior without introducing a fallback provider, weakening version/provider identity checks, exposing raw keyed connection state, or treating skipped/unsupported evidence as PASS.
 
-```text
-SQLCIPHER_VERSION = 4.14.0
-SQLCIPHER_SOURCE_REVISION = 778ab890cfc30c3631212dcceb0295498abdcd3e
-SQLCIPHER_EMBEDDED_SQLITE_VERSION = 3.51.3
-```
+B305 may extend bounded test helpers as necessary to exercise the existing provider-open and integrity failure surfaces, but production semantics may change only if a fixture proves the current fail-closed path is incomplete and the repair remains within B305 authority.
 
-The pinned SQLCipher regression suite defines the clean file-backed database result of:
+B305 must not absorb:
 
-```sql
-PRAGMA cipher_integrity_check;
-PRAGMA integrity_check;
-```
-
-as cipher-integrity producing no result rows followed by SQLite integrity producing exact text `ok`. The same pinned suite demonstrates that cipher-integrity failures produce one or more diagnostic rows such as HMAC-verification or invalid-page-size failures.
-
-B304 must therefore fail closed unless:
-
-```text
-SQLITE_INTEGRITY_RESULT = EXACTLY_ONE_ROW_WITH_TEXT_ok
-SQLCIPHER_INTEGRITY_RESULT = ZERO_ROWS
-```
-
-Any query/type/execution failure, any SQLite result other than exactly one `ok` row, or any SQLCipher cipher-integrity diagnostic row is NOT healthy and must return a typed fail-closed integrity error. The operation must retain the existing B105 lease permit for the complete integrity check and must not expose the raw `rusqlite::Connection`.
-
-B304 may add pristine file-backed positive evidence and bounded helper-level rejection tests for non-success result shapes. It must not absorb the B305-owned wrong-key/corruption/unsupported-provider/version fixture expansion merely to manufacture negative provider evidence early.
-
-B304 must not absorb:
-
-- B305 wrong-key/corruption/unsupported-provider/version fixture expansion;
-- B306 plaintext-spill/logical-ID/public-filename qualification;
+- B306 plaintext-spill, logical-ID, semantic-marker, file-backed-temp, or public-filename qualification;
 - B307 copy-verify-publish migration;
 - B401-B406 platform protector implementation;
 - B501-B506 freshness/backup/rotation/deletion;
@@ -392,7 +449,7 @@ B304 must not absorb:
 - new donor/dependency adoption; or
 - release, FIPS, or compliance claims.
 
-If either integrity surface cannot be positively proven under the exact reviewed provider, B304 must fail closed rather than downgrade, skip, or substitute the check.
+Any unsupported provider/version, wrong key, or corruption condition that cannot be represented with genuine evidence must remain NOT PROVEN rather than being simulated as a passing qualification result.
 
 ## Specification 004 delivery chain
 
@@ -408,8 +465,10 @@ If either integrity surface cannot be positively proven under the exact reviewed
   -> B302 encryption-active proof             CANONICAL_QUALIFIED
   -> B302/B303 state reconciliation           CANONICAL_QUALIFIED
   -> B303 provider/temp/journal posture       CANONICAL_QUALIFIED
-  -> B303/B304 state reconciliation           ACTIVE
-  -> B304-B307 encrypted structured store     B304_NEXT_AFTER_RECONCILIATION_QUALIFICATION
+  -> B303/B304 state reconciliation           CANONICAL_QUALIFIED
+  -> B304 normal/cipher integrity             CANONICAL_QUALIFIED
+  -> B304/B305 state reconciliation           ACTIVE
+  -> B305-B307 encrypted structured store     B305_NEXT_AFTER_RECONCILIATION_QUALIFICATION
   -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
