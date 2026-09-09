@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B306_AUTHORIZED_AFTER_CANONICAL_TRANSPORT_RECOVERY
+PROGRAM_STATE = SPEC_004_B306_CANONICAL_RECONCILING_B307_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -41,9 +41,12 @@ B305_DISPOSITION = CANONICAL_CLOSED
 B305_B306_RECONCILIATION_DISPOSITION = CANONICAL_MERGED_TRANSPORT_PROOF_NOT_RECONSTRUCTIBLE_NOT_QUALIFIED
 B305_B306_TRANSPORT_RECOVERY_STATE = CANONICAL_QUALIFIED
 B305_B306_TRANSPORT_RECOVERY_CANONICAL_MERGE = c22385e0245d9b372b396bbe9a2d158d30b40052
-NEXT_IMPLEMENTATION_LEAF = B306_PLAINTEXT_SPILL_MARKER_LOGICAL_ID_FILENAME_QUALIFICATION_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B306_ONLY
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B306_SQLCIPHER_PLAINTEXT_SPILL_QUALIFICATION_ONLY
+B306_DISPOSITION = CANONICAL_CLOSED
+B306_CANONICAL_MERGE = 7359ca64f6679409ddc81a025fe556c7297845e2
+B306_B307_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B307_COPY_VERIFY_PUBLISH_MIGRATION_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B307_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B307_COPY_VERIFY_PUBLISH_MIGRATION_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -446,15 +449,27 @@ Push-triggered post-merge CI `34293423595` and R3 `34293423619` both succeeded o
 
 This forward recovery does not retroactively repair PR #70's missing merge-request transport proof: B305R002 remains unchecked / NOT PASS. B305R003 is independently proven by exact PR #70 parentage and post-merge CI/R3. `P011` remains unchecked / NOT PASS. Q009 remains unsatisfied.
 
-B306 is now the only authorized implementation leaf.
+## Canonical B306 disposition
 
-## B306 bounded scope after reconciliation qualification
+B306 implementation PR #74 exact final head `35bd5ace1f72fed39ff34236c17ae46a0e73f705` changed only `crates/himsat-core/tests/b306_plaintext_spill.rs`. Two predecessor heads remain NOT PASS: `3c9550cba175f8f63aba265b2cac7e7bd429e1a7` failed CI `34365909898` / R3 `34365909795` on formatting; `7872315dff90c7f3d4112a171a989289d7dc3fb0` failed CI `34366447120` / R3 `34366447403` on residual EOF newline formatting. Neither failed head was rerun or upgraded.
 
-B306 owns only plaintext-spill qualification for the already reviewed SQLCipher path: semantic fixture markers and logical IDs must be absent from encrypted DB/WAL/rollback-journal/file-backed-temp bytes and from public filenames under the qualified configuration.
+Final exact head `35bd5ace1f72fed39ff34236c17ae46a0e73f705` passed pull-request CI `34366925805` / run #191 and R3 `34366925788` / run #168 on attempt 1. Repository-owner reconciliation review `5156261043` is governance evidence only and explicitly `NOT_Q009`. Qodo billing-blocked and CodeRabbit auto-skipped outputs remain NOT PASS.
 
-Qualification must use genuine file-backed WAL and rollback-journal behavior where those sidecars exist, retain `temp_store = MEMORY`, avoid putting the tested semantic marker or logical ID into the qualification filename itself, and treat unavailable evidence as NOT PROVEN rather than PASS.
+Durable transport binding comment `5604219116` bound the exact final head. The observed actual merge invocation used `expected_head_sha = 35bd5ace1f72fed39ff34236c17ae46a0e73f705` and `merge_method = merge`; GitHub returned `merged = true` with canonical merge `7359ca64f6679409ddc81a025fe556c7297845e2`. Exact parentage is `52f7d8bba3ca07aeff20b4b457db6985c13492c0` + `35bd5ace1f72fed39ff34236c17ae46a0e73f705`; merge tree `6f83aa4d19bc4cc39dc0a1d7c41bac5a0e3e6860` exactly matches the accepted head tree.
 
-B306 must not absorb B307 copy-verify-publish migration, B401-B406 platform protectors, B501-B506 freshness/backup/rotation/deletion, Q009 independent review, Specification 005 behavior, new donor/dependency adoption, or release/FIPS/compliance claims.
+Push-triggered post-merge CI `34369011280` / run #192 and R3 `34369011241` / run #169 both succeeded on attempt 1 on exact canonical merge `7359ca64f6679409ddc81a025fe556c7297845e2`; durable qualification comment `5604388541`. Complete evidence is recorded in `b306-plaintext-spill-final-evidence.md`.
+
+B306 is therefore canonical and closed only for the SQLCipher plaintext-spill, semantic-marker, logical-ID, temp-store, sidecar-byte, and public-filename qualification boundary.
+
+## B306/B307 reconciliation bound
+
+This reconciliation changes only Specification 004 evidence/state surfaces. It does not change runtime/security semantics, dependencies, provider/provenance bytes, generated artifacts, workflows, donor material, B307 implementation bytes, later platform/freshness behavior, Specification 005, P011, B305R002, Q009, or release/FIPS/compliance posture.
+
+B307 may begin only after this reconciliation exact head itself passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+
+After those conditions become true, the conditional authority in the current-state block resolves to `B307_ONLY` without another state mutation.
+
+B307 is bounded to copy-verify-publish migration. The verified prior encrypted state must remain recoverable until the new encrypted state is complete/authenticated, published, anchored, reopened, and integrity-verified. B307 must not absorb B401-B406 native platform protectors or B501-B506 freshness/backup/full seven-phase VRK rotation/deletion behavior. Full root rotation remains B503.
 
 ## Specification 004 delivery chain
 
@@ -473,21 +488,23 @@ B306 must not absorb B307 copy-verify-publish migration, B401-B406 platform prot
   -> B303/B304 state reconciliation           CANONICAL_QUALIFIED
   -> B304 normal/cipher integrity             CANONICAL_QUALIFIED
   -> B304/B305 state reconciliation           CANONICAL_QUALIFIED
-  -> B305 negative SQLCipher fixtures          CANONICAL_QUALIFIED
+  -> B305 negative SQLCipher fixtures         CANONICAL_QUALIFIED
   -> B305/B306 state reconciliation           CANONICAL_MERGED_TRANSPORT_PROOF_NOT_PROVEN
   -> B305/B306 transport recovery             CANONICAL_QUALIFIED
-  -> B306 plaintext-spill qualification         AUTHORIZED_NEXT
-  -> B307 copy-verify-publish migration          BLOCKED_PENDING_B306
+  -> B306 plaintext-spill qualification       CANONICAL_QUALIFIED
+  -> B306/B307 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B307 copy-verify-publish migration       BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
   -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
-  -> C001-C005 Specification 004 closeout      BLOCKED_PENDING_QUALIFICATION
+  -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
   -> Specification 005                        BLOCKED_PENDING_SPEC_004_CLOSEOUT
 ```
 
 ## Residual blockers and non-claims
 
 - `P011` remains unchecked because historical expected-head transport proof is not reconstructible post hoc.
+- `B305R002` remains unchecked because PR #70's actual merge request body is not reconstructible post hoc.
 - Q009 remains unsatisfied and requires a genuinely independent substantive crypto/security review of the exact implementation revision.
 - Specification 005 remains blocked pending genuine Specification 004 `CLOSED_CANONICAL` closeout.
 - No new donor/dependency adoption is authorized by this reconciliation.
