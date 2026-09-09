@@ -3,7 +3,8 @@
 ## Status
 
 ```text
-BASE_CANONICAL_MAIN = ba32dfc21d025a189cddfdd9f46c48fdcd327e1e
+B401_PRECONDITION_BASE = ba32dfc21d025a189cddfdd9f46c48fdcd327e1e
+TRUSTED_GATE_BASE = MUST_BE_LIVE_VERIFIED_AS_CANONICAL_GATE_HARDENING_SUCCESSOR
 LEAF = B401_APPLE_KEYCHAIN_ADAPTER_ONLY
 IMPLEMENTATION_STATUS = CANDIDATE_NOT_CANONICAL
 B401_TASK_DISPOSITION = UNCHECKED_NOT_PASS
@@ -30,7 +31,7 @@ The current forward-only candidate deliberately narrows Apple behavior to the ma
 - `APP_EXCLUSIVE`, `SAME_USER_SESSION`, and `REQUIRED_EACH_HIMSAT_UNLOCK` requests return `UnsupportedPolicy`;
 - existing-item operations re-check service, account, `ThisDeviceOnly` accessibility, and absence of a synchronized twin before releasing or mutating VRK state;
 - cross-vault/generation/policy protector reuse and wrong-vault removal fail closed;
-- temporary Keychain value buffers are zeroized after reads/writes;
+- temporary Keychain value buffers are held in zeroize-on-drop wrappers before fallible validation or provider operations;
 - freshness/full-rotation behavior remains `UnsupportedPolicy` for B501/B503;
 - there is no plaintext fallback.
 
@@ -115,6 +116,27 @@ DISPOSITION = FAILURE_NOT_PASS
 ```
 
 The failure is not rerun or upgraded. The forward-only successor cfg-gates only those imports; no protector semantics are weakened.
+
+## Exact-head review rejection preserved
+
+The next exact head passed repository automation but is not accepted because the completed CodeRabbit review identified two unresolved major security findings plus two valid hardening findings:
+
+```text
+HEAD = b9b9748401bf1c5e28ff81220d199f4515449f3a
+TREE = 7e8b1e777388af343078eeed54e47bb564038390
+CI = 34400331465 / run #208 / SUCCESS / attempt 1 / pull_request
+R3 = 34400331325 / run #185 / SUCCESS / attempt 1 / pull_request
+CODERABBIT_REVIEW = PRR_kwDOUQPwRs8AAAABM4oZWA / COMMENTED
+MAJOR_FINDING_1 = fallible Keychain paths could drop VRK-bearing buffers before explicit zeroization
+MAJOR_FINDING_2 = the B401 exception executed a mutable HEAD gate and pinned only part of the candidate artifact set
+HARDENING_FINDING_1 = unknown Apple Security status codes were mapped to UnsupportedPolicy instead of Unavailable
+HARDENING_FINDING_2 = unknown stored scope/presence discriminants lacked direct negative assertions
+DISPOSITION = GREEN_AUTOMATION_NOT_ACCEPTED
+```
+
+The forward-only code successor uses `Zeroizing` wrappers for Keychain value buffers, evaluates fallible write-option construction before encoding a VRK record, maps unknown Security status codes to `Unavailable`, and adds direct corruption tests for unknown scope/presence discriminants. These changes still require exact-head automation and review reconciliation after they are committed.
+
+The gate-authentication finding requires a separate canonical tooling prerequisite: pull-request CI/R3 must execute the adoption gate from the trusted immutable PR base, and that canonical gate must pin every B401 candidate artifact that is permitted by the exception. Until that prerequisite is canonical and the B401 branch incorporates it forward-only, no B401 exception result is treated as sufficient qualification evidence.
 
 ## Native macOS evidence attempts
 

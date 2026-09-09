@@ -23,7 +23,7 @@ use security_framework::passwords::{
     AccessControlOptions, PasswordOptions, delete_generic_password_options, generic_password,
     set_generic_password_options,
 };
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 const RECORD_MAGIC: &[u8] = b"HIMSAT/APPLE/VRK/v1\0";
 const PROTECTOR_ID_BYTES: usize = 16;
@@ -250,22 +250,18 @@ impl SecretProtector for AppleKeychainProtector {
         }
 
         match generic_password(self.read_options()) {
-            Ok(mut existing) => {
+            Ok(existing) => {
+                let existing = Zeroizing::new(existing);
                 self.verify_native_item_attributes()?;
-                let binding =
-                    validate_record_binding(&existing, vault_id, Some(key_generation), policy);
-                existing.zeroize();
-                binding?;
+                validate_record_binding(&existing, vault_id, Some(key_generation), policy)?;
             }
             Err(error) if error.code() == ERR_SEC_ITEM_NOT_FOUND => {}
             Err(error) => return Err(map_security_error(error)),
         }
 
-        let mut record = encode_record(vault_id, key_generation, policy, vrk);
-        let result = set_generic_password_options(&record, self.write_options(policy)?)
-            .map_err(map_security_error);
-        record.zeroize();
-        result
+        let options = self.write_options(policy)?;
+        let record = Zeroizing::new(encode_record(vault_id, key_generation, policy, vrk));
+        set_generic_password_options(&record[..], options).map_err(map_security_error)
     }
 
     fn unlock_vrk(
@@ -275,11 +271,9 @@ impl SecretProtector for AppleKeychainProtector {
     ) -> Result<Self::VaultRootKey, ProtectorError> {
         let policy = self.policy()?;
         self.verify_native_item_attributes()?;
-        let mut record = generic_password(self.read_options()).map_err(map_security_error)?;
-        let vrk = decode_record(&record, vault_id, key_generation, policy);
-        record.zeroize();
-        let vrk = vrk?;
-        Ok(vrk)
+        let record =
+            Zeroizing::new(generic_password(self.read_options()).map_err(map_security_error)?);
+        decode_record(&record, vault_id, key_generation, policy)
     }
 
     fn read_freshness_anchor(
@@ -314,10 +308,9 @@ impl SecretProtector for AppleKeychainProtector {
     fn remove_protector(&mut self, vault_id: VaultId) -> Result<(), ProtectorError> {
         let policy = self.policy()?;
         self.verify_native_item_attributes()?;
-        let mut record = generic_password(self.read_options()).map_err(map_security_error)?;
-        let binding = validate_record_binding(&record, vault_id, None, policy);
-        record.zeroize();
-        binding?;
+        let record =
+            Zeroizing::new(generic_password(self.read_options()).map_err(map_security_error)?);
+        validate_record_binding(&record, vault_id, None, policy)?;
         delete_generic_password_options(self.read_options()).map_err(map_security_error)?;
         self.policy = None;
         Ok(())
@@ -458,14 +451,14 @@ fn map_security_error(error: SecurityFrameworkError) -> ProtectorError {
         ERR_SEC_MISSING_ENTITLEMENT => ProtectorError::OwnerMismatch,
         ERR_SEC_DECODE => ProtectorError::Invalidated,
         ERR_SEC_NOT_AVAILABLE => ProtectorError::Unavailable,
-        _ => ProtectorError::UnsupportedPolicy,
+        _ => ProtectorError::Unavailable,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        AppleKeychainConfig, AppleKeychainProtector, AppleProtectorId, decode_record,
+        AppleKeychainConfig, AppleKeychainProtector, AppleProtectorId, RECORD_MAGIC, decode_record,
         encode_record, map_security_error, validate_record_binding,
     };
     use crate::vault::{
@@ -601,6 +594,21 @@ mod tests {
             decode_record(&encoded, vault(0x21), generation(3), policy),
             Err(ProtectorError::CorruptOrTampered)
         ));
+
+        let scope_offset = RECORD_MAGIC.len() + 16 + 8;
+        let mut bad_scope = encode_record(vault(0x21), generation(3), policy, &vrk);
+        bad_scope[scope_offset] = 9;
+        assert!(matches!(
+            decode_record(&bad_scope, vault(0x21), generation(3), policy),
+            Err(ProtectorError::CorruptOrTampered)
+        ));
+
+        let mut bad_presence = encode_record(vault(0x21), generation(3), policy, &vrk);
+        bad_presence[scope_offset + 1] = 9;
+        assert!(matches!(
+            decode_record(&bad_presence, vault(0x21), generation(3), policy),
+            Err(ProtectorError::CorruptOrTampered)
+        ));
     }
 
     #[test]
@@ -620,6 +628,10 @@ mod tests {
         assert_eq!(
             map_security_error(SecurityFrameworkError::from_code(-128)),
             ProtectorError::Denied
+        );
+        assert_eq!(
+            map_security_error(SecurityFrameworkError::from_code(-50)),
+            ProtectorError::Unavailable
         );
     }
 }
