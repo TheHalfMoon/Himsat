@@ -86,7 +86,10 @@ fn fixture_paths(label: &str) -> (PathBuf, PathBuf, PathBuf) {
 }
 
 fn cleanup(paths: &[&Path]) {
-    let parent = paths.first().and_then(|path| path.parent()).map(PathBuf::from);
+    let parent = paths
+        .first()
+        .and_then(|path| path.parent())
+        .map(PathBuf::from);
     for path in paths {
         for suffix in ["", "-wal", "-shm", "-journal"] {
             let candidate = if suffix.is_empty() {
@@ -123,7 +126,10 @@ fn create_encrypted_source(path: &Path) {
     drop(connection);
 
     let bytes = fs::read(path).expect("B307 encrypted source bytes must be readable");
-    assert!(!bytes.is_empty(), "B307 source must contain encrypted bytes");
+    assert!(
+        !bytes.is_empty(),
+        "B307 source must contain encrypted bytes"
+    );
     assert!(
         !bytes
             .windows(SEMANTIC_MARKER.len())
@@ -239,9 +245,7 @@ impl EncryptedMigrationTarget for SqlCipherTarget {
             .anchor_digest
             .ok_or(FixtureError(CopyVerifyPublishStage::ReopenedVerification))?;
         if digest.as_slice() != expected {
-            return Err(FixtureError(
-                CopyVerifyPublishStage::ReopenedVerification,
-            ));
+            return Err(FixtureError(CopyVerifyPublishStage::ReopenedVerification));
         }
         Ok(())
     }
@@ -292,7 +296,10 @@ fn b307_sqlcipher_copy_verify_publish_preserves_prior_encrypted_state() {
         source_bytes,
         "B307 must not alter the prior verified encrypted source"
     );
-    assert!(!staged_path.exists(), "published target must leave no staged path");
+    assert!(
+        !staged_path.exists(),
+        "published target must leave no staged path"
+    );
     assert!(published_path.exists(), "B307 target must be published");
     assert_eq!(
         fs::read(&published_path).expect("B307 published bytes must be readable"),
