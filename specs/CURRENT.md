@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B306_CANONICAL_RECONCILING_B307_BOUND
+PROGRAM_STATE = SPEC_004_B307_CANONICAL_RECONCILING_B401_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -43,10 +43,14 @@ B305_B306_TRANSPORT_RECOVERY_STATE = CANONICAL_QUALIFIED
 B305_B306_TRANSPORT_RECOVERY_CANONICAL_MERGE = c22385e0245d9b372b396bbe9a2d158d30b40052
 B306_DISPOSITION = CANONICAL_CLOSED
 B306_CANONICAL_MERGE = 7359ca64f6679409ddc81a025fe556c7297845e2
-B306_B307_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B307_COPY_VERIFY_PUBLISH_MIGRATION_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B307_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B307_COPY_VERIFY_PUBLISH_MIGRATION_ONLY_IF_RECONCILIATION_QUALIFIED
+B306_B307_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B306_B307_RECONCILIATION_CANONICAL_MERGE = 1132b94d2185efbdaadd5d60e1c98a3ce4ca08e4
+B307_DISPOSITION = CANONICAL_CLOSED
+B307_CANONICAL_MERGE = fdc1d17a8df49c007f5038336ce267ea5eaf28a8
+B307_B401_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B401_APPLE_KEYCHAIN_ADAPTER_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B401_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B401_APPLE_KEYCHAIN_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -461,15 +465,35 @@ Push-triggered post-merge CI `34369011280` / run #192 and R3 `34369011241` / run
 
 B306 is therefore canonical and closed only for the SQLCipher plaintext-spill, semantic-marker, logical-ID, temp-store, sidecar-byte, and public-filename qualification boundary.
 
-## B306/B307 reconciliation bound
+## Canonical B306/B307 reconciliation disposition
 
-This reconciliation changes only Specification 004 evidence/state surfaces. It does not change runtime/security semantics, dependencies, provider/provenance bytes, generated artifacts, workflows, donor material, B307 implementation bytes, later platform/freshness behavior, Specification 005, P011, B305R002, Q009, or release/FIPS/compliance posture.
+PR #75 exact head `225fd1717152096db3fdde0a0d26452bd2024b0c` changed only Specification 004 evidence/state. Pre-merge CI `34373218781` / run #193 and R3 `34373218716` / run #170 succeeded on attempt 1. Repository-owner reconciliation review `5156839656` is governance evidence only and explicitly `NOT_Q009`. Durable transport binding comment `5604897935` bound the exact head.
 
-B307 may begin only after this reconciliation exact head itself passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+The observed actual merge invocation used `expected_head_sha = 225fd1717152096db3fdde0a0d26452bd2024b0c` and `merge_method = merge`; GitHub returned canonical merge `1132b94d2185efbdaadd5d60e1c98a3ce4ca08e4` with exact parents `7359ca64f6679409ddc81a025fe556c7297845e2` + `225fd1717152096db3fdde0a0d26452bd2024b0c`. Push-triggered CI `34374339382` / run #194 and R3 `34374339386` / run #171 both succeeded on attempt 1. Durable post-merge qualification comment: `5605065159`.
 
-After those conditions become true, the conditional authority in the current-state block resolves to `B307_ONLY` without another state mutation.
+The reconciliation is therefore canonical-qualified and resolved B307 authority before the accepted B307 implementation began.
 
-B307 is bounded to copy-verify-publish migration. The verified prior encrypted state must remain recoverable until the new encrypted state is complete/authenticated, published, anchored, reopened, and integrity-verified. B307 must not absorb B401-B406 native platform protectors or B501-B506 freshness/backup/full seven-phase VRK rotation/deletion behavior. Full root rotation remains B503.
+## Canonical B307 disposition
+
+B307 implementation PR #76 final accepted head `bcaf38abde83a55cb1caccd81141167911d05a92` changed only `crates/himsat-core/src/lib.rs`, `crates/himsat-core/src/vault_migration.rs`, and `crates/himsat-core/tests/b307_copy_verify_publish.rs`. It implements the bounded `source verify -> copy -> staged verify -> publish -> anchor -> reopen -> reopened integrity verify` coordinator without any source-retirement/deletion capability.
+
+Preserved predecessor heads remain NOT PASS. Head `a7df04cf7e4fe6447fe452aecae65a9e91e125a9` failed CI `34377675561` / run #195 and R3 `34377675603` / run #172 on formatting. Head `8a5d3a0afafb9159e08da503fb7e9a04afd4a492` failed CI `34378263024` / run #197 on Windows job `102556737162`; R3 `34378262986` / run #174 succeeded but does not upgrade the failed CI. The Windows defect was a read-only staged-file handle before `sync_all`; repair was forward-only in the accepted successor. Neither failed head was rerun or reclassified.
+
+Final exact head `bcaf38abde83a55cb1caccd81141167911d05a92` passed pull-request CI `34383104985` / run #198 and R3 `34383104987` / run #175 on attempt 1, including Windows Rust job `102572549378`. Repository-owner reconciliation review `5157850803` is governance evidence only and explicitly `NOT_Q009`; Qodo billing-blocked, CodeRabbit auto-skipped, and Cubic neutral output remain NOT PASS / NOT_Q009.
+
+Durable transport binding comment `5606187755` bound the exact accepted head. The observed actual merge invocation used `expected_head_sha = bcaf38abde83a55cb1caccd81141167911d05a92` and `merge_method = merge`; GitHub returned `merged = true` with canonical merge `fdc1d17a8df49c007f5038336ce267ea5eaf28a8`. Exact parentage is `1132b94d2185efbdaadd5d60e1c98a3ce4ca08e4` + `bcaf38abde83a55cb1caccd81141167911d05a92`; merge tree `0b38c68b2455984242f4c0d01680e7f3e1291bc4` matches the accepted head tree.
+
+Push-triggered post-merge CI `34384441066` / run #199 and R3 `34384441018` / run #176 both succeeded on attempt 1 on exact canonical merge `fdc1d17a8df49c007f5038336ce267ea5eaf28a8`; Windows Rust job `102577069978` succeeded. Durable post-merge qualification comment: `5606324660`. Complete evidence is recorded in `b307-copy-verify-publish-final-evidence.md`.
+
+B307 is therefore canonical and closed only for the bounded copy-verify-publish migration coordinator and qualification fixture. Full seven-phase VRK rotation, source retirement, write quiescing, freshness implementation, native platform protectors, and deletion remain later leaves.
+
+## B307/B401 reconciliation bound
+
+This reconciliation changes only Specification 004 evidence/state surfaces. It does not change runtime/security semantics, Cargo manifests/lockfiles, dependency bytes, provider/provenance registry, generated artifacts, workflows, donor material, B401 implementation bytes, freshness/backup/rotation/deletion behavior, Specification 005, P011, B305R002, Q009, or release/FIPS/compliance posture.
+
+B401 may begin only after this reconciliation exact head passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+
+After those conditions become true, the conditional authority in the current-state block resolves to `B401_ONLY` without another state mutation. B401 is bounded to the Apple Keychain adapter and exact platform evidence. B402-B406 and B501-B506 remain separate later leaves. Any new native dependency requires exact provenance/license/closure evidence before canonical adoption; this reconciliation itself adopts none.
 
 ## Specification 004 delivery chain
 
@@ -492,9 +516,11 @@ B307 is bounded to copy-verify-publish migration. The verified prior encrypted s
   -> B305/B306 state reconciliation           CANONICAL_MERGED_TRANSPORT_PROOF_NOT_PROVEN
   -> B305/B306 transport recovery             CANONICAL_QUALIFIED
   -> B306 plaintext-spill qualification       CANONICAL_QUALIFIED
-  -> B306/B307 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B307 copy-verify-publish migration       BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B401-B406 platform protectors            BLOCKED_PENDING_PRIOR_LEAVES
+  -> B306/B307 state reconciliation           CANONICAL_QUALIFIED
+  -> B307 copy-verify-publish migration       CANONICAL_QUALIFIED
+  -> B307/B401 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B401 Apple Keychain adapter              BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B402-B406 remaining platform protectors  BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
