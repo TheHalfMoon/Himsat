@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed Specification 004P P005/P006 dependency/native closure check."""
+"""Fail-closed Specification 004P provider plus authorized platform dependency/native closure check."""
 
 from __future__ import annotations
 
@@ -19,8 +19,57 @@ CORE_MANIFEST = ROOT / "crates/himsat-core/Cargo.toml"
 LOCK_PATH = ROOT / "Cargo.lock"
 REGISTRY_SCHEMA = "himsat.provenance-registry/v2"
 REGISTRY_SOURCE = "registry+https://github.com/rust-lang/crates.io-index"
-EXPECTED_EXTERNAL_COUNT = 41
+EXPECTED_PROVIDER_EXTERNAL_COUNT = 41
+EXPECTED_TOTAL_EXTERNAL_COUNT = 45
 EVIDENCE_REFERENCE = "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md"
+
+EXPECTED_APPLE_TARGET = 'cfg(target_os = "macos")'
+EXPECTED_APPLE_DIRECT: dict[str, dict[str, Any]] = {
+    "security-framework": {
+        "version": "=3.7.0",
+        "default-features": False,
+        "features": ["OSX_10_15"],
+    },
+}
+
+EXPECTED_PLATFORM_PACKAGES: dict[tuple[str, str], dict[str, str]] = {
+    ("core-foundation", "0.10.1"): {
+        "checksum": "b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6",
+        "repository": "https://github.com/servo/core-foundation-rs",
+        "revision": "548b65cd3046bb46fc5cebb9f39e7bfd56eaeaa2",
+        "source_path": "core-foundation",
+        "license_expression": "MIT OR Apache-2.0",
+        "selected_license": "MIT",
+        "license_evidence": "crate LICENSE-MIT at immutable VCS revision",
+    },
+    ("core-foundation-sys", "0.8.7"): {
+        "checksum": "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b",
+        "repository": "https://github.com/servo/core-foundation-rs",
+        "revision": "652bab0a62d87df8a974ffad2ad9f7be218a8b56",
+        "source_path": "core-foundation-sys",
+        "license_expression": "MIT OR Apache-2.0",
+        "selected_license": "MIT",
+        "license_evidence": "crate LICENSE-MIT at immutable VCS revision",
+    },
+    ("security-framework", "3.7.0"): {
+        "checksum": "b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d",
+        "repository": "https://github.com/kornelski/rust-security-framework",
+        "revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2",
+        "source_path": "security-framework",
+        "license_expression": "MIT OR Apache-2.0",
+        "selected_license": "MIT",
+        "license_evidence": "crate LICENSE-MIT at immutable VCS revision",
+    },
+    ("security-framework-sys", "2.17.0"): {
+        "checksum": "6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3",
+        "repository": "https://github.com/kornelski/rust-security-framework",
+        "revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2",
+        "source_path": "security-framework-sys",
+        "license_expression": "MIT OR Apache-2.0",
+        "selected_license": "MIT",
+        "license_evidence": "crate LICENSE-MIT at immutable VCS revision",
+    },
+}
 
 EXPECTED_DIRECT: dict[str, dict[str, Any]] = {
     "argon2": {"version": "=0.6.0", "default-features": False, "features": ["alloc", "zeroize"]},
@@ -141,8 +190,10 @@ def parse_closure_table() -> dict[tuple[str, str], dict[str, str]]:
             "selected_license": adoption,
             "license_evidence": evidence,
         }
-    if len(records) != EXPECTED_EXTERNAL_COUNT:
-        raise ClosureError(f"closure table: expected 41 packages, found {len(records)}")
+    if len(records) != EXPECTED_PROVIDER_EXTERNAL_COUNT:
+        raise ClosureError(
+            f"closure table: expected {EXPECTED_PROVIDER_EXTERNAL_COUNT} provider packages, found {len(records)}"
+        )
     return records
 
 
@@ -162,6 +213,20 @@ def check_direct_manifest() -> None:
         if observed != expected:
             raise ClosureError(f"himsat-core: {name} exact pin/features mismatch: observed={observed!r}")
 
+    targets = manifest.get("target")
+    if not isinstance(targets, dict) or set(targets) != {EXPECTED_APPLE_TARGET}:
+        raise ClosureError(
+            f"himsat-core: exact target dependency table mismatch; observed={sorted(targets) if isinstance(targets, dict) else targets!r}"
+        )
+    apple = targets[EXPECTED_APPLE_TARGET]
+    if not isinstance(apple, dict) or set(apple) != {"dependencies"}:
+        raise ClosureError("himsat-core: Apple target must contain only dependencies")
+    apple_dependencies = apple["dependencies"]
+    if apple_dependencies != EXPECTED_APPLE_DIRECT:
+        raise ClosureError(
+            f"himsat-core: Apple target dependency pin/features mismatch: observed={apple_dependencies!r}"
+        )
+
 
 def lock_external() -> dict[tuple[str, str], dict[str, Any]]:
     lock = tomllib.loads(LOCK_PATH.read_text(encoding="utf-8"))
@@ -169,8 +234,10 @@ def lock_external() -> dict[tuple[str, str], dict[str, Any]]:
     if not isinstance(packages, list):
         raise ClosureError("Cargo.lock: package list missing")
     external = [pkg for pkg in packages if isinstance(pkg, dict) and pkg.get("source") is not None]
-    if len(external) != EXPECTED_EXTERNAL_COUNT:
-        raise ClosureError(f"Cargo.lock: expected 41 external packages, found {len(external)}")
+    if len(external) != EXPECTED_TOTAL_EXTERNAL_COUNT:
+        raise ClosureError(
+            f"Cargo.lock: expected {EXPECTED_TOTAL_EXTERNAL_COUNT} external packages, found {len(external)}"
+        )
     result: dict[tuple[str, str], dict[str, Any]] = {}
     for pkg in external:
         identity = (pkg.get("name"), pkg.get("version"))
@@ -188,11 +255,12 @@ def check_lock_against_closure(
     closure: dict[tuple[str, str], dict[str, str]],
     external: dict[tuple[str, str], dict[str, Any]],
 ) -> None:
-    if set(closure) != set(external):
-        missing = sorted(set(closure).difference(external))
-        extras = sorted(set(external).difference(closure))
+    selected = closure | EXPECTED_PLATFORM_PACKAGES
+    if set(selected) != set(external):
+        missing = sorted(set(selected).difference(external))
+        extras = sorted(set(external).difference(selected))
         raise ClosureError(f"Cargo.lock: selected closure mismatch; missing={missing} extras={extras}")
-    for identity, record in closure.items():
+    for identity, record in selected.items():
         if external[identity].get("checksum") != record["checksum"]:
             raise ClosureError(f"Cargo.lock: checksum drift for {identity[0]} {identity[1]}")
 
@@ -215,10 +283,14 @@ def check_registry(
         and entry.get("adoption_mode") == "depend"
         and entry.get("kind") == "dependency"
     ]
-    if len(adopted_dependencies) != EXPECTED_EXTERNAL_COUNT:
-        raise ClosureError(f"registry: expected 41 adopted dependencies, found {len(adopted_dependencies)}")
-    if len(entries) != EXPECTED_EXTERNAL_COUNT:
-        raise ClosureError(f"registry: P005 must contain only the selected 41 dependency entries, found {len(entries)}")
+    if len(adopted_dependencies) != EXPECTED_TOTAL_EXTERNAL_COUNT:
+        raise ClosureError(
+            f"registry: expected {EXPECTED_TOTAL_EXTERNAL_COUNT} adopted dependencies, found {len(adopted_dependencies)}"
+        )
+    if len(entries) != EXPECTED_TOTAL_EXTERNAL_COUNT:
+        raise ClosureError(
+            f"registry: expected only the selected {EXPECTED_TOTAL_EXTERNAL_COUNT} dependency entries, found {len(entries)}"
+        )
 
     by_identity: dict[tuple[str, str], dict[str, Any]] = {}
     native_seen: dict[str, tuple[tuple[str, str], dict[str, Any]]] = {}
@@ -240,9 +312,10 @@ def check_registry(
                 raise ClosureError(f"registry: duplicate native component {native_id}")
             native_seen[native_id] = (identity, native)
 
-    if set(by_identity) != set(closure):
-        raise ClosureError("registry: adopted dependency identities differ from controlling 41-package closure")
-    for identity, selected in closure.items():
+    selected_closure = closure | EXPECTED_PLATFORM_PACKAGES
+    if set(by_identity) != set(selected_closure):
+        raise ClosureError("registry: adopted dependency identities differ from exact provider + platform closure")
+    for identity, selected in selected_closure.items():
         entry = by_identity[identity]
         package = entry["package"]
         if package != {

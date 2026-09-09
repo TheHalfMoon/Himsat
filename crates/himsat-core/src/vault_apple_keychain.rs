@@ -1,0 +1,637 @@
+//! Apple data-protection Keychain adapter for Specification 004B4 B401.
+//!
+//! The adapter stores a VRK only inside a non-synchronizable, ThisDeviceOnly
+//! generic-password item in the target's default application Keychain group. Provider-
+//! visible lookup metadata is limited to one fixed Himsat service identifier plus
+//! one opaque random protector identifier. Vault identity, key generation,
+//! policy binding, and VRK bytes remain inside the protected item value.
+//!
+//! Freshness anchors, full protector replacement/rotation, and non-Apple
+//! platform adapters remain separately authorized leaves.
+
+use crate::vault::{
+    AccessScope, FreshnessAnchor, HardwareBacking, KeyGeneration, ProtectedFreshnessState,
+    ProtectorCapabilities, ProtectorError, SecretProtector, UserPresencePolicy, VaultId,
+};
+use crate::vault_keys::{KEY_MATERIAL_BYTES, OwnedKeyMaterial};
+use crate::vault_protector::{ProtectorPolicy, validate_requested_policy};
+use getrandom::fill;
+use security_framework::access_control::{ProtectionMode, SecAccessControl};
+use security_framework::base::Error as SecurityFrameworkError;
+use security_framework::item::{ItemClass, ItemSearchOptions};
+use security_framework::passwords::{
+    AccessControlOptions, PasswordOptions, delete_generic_password_options, generic_password,
+    set_generic_password_options,
+};
+use zeroize::Zeroizing;
+
+const RECORD_MAGIC: &[u8] = b"HIMSAT/APPLE/VRK/v1\0";
+const PROTECTOR_ID_BYTES: usize = 16;
+const RECORD_BYTES: usize = RECORD_MAGIC.len() + 16 + 8 + 1 + 1 + KEY_MATERIAL_BYTES;
+
+const ERR_SEC_USER_CANCELED: i32 = -128;
+const ERR_SEC_NOT_AVAILABLE: i32 = -25291;
+const ERR_SEC_AUTH_FAILED: i32 = -25293;
+const ERR_SEC_ITEM_NOT_FOUND: i32 = -25300;
+const ERR_SEC_INTERACTION_NOT_ALLOWED: i32 = -25308;
+const ERR_SEC_DECODE: i32 = -26275;
+const ERR_SEC_MISSING_ENTITLEMENT: i32 = -34018;
+
+/// Opaque provider-visible identifier used as the Keychain account attribute.
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+pub struct AppleProtectorId([u8; PROTECTOR_ID_BYTES]);
+
+impl AppleProtectorId {
+    /// Generates a new opaque protector identifier from the reviewed OS CSPRNG.
+    pub fn generate() -> Result<Self, ProtectorError> {
+        let mut bytes = [0_u8; PROTECTOR_ID_BYTES];
+        fill(&mut bytes).map_err(|_| ProtectorError::Unavailable)?;
+        Ok(Self(bytes))
+    }
+
+    /// Reconstructs a previously persisted opaque protector identifier.
+    #[must_use]
+    pub const fn from_bytes(bytes: [u8; PROTECTOR_ID_BYTES]) -> Self {
+        Self(bytes)
+    }
+
+    /// Returns the opaque bytes for Himsat-owned metadata persistence.
+    #[must_use]
+    pub const fn as_bytes(&self) -> &[u8; PROTECTOR_ID_BYTES] {
+        &self.0
+    }
+
+    /// Returns the lowercase hexadecimal Keychain account value.
+    #[must_use]
+    pub fn account(&self) -> String {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut output = String::with_capacity(PROTECTOR_ID_BYTES * 2);
+        for byte in self.0 {
+            output.push(HEX[(byte >> 4) as usize] as char);
+            output.push(HEX[(byte & 0x0f) as usize] as char);
+        }
+        output
+    }
+}
+
+impl core::fmt::Debug for AppleProtectorId {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str("AppleProtectorId([OPAQUE; 16 bytes])")
+    }
+}
+
+/// Apple Keychain protector configuration for the target's default application group.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AppleKeychainConfig {
+    service: String,
+    protector_id: AppleProtectorId,
+}
+
+impl AppleKeychainConfig {
+    /// Creates configuration for one fixed Himsat service in the default application group.
+    pub fn new(
+        service: impl Into<String>,
+        protector_id: AppleProtectorId,
+    ) -> Result<Self, ProtectorError> {
+        let service = service.into();
+        if service.is_empty() {
+            return Err(ProtectorError::UnsupportedPolicy);
+        }
+        Ok(Self {
+            service,
+            protector_id,
+        })
+    }
+
+    /// Fixed service identifier visible to Keychain.
+    #[must_use]
+    pub fn service(&self) -> &str {
+        &self.service
+    }
+
+    /// Opaque provider-visible protector identifier.
+    #[must_use]
+    pub const fn protector_id(&self) -> AppleProtectorId {
+        self.protector_id
+    }
+}
+
+/// Apple Keychain implementation of the portable `SecretProtector` contract.
+pub struct AppleKeychainProtector {
+    config: AppleKeychainConfig,
+    policy: Option<ProtectorPolicy>,
+}
+
+impl AppleKeychainProtector {
+    /// Creates an unconfigured conservative macOS adapter.
+    #[must_use]
+    pub const fn new(config: AppleKeychainConfig) -> Self {
+        Self {
+            config,
+            policy: None,
+        }
+    }
+
+    /// Returns the immutable native configuration used by this adapter.
+    #[must_use]
+    pub const fn config(&self) -> &AppleKeychainConfig {
+        &self.config
+    }
+
+    fn policy(&self) -> Result<ProtectorPolicy, ProtectorError> {
+        self.policy.ok_or(ProtectorError::UnsupportedPolicy)
+    }
+
+    fn read_options(&self) -> PasswordOptions {
+        let mut options = PasswordOptions::new_generic_password(
+            self.config.service(),
+            &self.config.protector_id().account(),
+        );
+        options.set_access_synchronized(Some(false));
+        options.use_protected_keychain();
+        options
+    }
+
+    fn write_options(&self, policy: ProtectorPolicy) -> Result<PasswordOptions, ProtectorError> {
+        if policy.user_presence_policy() != UserPresencePolicy::NotRequired {
+            return Err(ProtectorError::UnsupportedPolicy);
+        }
+        let access_control = SecAccessControl::create_with_protection(
+            Some(ProtectionMode::AccessibleWhenPasscodeSetThisDeviceOnly),
+            AccessControlOptions::empty().bits(),
+        )
+        .map_err(map_security_error)?;
+        let mut options = self.read_options();
+        options.set_access_control(access_control);
+        Ok(options)
+    }
+
+    fn synchronized_item_exists(&self) -> Result<bool, ProtectorError> {
+        let account = self.config.protector_id().account();
+        let mut synchronized = ItemSearchOptions::new();
+        synchronized
+            .class(ItemClass::generic_password())
+            .service(self.config.service())
+            .account(&account)
+            .cloud_sync(Some(true))
+            .load_attributes(true)
+            .limit(1)
+            .ignore_legacy_keychains();
+        match synchronized.search() {
+            Ok(items) => Ok(!items.is_empty()),
+            Err(error) if error.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(false),
+            Err(error) => Err(map_security_error(error)),
+        }
+    }
+
+    fn verify_native_item_attributes(&self) -> Result<(), ProtectorError> {
+        let account = self.config.protector_id().account();
+        let mut search = ItemSearchOptions::new();
+        search
+            .class(ItemClass::generic_password())
+            .service(self.config.service())
+            .account(&account)
+            .cloud_sync(Some(false))
+            .load_attributes(true)
+            .limit(1)
+            .ignore_legacy_keychains();
+        let results = search.search().map_err(map_security_error)?;
+        let Some(result) = results.first() else {
+            return Err(ProtectorError::ItemMissing);
+        };
+        let Some(attributes) = result.simplify_dict() else {
+            return Err(ProtectorError::CorruptOrTampered);
+        };
+        if attributes.get("svce").map(String::as_str) != Some(self.config.service())
+            || attributes.get("acct").map(String::as_str) != Some(account.as_str())
+            || attributes.get("pdmn").map(String::as_str) != Some("akpu")
+        {
+            return Err(ProtectorError::PolicyMismatch);
+        }
+
+        if self.synchronized_item_exists()? {
+            return Err(ProtectorError::PolicyMismatch);
+        }
+        Ok(())
+    }
+}
+
+impl SecretProtector for AppleKeychainProtector {
+    type VaultRootKey = OwnedKeyMaterial;
+
+    fn create_protector(
+        &mut self,
+        requested_scope: AccessScope,
+        user_presence_policy: UserPresencePolicy,
+    ) -> Result<(), ProtectorError> {
+        let policy = ProtectorPolicy::new(requested_scope, user_presence_policy);
+        validate_requested_policy(
+            ProtectorCapabilities::new(
+                AccessScope::SameUserAccount,
+                false,
+                HardwareBacking::Unknown,
+            ),
+            policy,
+        )?;
+        self.write_options(policy)?;
+        self.policy = Some(policy);
+        Ok(())
+    }
+
+    fn protect_or_store_vrk(
+        &mut self,
+        vault_id: VaultId,
+        key_generation: KeyGeneration,
+        vrk: &Self::VaultRootKey,
+    ) -> Result<(), ProtectorError> {
+        let policy = self.policy()?;
+        if self.synchronized_item_exists()? {
+            return Err(ProtectorError::PolicyMismatch);
+        }
+
+        match generic_password(self.read_options()) {
+            Ok(existing) => {
+                let existing = Zeroizing::new(existing);
+                self.verify_native_item_attributes()?;
+                validate_record_binding(&existing, vault_id, Some(key_generation), policy)?;
+            }
+            Err(error) if error.code() == ERR_SEC_ITEM_NOT_FOUND => {}
+            Err(error) => return Err(map_security_error(error)),
+        }
+
+        let options = self.write_options(policy)?;
+        let record = Zeroizing::new(encode_record(vault_id, key_generation, policy, vrk));
+        set_generic_password_options(&record[..], options).map_err(map_security_error)
+    }
+
+    fn unlock_vrk(
+        &mut self,
+        vault_id: VaultId,
+        key_generation: KeyGeneration,
+    ) -> Result<Self::VaultRootKey, ProtectorError> {
+        let policy = self.policy()?;
+        self.verify_native_item_attributes()?;
+        let record =
+            Zeroizing::new(generic_password(self.read_options()).map_err(map_security_error)?);
+        decode_record(&record, vault_id, key_generation, policy)
+    }
+
+    fn read_freshness_anchor(
+        &self,
+        _vault_id: VaultId,
+    ) -> Result<ProtectedFreshnessState, ProtectorError> {
+        Err(ProtectorError::UnsupportedPolicy)
+    }
+
+    fn install_genesis_freshness_anchor(
+        &mut self,
+        _vault_id: VaultId,
+        _expected_state: ProtectedFreshnessState,
+        _new_anchor: FreshnessAnchor,
+    ) -> Result<(), ProtectorError> {
+        Err(ProtectorError::UnsupportedPolicy)
+    }
+
+    fn advance_freshness_anchor(
+        &mut self,
+        _vault_id: VaultId,
+        _expected_old: FreshnessAnchor,
+        _new_anchor: FreshnessAnchor,
+    ) -> Result<(), ProtectorError> {
+        Err(ProtectorError::UnsupportedPolicy)
+    }
+
+    fn replace_protector(&mut self, _vault_id: VaultId) -> Result<(), ProtectorError> {
+        Err(ProtectorError::UnsupportedPolicy)
+    }
+
+    fn remove_protector(&mut self, vault_id: VaultId) -> Result<(), ProtectorError> {
+        let policy = self.policy()?;
+        self.verify_native_item_attributes()?;
+        let record =
+            Zeroizing::new(generic_password(self.read_options()).map_err(map_security_error)?);
+        validate_record_binding(&record, vault_id, None, policy)?;
+        delete_generic_password_options(self.read_options()).map_err(map_security_error)?;
+        self.policy = None;
+        Ok(())
+    }
+
+    fn actual_access_scope(&self) -> AccessScope {
+        AccessScope::SameUserAccount
+    }
+
+    fn requires_user_presence(&self) -> bool {
+        false
+    }
+
+    fn hardware_backed_state(&self) -> HardwareBacking {
+        HardwareBacking::Unknown
+    }
+}
+
+fn encode_record(
+    vault_id: VaultId,
+    key_generation: KeyGeneration,
+    policy: ProtectorPolicy,
+    vrk: &OwnedKeyMaterial,
+) -> [u8; RECORD_BYTES] {
+    let mut output = [0_u8; RECORD_BYTES];
+    let mut offset = 0;
+    output[offset..offset + RECORD_MAGIC.len()].copy_from_slice(RECORD_MAGIC);
+    offset += RECORD_MAGIC.len();
+    output[offset..offset + 16].copy_from_slice(vault_id.as_bytes());
+    offset += 16;
+    output[offset..offset + 8].copy_from_slice(&key_generation.get().to_be_bytes());
+    offset += 8;
+    output[offset] = encode_scope(policy.access_scope());
+    offset += 1;
+    output[offset] = encode_presence(policy.user_presence_policy());
+    offset += 1;
+    vrk.with_bytes(|bytes| output[offset..].copy_from_slice(bytes));
+    output
+}
+
+fn record_binding(
+    record: &[u8],
+) -> Result<(VaultId, KeyGeneration, ProtectorPolicy), ProtectorError> {
+    if record.len() != RECORD_BYTES || &record[..RECORD_MAGIC.len()] != RECORD_MAGIC {
+        return Err(ProtectorError::CorruptOrTampered);
+    }
+    let mut offset = RECORD_MAGIC.len();
+    let stored_vault = VaultId::try_from_slice(&record[offset..offset + 16])
+        .map_err(|_| ProtectorError::CorruptOrTampered)?;
+    offset += 16;
+    let generation_bytes: [u8; 8] = record[offset..offset + 8]
+        .try_into()
+        .map_err(|_| ProtectorError::CorruptOrTampered)?;
+    let stored_generation = KeyGeneration::new(u64::from_be_bytes(generation_bytes))
+        .map_err(|_| ProtectorError::CorruptOrTampered)?;
+    offset += 8;
+    let stored_policy = ProtectorPolicy::new(
+        decode_scope(record[offset])?,
+        decode_presence(record[offset + 1])?,
+    );
+    Ok((stored_vault, stored_generation, stored_policy))
+}
+
+fn validate_record_binding(
+    record: &[u8],
+    expected_vault_id: VaultId,
+    expected_generation: Option<KeyGeneration>,
+    expected_policy: ProtectorPolicy,
+) -> Result<(), ProtectorError> {
+    let (stored_vault, stored_generation, stored_policy) = record_binding(record)?;
+    if stored_vault != expected_vault_id
+        || expected_generation.is_some_and(|generation| stored_generation != generation)
+    {
+        return Err(ProtectorError::OwnerMismatch);
+    }
+    if stored_policy != expected_policy {
+        return Err(ProtectorError::PolicyMismatch);
+    }
+    Ok(())
+}
+
+fn decode_record(
+    record: &[u8],
+    expected_vault_id: VaultId,
+    expected_generation: KeyGeneration,
+    expected_policy: ProtectorPolicy,
+) -> Result<OwnedKeyMaterial, ProtectorError> {
+    validate_record_binding(
+        record,
+        expected_vault_id,
+        Some(expected_generation),
+        expected_policy,
+    )?;
+    let key_offset = RECORD_BYTES - KEY_MATERIAL_BYTES;
+    let key: [u8; KEY_MATERIAL_BYTES] = record[key_offset..]
+        .try_into()
+        .map_err(|_| ProtectorError::CorruptOrTampered)?;
+    Ok(OwnedKeyMaterial::from_bytes(key))
+}
+
+const fn encode_scope(scope: AccessScope) -> u8 {
+    match scope {
+        AccessScope::AppExclusive => 1,
+        AccessScope::SameUserAccount => 2,
+        AccessScope::SameUserSession => 3,
+    }
+}
+
+fn decode_scope(value: u8) -> Result<AccessScope, ProtectorError> {
+    match value {
+        1 => Ok(AccessScope::AppExclusive),
+        2 => Ok(AccessScope::SameUserAccount),
+        3 => Ok(AccessScope::SameUserSession),
+        _ => Err(ProtectorError::CorruptOrTampered),
+    }
+}
+
+const fn encode_presence(policy: UserPresencePolicy) -> u8 {
+    match policy {
+        UserPresencePolicy::NotRequired => 0,
+        UserPresencePolicy::RequiredEachHimsatUnlock => 1,
+    }
+}
+
+fn decode_presence(value: u8) -> Result<UserPresencePolicy, ProtectorError> {
+    match value {
+        0 => Ok(UserPresencePolicy::NotRequired),
+        1 => Ok(UserPresencePolicy::RequiredEachHimsatUnlock),
+        _ => Err(ProtectorError::CorruptOrTampered),
+    }
+}
+
+fn map_security_error(error: SecurityFrameworkError) -> ProtectorError {
+    match error.code() {
+        ERR_SEC_ITEM_NOT_FOUND => ProtectorError::ItemMissing,
+        ERR_SEC_AUTH_FAILED | ERR_SEC_USER_CANCELED => ProtectorError::Denied,
+        ERR_SEC_INTERACTION_NOT_ALLOWED => ProtectorError::Locked,
+        ERR_SEC_MISSING_ENTITLEMENT => ProtectorError::OwnerMismatch,
+        ERR_SEC_DECODE => ProtectorError::Invalidated,
+        ERR_SEC_NOT_AVAILABLE => ProtectorError::Unavailable,
+        _ => ProtectorError::Unavailable,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        AppleKeychainConfig, AppleKeychainProtector, AppleProtectorId, RECORD_MAGIC, decode_record,
+        encode_record, map_security_error, validate_record_binding,
+    };
+    use crate::vault::{
+        AccessScope, KeyGeneration, ProtectorError, SecretProtector, UserPresencePolicy,
+        VAULT_ID_BYTES, VaultId,
+    };
+    use crate::vault_keys::OwnedKeyMaterial;
+    use crate::vault_protector::ProtectorPolicy;
+    use security_framework::base::Error as SecurityFrameworkError;
+
+    fn vault(byte: u8) -> VaultId {
+        VaultId::from_bytes([byte; VAULT_ID_BYTES])
+    }
+
+    fn generation(value: u64) -> KeyGeneration {
+        KeyGeneration::new(value).expect("non-zero generation")
+    }
+
+    #[test]
+    fn opaque_identifier_never_embeds_vault_or_generation() {
+        let id = AppleProtectorId::from_bytes([0xa5; 16]);
+        assert_eq!(id.account(), "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5");
+        assert_eq!(format!("{id:?}"), "AppleProtectorId([OPAQUE; 16 bytes])");
+    }
+
+    #[test]
+    fn configuration_rejects_empty_application_metadata() {
+        let id = AppleProtectorId::from_bytes([1; 16]);
+        assert_eq!(
+            AppleKeychainConfig::new("", id),
+            Err(ProtectorError::UnsupportedPolicy)
+        );
+    }
+
+    #[test]
+    fn conservative_policy_rejects_unproven_scope_and_presence() {
+        let config = AppleKeychainConfig::new(
+            "com.thehalfmoon.himsat.b401.test",
+            AppleProtectorId::from_bytes([2; 16]),
+        )
+        .expect("valid fixed service");
+        let mut protector = AppleKeychainProtector::new(config);
+        assert_eq!(
+            protector.create_protector(AccessScope::AppExclusive, UserPresencePolicy::NotRequired,),
+            Err(ProtectorError::UnsupportedPolicy)
+        );
+        assert_eq!(
+            protector.create_protector(
+                AccessScope::SameUserAccount,
+                UserPresencePolicy::RequiredEachHimsatUnlock,
+            ),
+            Err(ProtectorError::UnsupportedPolicy)
+        );
+        assert_eq!(
+            protector.actual_access_scope(),
+            AccessScope::SameUserAccount
+        );
+        assert!(!protector.requires_user_presence());
+    }
+
+    #[test]
+    fn protected_record_binds_vault_generation_and_policy() {
+        let vrk = OwnedKeyMaterial::from_bytes([0x5a; 32]);
+        let policy = ProtectorPolicy::new(
+            AccessScope::AppExclusive,
+            UserPresencePolicy::RequiredEachHimsatUnlock,
+        );
+        let encoded = encode_record(vault(0x11), generation(7), policy, &vrk);
+        assert!(decode_record(&encoded, vault(0x11), generation(7), policy).is_ok());
+        assert!(matches!(
+            decode_record(&encoded, vault(0x12), generation(7), policy),
+            Err(ProtectorError::OwnerMismatch)
+        ));
+        assert!(matches!(
+            decode_record(&encoded, vault(0x11), generation(8), policy),
+            Err(ProtectorError::OwnerMismatch)
+        ));
+        let weaker =
+            ProtectorPolicy::new(AccessScope::AppExclusive, UserPresencePolicy::NotRequired);
+        assert!(matches!(
+            decode_record(&encoded, vault(0x11), generation(7), weaker),
+            Err(ProtectorError::PolicyMismatch)
+        ));
+    }
+
+    #[test]
+    fn stored_record_binding_rejects_cross_vault_generation_and_policy_reuse() {
+        let vrk = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let policy =
+            ProtectorPolicy::new(AccessScope::AppExclusive, UserPresencePolicy::NotRequired);
+        let encoded = encode_record(vault(0x31), generation(5), policy, &vrk);
+
+        assert_eq!(
+            validate_record_binding(&encoded, vault(0x31), Some(generation(5)), policy),
+            Ok(())
+        );
+        assert_eq!(
+            validate_record_binding(&encoded, vault(0x32), Some(generation(5)), policy),
+            Err(ProtectorError::OwnerMismatch)
+        );
+        assert_eq!(
+            validate_record_binding(&encoded, vault(0x31), Some(generation(6)), policy),
+            Err(ProtectorError::OwnerMismatch)
+        );
+        let stronger = ProtectorPolicy::new(
+            AccessScope::AppExclusive,
+            UserPresencePolicy::RequiredEachHimsatUnlock,
+        );
+        assert_eq!(
+            validate_record_binding(&encoded, vault(0x31), Some(generation(5)), stronger),
+            Err(ProtectorError::PolicyMismatch)
+        );
+
+        // Removal deliberately omits generation matching but still binds vault and policy.
+        assert_eq!(
+            validate_record_binding(&encoded, vault(0x31), None, policy),
+            Ok(())
+        );
+        assert_eq!(
+            validate_record_binding(&encoded, vault(0x32), None, policy),
+            Err(ProtectorError::OwnerMismatch)
+        );
+    }
+
+    #[test]
+    fn protected_record_rejects_corruption() {
+        let vrk = OwnedKeyMaterial::from_bytes([0x7c; 32]);
+        let policy =
+            ProtectorPolicy::new(AccessScope::AppExclusive, UserPresencePolicy::NotRequired);
+        let mut encoded = encode_record(vault(0x21), generation(3), policy, &vrk);
+        encoded[0] ^= 1;
+        assert!(matches!(
+            decode_record(&encoded, vault(0x21), generation(3), policy),
+            Err(ProtectorError::CorruptOrTampered)
+        ));
+
+        let scope_offset = RECORD_MAGIC.len() + 16 + 8;
+        let mut bad_scope = encode_record(vault(0x21), generation(3), policy, &vrk);
+        bad_scope[scope_offset] = 9;
+        assert!(matches!(
+            decode_record(&bad_scope, vault(0x21), generation(3), policy),
+            Err(ProtectorError::CorruptOrTampered)
+        ));
+
+        let mut bad_presence = encode_record(vault(0x21), generation(3), policy, &vrk);
+        bad_presence[scope_offset + 1] = 9;
+        assert!(matches!(
+            decode_record(&bad_presence, vault(0x21), generation(3), policy),
+            Err(ProtectorError::CorruptOrTampered)
+        ));
+    }
+
+    #[test]
+    fn native_error_mapping_is_fail_closed() {
+        assert_eq!(
+            map_security_error(SecurityFrameworkError::from_code(-25300)),
+            ProtectorError::ItemMissing
+        );
+        assert_eq!(
+            map_security_error(SecurityFrameworkError::from_code(-34018)),
+            ProtectorError::OwnerMismatch
+        );
+        assert_eq!(
+            map_security_error(SecurityFrameworkError::from_code(-25308)),
+            ProtectorError::Locked
+        );
+        assert_eq!(
+            map_security_error(SecurityFrameworkError::from_code(-128)),
+            ProtectorError::Denied
+        );
+        assert_eq!(
+            map_security_error(SecurityFrameworkError::from_code(-50)),
+            ProtectorError::Unavailable
+        );
+    }
+}
