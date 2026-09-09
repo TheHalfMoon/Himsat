@@ -68,11 +68,11 @@ On the connected macOS development host, exact working-tree candidate bytes pass
 cargo +1.98.1 fmt --all -- --check = PASS
 cargo +1.98.1 clippy --workspace --locked --all-targets -- -D warnings = PASS
 cargo +1.98.1 test --workspace --locked --all-targets = PASS
-HIMSAT_CORE_UNIT_TESTS = 88 passed / 0 failed
-B401_APPLE_UNIT_TESTS = 5 passed / 0 failed
+HIMSAT_CORE_UNIT_TESTS = 89 passed / 0 failed
+B401_APPLE_UNIT_TESTS = 6 passed / 0 failed
 ```
 
-The B401 unit tests prove opaque identifier formatting/redaction, empty application metadata rejection, protected record vault/generation/policy binding, corruption rejection, and typed fail-closed native error mapping. These are Himsat-owned tests, but they do not substitute for signed native Keychain runtime qualification.
+The B401 unit tests prove opaque identifier formatting/redaction, empty application metadata rejection, protected record vault/generation/policy binding, cross-vault/generation/policy reuse rejection, corruption rejection, and typed fail-closed native error mapping. These are Himsat-owned tests, but they do not substitute for signed native Keychain runtime qualification.
 
 ## Signed native evidence gap
 
@@ -118,6 +118,21 @@ The failure was not re-run or upgraded. Formatting, Clippy, and workspace tests 
 The four additional packages are the exact Apple dependency closure already recorded above. A forward-only successor therefore extends the closure guard with exact identities/checksums/revisions and exact target-manifest validation. It does not make the gate registry-driven or permissive.
 
 Diffcipline also treats later dependency manifest/lockfile changes and diffs above 900 added lines as blocking by default. The successor extends `tools/diffcipline_adoption_gate.py` with one B401-only exact-base exception. The exception requires the exact B401 path set, exact dependency/provenance blobs, no scope violations, and all configured verification commands to pass. Its allowed path set deliberately excludes `specs/004-vault-key-crypto/tasks.md` and `specs/CURRENT.md`; therefore the exception cannot mark B401 complete or authorize B402.
+
+
+## Green predecessor rejected by self-review
+
+A later exact head passed repository automation but was not accepted because self-review found a vault-binding defect after CI completed:
+
+```text
+HEAD = 83397af010817dd4dc4f83d6ddc304f7caa53f78
+CI = 34392435440 / run #203 / SUCCESS / attempt 1 / pull_request
+R3 = 34392435528 / run #180 / SUCCESS / attempt 1 / pull_request
+DISPOSITION = GREEN_AUTOMATION_NOT_ACCEPTED
+SELF_REVIEW_FINDING = remove_protector(vault_id) ignored vault_id before deleting the opaque Keychain item
+```
+
+The head is not re-run, merged, or upgraded into B401 acceptance evidence. The forward-only successor binds removal to the protected record's vault/policy before deletion, refuses reuse of an existing opaque protector identifier for a different vault/generation/policy, and zeroizes temporary Keychain record buffers after provider reads/writes.
 
 ## Native-signing environment reconciliation
 
