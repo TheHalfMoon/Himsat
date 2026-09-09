@@ -7,8 +7,7 @@ use himsat_core::vault_keys::{
 use himsat_core::vault_lease::VaultLease;
 use himsat_core::vault_sqlcipher::{
     EXPECTED_OPENSSL_RUNTIME_VERSION, EXPECTED_SQLCIPHER_CRYPTO_PROVIDER,
-    EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION,
-    open_sqlcipher_database,
+    EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION, open_sqlcipher_database,
 };
 use hkdf::Hkdf;
 use rusqlite::{Connection, OpenFlags, params};
@@ -112,7 +111,10 @@ fn assert_public_filename_clean(path: &Path) {
 
 fn assert_sensitive_bytes_absent(path: &Path, surface: &str) {
     let bytes = fs::read(path).unwrap_or_else(|error| {
-        panic!("B306 {surface} bytes must be readable from {}: {error}", path.display())
+        panic!(
+            "B306 {surface} bytes must be readable from {}: {error}",
+            path.display()
+        )
     });
     assert!(
         !bytes.is_empty(),
@@ -149,7 +151,9 @@ fn keyed_qualification_connection(path: &Path) -> Connection {
     assert_eq!(sqlcipher_version, EXPECTED_SQLCIPHER_RUNTIME_VERSION);
 
     let sqlite_version = connection
-        .query_row("SELECT sqlite_version();", [], |row| row.get::<_, String>(0))
+        .query_row("SELECT sqlite_version();", [], |row| {
+            row.get::<_, String>(0)
+        })
         .expect("SQLite runtime identity must be queryable");
     assert_eq!(sqlite_version, EXPECTED_SQLITE_RUNTIME_VERSION);
 
@@ -209,7 +213,9 @@ fn b306_plaintext_spill_surfaces_remain_opaque_under_qualified_sqlcipher_posture
     let connection = keyed_qualification_connection(&path);
 
     let wal_mode = connection
-        .query_row("PRAGMA journal_mode = WAL;", [], |row| row.get::<_, String>(0))
+        .query_row("PRAGMA journal_mode = WAL;", [], |row| {
+            row.get::<_, String>(0)
+        })
         .expect("reviewed SQLCipher provider must enter WAL mode");
     assert_eq!(wal_mode, "wal");
     connection
