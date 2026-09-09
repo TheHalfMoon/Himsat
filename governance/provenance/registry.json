@@ -284,6 +284,52 @@
       "adoption_mode": "depend",
       "artifacts": [],
       "destination_paths": [],
+      "id": "cargo-core-foundation-0.10.1",
+      "kind": "dependency",
+      "name": "Cargo: core-foundation 0.10.1",
+      "notice": "Copyright (c) 2012-2013 Mozilla Foundation\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6",
+        "ecosystem": "cargo",
+        "name": "core-foundation",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.10.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "core-foundation"
+      ],
+      "source_repository": "https://github.com/servo/core-foundation-rs",
+      "source_revision": "548b65cd3046bb46fc5cebb9f39e7bfd56eaeaa2"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-core-foundation-sys-0.8.7",
+      "kind": "dependency",
+      "name": "Cargo: core-foundation-sys 0.8.7",
+      "notice": "Copyright (c) 2012-2013 Mozilla Foundation\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b",
+        "ecosystem": "cargo",
+        "name": "core-foundation-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.8.7"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "core-foundation-sys"
+      ],
+      "source_repository": "https://github.com/servo/core-foundation-rs",
+      "source_revision": "652bab0a62d87df8a974ffad2ad9f7be218a8b56"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
       "id": "cargo-cpufeatures-0.3.1",
       "kind": "dependency",
       "name": "Cargo: cpufeatures 0.3.1",
@@ -812,7 +858,7 @@
       "id": "cargo-r-efi-6.0.0",
       "kind": "dependency",
       "name": "Cargo: r-efi 6.0.0",
-      "notice": "LICENSE:\n        This project is triple-licensed under the MIT License, the Apache\n        License, Version 2.0, and the GNU Lesser General Public License,\n        Version 2.1+.\n\nAUTHORS-MIT:\n        Permission is hereby granted, free of charge, to any person obtaining a\n        copy of this software and associated documentation files (the\n        \"Software\"), to deal in the Software without restriction, including\n        without limitation the rights to use, copy, modify, merge, publish,\n        distribute, sublicense, and/or sell copies of the Software, and to\n        permit persons to whom the Software is furnished to do so, subject to\n        the following conditions:\n\n        The above copyright notice and this permission notice shall be included\n        in all copies or substantial portions of the Software.\n\n        THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS\n        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\nAUTHORS-ASL:\n        Licensed under the Apache License, Version 2.0 (the \"License\");\n        you may not use this file except in compliance with the License.\n        You may obtain a copy of the License at\n\n                http://www.apache.org/licenses/LICENSE-2.0\n\n        Unless required by applicable law or agreed to in writing, software\n        distributed under the License is distributed on an \"AS IS\" BASIS,\n        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n        See the License for the specific language governing permissions and\n        limitations under the License.\n\nAUTHORS-LGPL:\n        This program is free software; you can redistribute it and/or modify it\n        under the terms of the GNU Lesser General Public License as published\n        by the Free Software Foundation; either version 2.1 of the License, or\n        (at your option) any later version.\n\n        This program is distributed in the hope that it will be useful, but\n        WITHOUT ANY WARRANTY; without even the implied warranty of\n        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU\n        Lesser General Public License for more details.\n\n        You should have received a copy of the GNU Lesser General Public License\n        along with this program; If not, see <http://www.gnu.org/licenses/>.\n\nCOPYRIGHT: (ordered alphabetically)\n        Copyright (C) 2017-2023 Red Hat, Inc.\n        Copyright (C) 2019-2023 Microsoft Corporation\n        Copyright (C) 2022-2023 David Rheinsberg\n\nAUTHORS: (ordered alphabetically)\n        Alan Egerton <eggyal@gmail.com>\n        Alex James <theracermaster@gmail.com>\n        Ayush Singh <ayushsingh1325@gmail.com>\n        Boris-Chengbiao Zhou <bobo1239@web.de>\n        Bret Barkelew <bret@corthon.com>\n        Christopher Zurcher <christopher.zurcher@microsoft.com>\n        David Rheinsberg <david@readahead.eu>\n        Dmitry Mostovenko <trueberserker@gmail.com>\n        Hiroki Tokunaga <tokusan441@gmail.com>\n        Joe Richey <joerichey@google.com>\n        John Schock <joschock@microsoft.com>\n        Michael Kubacki <michael.kubacki@microsoft.com>\n        Oliver Smith-Denny <osde@microsoft.com>\n        Richard Wiedenh\u00f6ft <richard@wiedenhoeft.xyz>\n        Rob Bradford <robert.bradford@intel.com>, <rbradford@rivosinc.com>\n        Tom Gundersen <teg@jklm.no>\n        Trevor Gross <tmgross@umich.edu>",
+      "notice": "LICENSE:\n        This project is triple-licensed under the MIT License, the Apache\n        License, Version 2.0, and the GNU Lesser General Public License,\n        Version 2.1+.\n\nAUTHORS-MIT:\n        Permission is hereby granted, free of charge, to any person obtaining a\n        copy of this software and associated documentation files (the\n        \"Software\"), to deal in the Software without restriction, including\n        without limitation the rights to use, copy, modify, merge, publish,\n        distribute, sublicense, and/or sell copies of the Software, and to\n        permit persons to whom the Software is furnished to do so, subject to\n        the following conditions:\n\n        The above copyright notice and this permission notice shall be included\n        in all copies or substantial portions of the Software.\n\n        THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS\n        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\nAUTHORS-ASL:\n        Licensed under the Apache License, Version 2.0 (the \"License\");\n        you may not use this file except in compliance with the License.\n        You may obtain a copy of the License at\n\n                http://www.apache.org/licenses/LICENSE-2.0\n\n        Unless required by applicable law or agreed to in writing, software\n        distributed under the License is distributed on an \"AS IS\" BASIS,\n        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n        See the License for the specific language governing permissions and\n        limitations under the License.\n\nAUTHORS-LGPL:\n        This program is free software; you can redistribute it and/or modify it\n        under the terms of the GNU Lesser General Public License as published\n        by the Free Software Foundation; either version 2.1 of the License, or\n        (at your option) any later version.\n\n        This program is distributed in the hope that it will be useful, but\n        WITHOUT ANY WARRANTY; without even the implied warranty of\n        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU\n        Lesser General Public License for more details.\n\n        You should have received a copy of the GNU Lesser General Public License\n        along with this program; If not, see <http://www.gnu.org/licenses/>.\n\nCOPYRIGHT: (ordered alphabetically)\n        Copyright (C) 2017-2023 Red Hat, Inc.\n        Copyright (C) 2019-2023 Microsoft Corporation\n        Copyright (C) 2022-2023 David Rheinsberg\n\nAUTHORS: (ordered alphabetically)\n        Alan Egerton <eggyal@gmail.com>\n        Alex James <theracermaster@gmail.com>\n        Ayush Singh <ayushsingh1325@gmail.com>\n        Boris-Chengbiao Zhou <bobo1239@web.de>\n        Bret Barkelew <bret@corthon.com>\n        Christopher Zurcher <christopher.zurcher@microsoft.com>\n        David Rheinsberg <david@readahead.eu>\n        Dmitry Mostovenko <trueberserker@gmail.com>\n        Hiroki Tokunaga <tokusan441@gmail.com>\n        Joe Richey <joerichey@google.com>\n        John Schock <joschock@microsoft.com>\n        Michael Kubacki <michael.kubacki@microsoft.com>\n        Oliver Smith-Denny <osde@microsoft.com>\n        Richard Wiedenhöft <richard@wiedenhoeft.xyz>\n        Rob Bradford <robert.bradford@intel.com>, <rbradford@rivosinc.com>\n        Tom Gundersen <teg@jklm.no>\n        Trevor Gross <tmgross@umich.edu>",
       "package": {
         "checksum": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf",
         "ecosystem": "cargo",
@@ -851,6 +897,52 @@
       ],
       "source_repository": "https://github.com/rusqlite/rusqlite",
       "source_revision": "6d3c282dc5531a57eb4e22ece3207f00c95d0fb0"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-security-framework-3.7.0",
+      "kind": "dependency",
+      "name": "Cargo: security-framework 3.7.0",
+      "notice": "The MIT License (MIT)\n\nCopyright (c) 2015 Steven Fackler\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of\nthis software and associated documentation files (the \"Software\"), to deal in\nthe Software without restriction, including without limitation the rights to\nuse, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software is furnished to do so,\nsubject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\nFOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\nCOPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\nIN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\nCONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d",
+        "ecosystem": "cargo",
+        "name": "security-framework",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "3.7.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "security-framework"
+      ],
+      "source_repository": "https://github.com/kornelski/rust-security-framework",
+      "source_revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-security-framework-sys-2.17.0",
+      "kind": "dependency",
+      "name": "Cargo: security-framework-sys 2.17.0",
+      "notice": "The MIT License (MIT)\n\nCopyright (c) 2015 Steven Fackler\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of\nthis software and associated documentation files (the \"Software\"), to deal in\nthe Software without restriction, including without limitation the rights to\nuse, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software is furnished to do so,\nsubject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS\nFOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR\nCOPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER\nIN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN\nCONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3",
+        "ecosystem": "cargo",
+        "name": "security-framework-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.17.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "security-framework-sys"
+      ],
+      "source_repository": "https://github.com/kornelski/rust-security-framework",
+      "source_revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2"
     },
     {
       "adopted": true,

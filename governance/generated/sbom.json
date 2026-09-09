@@ -233,6 +233,44 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-core-foundation-0.10.1",
+      "kind": "dependency",
+      "name": "Cargo: core-foundation 0.10.1",
+      "package": {
+        "checksum": "b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6",
+        "ecosystem": "cargo",
+        "name": "core-foundation",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.10.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "core-foundation"
+      ],
+      "source_repository": "https://github.com/servo/core-foundation-rs",
+      "source_revision": "548b65cd3046bb46fc5cebb9f39e7bfd56eaeaa2"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-core-foundation-sys-0.8.7",
+      "kind": "dependency",
+      "name": "Cargo: core-foundation-sys 0.8.7",
+      "package": {
+        "checksum": "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b",
+        "ecosystem": "cargo",
+        "name": "core-foundation-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.8.7"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "core-foundation-sys"
+      ],
+      "source_repository": "https://github.com/servo/core-foundation-rs",
+      "source_revision": "652bab0a62d87df8a974ffad2ad9f7be218a8b56"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-cpufeatures-0.3.1",
       "kind": "dependency",
       "name": "Cargo: cpufeatures 0.3.1",
@@ -712,6 +750,44 @@
       ],
       "source_repository": "https://github.com/rusqlite/rusqlite",
       "source_revision": "6d3c282dc5531a57eb4e22ece3207f00c95d0fb0"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-security-framework-3.7.0",
+      "kind": "dependency",
+      "name": "Cargo: security-framework 3.7.0",
+      "package": {
+        "checksum": "b7f4bc775c73d9a02cde8bf7b2ec4c9d12743edf609006c7facc23998404cd1d",
+        "ecosystem": "cargo",
+        "name": "security-framework",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "3.7.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "security-framework"
+      ],
+      "source_repository": "https://github.com/kornelski/rust-security-framework",
+      "source_revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-security-framework-sys-2.17.0",
+      "kind": "dependency",
+      "name": "Cargo: security-framework-sys 2.17.0",
+      "package": {
+        "checksum": "6ce2691df843ecc5d231c0b14ece2acc3efb62c0a398c7e1d875f3983ce020e3",
+        "ecosystem": "cargo",
+        "name": "security-framework-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.17.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "security-framework-sys"
+      ],
+      "source_repository": "https://github.com/kornelski/rust-security-framework",
+      "source_revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2"
     },
     {
       "adoption_mode": "depend",
