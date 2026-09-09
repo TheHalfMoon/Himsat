@@ -49,3 +49,34 @@ This recovery may change only Specification 004 evidence/state surfaces needed t
 Only after this recovery itself becomes exact-head qualified, observed expected-head guarded, parentage-proven, and exact-post-merge qualified may B306 begin.
 
 B306 remains bounded to SQLCipher plaintext-spill qualification: genuine semantic markers and logical IDs must be absent from encrypted DB/WAL/rollback-journal/file-backed-temp bytes and public filenames under the already qualified configuration. `temp_store = MEMORY` must remain positively proven. Unavailable evidence is NOT PROVEN, not PASS. B306 does not absorb B307 or later platform/freshness work.
+
+## Canonical recovery qualification
+
+The forward-only recovery completed on PR #71 without changing runtime/security semantics, dependencies, provider/provenance records, workflows, donor material, Specification 005 behavior, P011, or Q009.
+
+```text
+RECOVERY_PR = 71
+RECOVERY_BASE = 7cdb8154ec90c59b64b2b47b37111cb491489e92
+RECOVERY_HEAD = b7f2886a4bbe641aeff7ea071cf261b5c7fd5c6a
+RECOVERY_TREE = 18c69932b809998292a0e67dc8e667c34312b48e
+PREMERGE_CI = 34292555783 / run #183 / SUCCESS / attempt 1 / pull_request
+PREMERGE_R3 = 34292555765 / run #160 / SUCCESS / attempt 1 / pull_request
+OWNER_RECONCILIATION_REVIEW = 5148286720 / COMMENTED / NOT_Q009
+PREMERGE_TRANSPORT_BINDING_COMMENT = 5593654712
+EXPECTED_HEAD_SHA = b7f2886a4bbe641aeff7ea071cf261b5c7fd5c6a
+MERGE_METHOD = merge
+ACTUAL_MERGE_RESULT = merged=true
+CANONICAL_MERGE = c22385e0245d9b372b396bbe9a2d158d30b40052
+PARENT_1 = 7cdb8154ec90c59b64b2b47b37111cb491489e92
+PARENT_2 = b7f2886a4bbe641aeff7ea071cf261b5c7fd5c6a
+MERGE_TREE = 18c69932b809998292a0e67dc8e667c34312b48e
+POSTMERGE_CI = 34293423595 / run #184 / SUCCESS / attempt 1 / push
+POSTMERGE_R3 = 34293423619 / run #161 / SUCCESS / attempt 1 / push
+POSTMERGE_QUALIFICATION_COMMENT = 5593744878
+```
+
+The actual merge operation was observed in the execution context that performed PR #71's merge and returned the canonical merge SHA above while using the exact recovery head as `expected_head_sha`. Exact canonical parentage and tree independently match that accepted head.
+
+Qodo remained billing-blocked and CodeRabbit remained auto-skipped; neither is PASS. The repository-owner reconciliation remains governance evidence only and is explicitly `NOT_Q009`. `P011` remains unchecked / NOT PASS. B305R002 remains unchecked / NOT PASS because PR #70's historical merge request body remains unavailable. B305R003 is independently proven by exact parentage and post-merge CI/R3 and may be checked without changing B305R002.
+
+With B305X001-B305X003 now proven, the transport recovery is canonical-qualified. B306 may proceed only after canonical state reconciliation records this completed recovery and rebinds implementation authority to the bounded B306 plaintext-spill qualification leaf.
