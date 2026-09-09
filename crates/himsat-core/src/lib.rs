@@ -8,10 +8,10 @@
 //! XChaCha20-Poly1305 envelope. B203 adds the reviewed OS-CSPRNG nonce lifecycle
 //! and in-process reservation/collision discipline. B204 adds the fixed reviewed
 //! Argon2id v1 recovery envelope. B301 integrates the exact reviewed SQLCipher
-//! provider behind the existing keyed-handle lease without absorbing later
-//! structured-store qualification leaves.
+//! provider behind the existing keyed-handle lease. B307 adds bounded
+//! copy-verify-publish migration sequencing without source-retirement behavior.
 //!
-//! Platform secure-store implementations, freshness/backup/rotation/deletion,
+//! Platform secure-store implementations, freshness/backup/full-rotation/deletion,
 //! and Specification 005 remain outside this module until separately authorized.
 
 /// Provider-neutral vault identity, freshness, lease identity, capability, and
@@ -29,6 +29,9 @@ pub mod vault_keys;
 
 /// B102 in-process revocable keyed-handle lease and typed access errors.
 pub mod vault_lease;
+
+/// B307 bounded copy-verify-publish migration sequencing.
+pub mod vault_migration;
 
 /// B203 OS-CSPRNG nonce generation, reservation, retry, restore, and collision policy.
 pub mod vault_nonce;
