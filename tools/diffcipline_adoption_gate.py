@@ -5,8 +5,10 @@ Repository Diffcipline policy remains conservative. The historical 004P
 P005/P006 adoption diff is exceptional because it intentionally introduces the
 reviewed dependency graph and generated provenance closure in one bounded leaf.
 This bridge accepts Diffcipline's otherwise-blocking REVIEW/size findings only
-for that exact base, exact changed-path set, and exact dependency-manifest and
-lockfile blobs. Every configured verification still has to pass.
+for explicitly bounded historical/provider or B401 candidate transitions. The
+B401 exception is available only when this gate is executed from the trusted
+immutable PR base and every permitted B401 candidate artifact matches its pinned
+Git blob. Every configured verification still has to pass.
 
 After the adoption merge the comparison base changes, so this exception cannot
 approve later dependency or oversized diffs.
@@ -28,29 +30,26 @@ EXPECTED_BLOBS = {
     "Cargo.lock": "070dea51697a6b6159627f7ac0140b43ae9c636a",
     "crates/himsat-core/Cargo.toml": "2e5efcd43b82c5ed88b6246ae62014a40a55f145",
 }
-B401_BASE = "ba32dfc21d025a189cddfdd9f46c48fdcd327e1e"
+B401_PRECONDITION_BASE = "ba32dfc21d025a189cddfdd9f46c48fdcd327e1e"
 B401_MAX_ADDED_LINES = 1600
-B401_EXPECTED_BLOBS = {
-    "Cargo.lock": "d9c5aac949ec0b0b7ec12d7baa4311a46ee79f41",
-    "crates/himsat-core/Cargo.toml": "4aefdc25644c7b54b55ac9536cbf8823a6b683d7",
-    "governance/provenance/registry.json": "ebe0264d0b318e757d89d214138cb1c6ae4c2c66",
-    "governance/generated/sbom.json": "dfb107acb6d647979903098518db357a1ffd1741",
-    "THIRD_PARTY_NOTICES.md": "721a7022939eafdf6e5203c4ec1c57676bacc409",
-    "tools/004p_dependency_closure.py": "203f5c351154aa1de9734f47a997059a997eebe3",
-}
-B401_EXPECTED_FILES = {
-    "Cargo.lock",
-    "THIRD_PARTY_NOTICES.md",
-    "crates/himsat-core/Cargo.toml",
-    "crates/himsat-core/examples/b401_apple_keychain_probe.rs",
-    "crates/himsat-core/src/lib.rs",
-    "crates/himsat-core/src/vault_apple_keychain.rs",
-    "governance/generated/sbom.json",
-    "governance/provenance/registry.json",
-    "specs/004-vault-key-crypto/b401-apple-keychain-candidate-evidence.md",
-    "tools/004p_dependency_closure.py",
+B401_TRUSTED_BASE_DELTA = {
+    ".github/workflows/ci.yml",
+    ".github/workflows/r3-security.yml",
     "tools/diffcipline_adoption_gate.py",
 }
+B401_EXPECTED_BLOBS = {
+    "Cargo.lock": "d9c5aac949ec0b0b7ec12d7baa4311a46ee79f41",
+    "THIRD_PARTY_NOTICES.md": "721a7022939eafdf6e5203c4ec1c57676bacc409",
+    "crates/himsat-core/Cargo.toml": "4aefdc25644c7b54b55ac9536cbf8823a6b683d7",
+    "crates/himsat-core/examples/b401_apple_keychain_probe.rs": "164c97e1e2af5d788de53ce147b580b5b17c409f",
+    "crates/himsat-core/src/lib.rs": "c506c30aeef391363bcdc076a694660b2deb5332",
+    "crates/himsat-core/src/vault_apple_keychain.rs": "b9f2e1429a15284abf8ae06e0a633facaba72eca",
+    "governance/generated/sbom.json": "dfb107acb6d647979903098518db357a1ffd1741",
+    "governance/provenance/registry.json": "ebe0264d0b318e757d89d214138cb1c6ae4c2c66",
+    "specs/004-vault-key-crypto/b401-apple-keychain-candidate-evidence.md": "b4c4cac48962fb4685b473bbd75751bf03a52139",
+    "tools/004p_dependency_closure.py": "203f5c351154aa1de9734f47a997059a997eebe3",
+}
+B401_EXPECTED_FILES = set(B401_EXPECTED_BLOBS)
 
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
@@ -129,6 +128,23 @@ def actual_git_diff(base: str) -> tuple[list[str], int, int]:
     return paths, added, deleted
 
 
+def b401_trusted_base(base: str) -> bool:
+    """Return whether base is the exact canonical B401 gate-hardening successor.
+
+    The secure B401 exception is available only after the precondition base has
+    changed by exactly the trusted workflow/gate hardening paths. The workflow
+    then executes this gate from that immutable base rather than from PR HEAD.
+    Any unrelated base drift disables the exception until separately reconciled.
+    """
+
+    try:
+        raw = git("diff", "--no-renames", "--name-only", B401_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B401_TRUSTED_BASE_DELTA and len(paths) == len(B401_TRUSTED_BASE_DELTA)
+
+
 def check_b401_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
     """Accept only the exact B401 candidate dependency-adoption diff.
 
@@ -194,9 +210,9 @@ def check_b401_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int
         for path, expected in B401_EXPECTED_BLOBS.items():
             actual = git("rev-parse", f"HEAD:{path}")
             if actual != expected:
-                return fail(f"B401 dependency blob drift: {path} expected {expected} got {actual}")
+                return fail(f"B401 candidate artifact blob drift: {path} expected {expected} got {actual}")
     except subprocess.CalledProcessError as exc:
-        return fail(f"cannot resolve B401 dependency blob from HEAD: {exc}")
+        return fail(f"cannot resolve B401 candidate artifact blob from HEAD: {exc}")
 
     print("DIFFCIPLINE B401 DEPENDENCY EXCEPTION PASS")
     print(f"base={args.base}")
@@ -234,9 +250,11 @@ def main() -> int:
         print("DIFFCIPLINE PASS")
         return 0
 
-    # B401 has one later exact dependency-adoption exception. It cannot close
-    # B401 because its exact path set excludes task/current-state mutations.
-    if args.base == B401_BASE:
+    # B401 has one later exact dependency-adoption exception. It is enabled
+    # only from the canonical trusted-base hardening successor and pins every
+    # candidate artifact. It cannot close B401 because its exact path set
+    # excludes task/current-state mutations.
+    if b401_trusted_base(args.base):
         return check_b401_exception(args, proof)
 
     # The remaining non-PASS result that can be accepted is the historical
