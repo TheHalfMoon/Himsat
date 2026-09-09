@@ -1,3 +1,4 @@
+#[cfg(target_os = "macos")]
 use himsat_core::vault::{
     AccessScope, HardwareBacking, KeyGeneration, ProtectorError, SecretProtector,
     UserPresencePolicy, VaultId,

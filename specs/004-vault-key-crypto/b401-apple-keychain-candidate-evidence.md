@@ -101,6 +101,21 @@ HIMSAT_CORE_UNIT_TESTS = 90 passed / 0 failed
 
 The added conservative-policy test proves that unqualified `APP_EXCLUSIVE` and per-unlock presence requests return `UnsupportedPolicy` before any Keychain mutation.
 
+## Preserved conservative-head CI evidence
+
+The conservative macOS-only tree was pushed through a forward-only cleanup head after an accidental transient-file tool incident. The final cleanup head remained byte-identical to the intended conservative tree, but its original GitHub qualification failed on Linux-only example imports that were not cfg-gated after the macOS-only refactor:
+
+```text
+HEAD = 7c759c75f9c1ed98551cd41a0b4ef3f147ce9466
+TREE = 377508a4567cd61675221b03f0eb5d931fe34d0e
+CI = 34398682744 / run #207 / FAILURE / attempt 1 / pull_request
+R3 = 34398682756 / run #184 / FAILURE / attempt 1 / pull_request
+CAUSE = Linux clippy detected macOS-only qualifier imports outside cfg(target_os = "macos")
+DISPOSITION = FAILURE_NOT_PASS
+```
+
+The failure is not rerun or upgraded. The forward-only successor cfg-gates only those imports; no protector semantics are weakened.
+
 ## Native macOS evidence attempts
 
 Positive data-protection Keychain runtime qualification remains NOT PROVEN. The following attempts are preserved as negative/unavailable evidence and are not PASS:
