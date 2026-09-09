@@ -7,40 +7,38 @@ BASE_CANONICAL_MAIN = ba32dfc21d025a189cddfdd9f46c48fdcd327e1e
 LEAF = B401_APPLE_KEYCHAIN_ADAPTER_ONLY
 IMPLEMENTATION_STATUS = CANDIDATE_NOT_CANONICAL
 B401_TASK_DISPOSITION = UNCHECKED_NOT_PASS
-SIGNED_KEYCHAIN_RUNTIME_EVIDENCE = NOT_PROVEN
-MACOS_PORTABLE_BUILD_TEST_EVIDENCE = PASS
-IOS_TARGET_RUNTIME_EVIDENCE = NOT_PROVEN
+CURRENT_APPLE_IMPLEMENTATION_TARGET = MACOS_ONLY
+QUALIFIED_SCOPE_CANDIDATE = SAME_USER_ACCOUNT
+QUALIFIED_PRESENCE_CANDIDATE = NOT_REQUIRED
+SIGNED_DATA_PROTECTION_KEYCHAIN_RUNTIME_EVIDENCE = NOT_PROVEN
+IOS_IMPLEMENTATION_SURFACE = NOT_ADOPTED_IN_B401
 Q009 = UNSATISFIED
 ```
 
-This document records only the current B401 implementation candidate and the evidence that genuinely exists. It does not mark B401 complete, does not open B402, and does not weaken the per-target Apple evidence requirements in the reviewed Specification 004 contract.
+This document records only evidence that actually exists. It does not mark B401 complete, authorize B402, or convert unavailable Apple platform evidence into PASS.
 
-## Candidate boundary
+## Conservative candidate boundary
 
-The candidate adds a target-specific Apple dependency and a bounded `SecretProtector` implementation that:
+The current forward-only candidate deliberately narrows Apple behavior to the macOS policy that Himsat can describe without an unproven stronger claim:
 
-- uses a fixed Himsat service identifier supplied by the caller, a signed-target access group supplied by the caller, and one opaque random protector identifier as provider-visible lookup metadata;
-- sets `kSecAttrSynchronizable = false` and selects the data-protection Keychain path;
-- creates `SecAccessControl` with `AccessibleWhenPasscodeSetThisDeviceOnly` and adds `USER_PRESENCE` when `REQUIRED_EACH_HIMSAT_UNLOCK` is requested;
-- keeps `VaultId`, key generation, requested policy, and VRK bytes inside the protected Keychain value;
-- probes the configured access-group entitlement before reporting `APP_EXCLUSIVE`;
-- reports hardware backing as `Unknown`; no Secure Enclave claim is made;
-- returns `UnsupportedPolicy` for freshness-anchor and full protector-replacement behavior owned by B501/B503;
-- has no plaintext fallback.
+- `security-framework = 3.7.0` is target-specific to `cfg(target_os = "macos")` only;
+- Keychain lookup metadata is a fixed Himsat service plus one opaque random protector identifier;
+- no explicit sharing access group is configured; the target's default application Keychain group is used;
+- `kSecAttrSynchronizable = false` and the data-protection Keychain path are requested;
+- VRK records use `AccessibleWhenPasscodeSetThisDeviceOnly`;
+- the adapter reports `SAME_USER_ACCOUNT`, `NOT_REQUIRED`, and hardware backing `Unknown`;
+- `APP_EXCLUSIVE`, `SAME_USER_SESSION`, and `REQUIRED_EACH_HIMSAT_UNLOCK` requests return `UnsupportedPolicy`;
+- existing-item operations re-check service, account, `ThisDeviceOnly` accessibility, and absence of a synchronized twin before releasing or mutating VRK state;
+- cross-vault/generation/policy protector reuse and wrong-vault removal fail closed;
+- temporary Keychain value buffers are zeroized after reads/writes;
+- freshness/full-rotation behavior remains `UnsupportedPolicy` for B501/B503;
+- there is no plaintext fallback.
 
-B402-B406, B501-B506, Specification 005, release/FIPS/compliance, and independent Q009 review remain outside this candidate.
+The candidate intentionally removes the earlier iOS compilation surface. Himsat currently lacks an iPhoneOS SDK/runtime qualification path, so B401 does not ship an unqualified iOS adapter merely because the Rust dependency can compile conditionally in theory.
 
-## Dependency and provenance candidate
+## Dependency and provenance closure
 
-The target-specific dependency is exact-pinned:
-
-```text
-security-framework = 3.7.0
-features = OSX_10_15
-default_features = false
-```
-
-The canonical lockfile delta is bounded to four new registry packages and no removals or unrelated version drift:
+The exact Apple Cargo closure remains four packages and no unrelated lockfile drift:
 
 ```text
 core-foundation 0.10.1
@@ -49,113 +47,97 @@ security-framework 3.7.0
 security-framework-sys 2.17.0
 ```
 
-Exact crates.io checksums, immutable VCS revisions/source paths, MIT notices, and Cargo package identities are represented in `governance/provenance/registry.json`. `THIRD_PARTY_NOTICES.md` and `governance/generated/sbom.json` were regenerated through the canonical provenance gate.
+The direct dependency remains exact-pinned with `default-features = false` and `features = ["OSX_10_15"]`. The target selector is now exactly `cfg(target_os = "macos")`.
 
-Local provenance evidence:
+Exact crates.io checksums, immutable VCS revisions/source paths, selected MIT license evidence, notices, registry entries, and generated SBOM remain represented in the repository provenance closure.
 
-```text
-python3 tools/provenance_gate.py validate = PASS
-python3 tools/provenance_gate.py check-generated = PASS
-python3 tools/provenance_gate.py self-test = PASS
-LOCKFILE_UNRELATED_DRIFT = NONE
-```
+## Exact-head automation history
 
-## Local implementation evidence
-
-On the connected macOS development host, exact working-tree candidate bytes passed:
-
-```text
-cargo +1.98.1 fmt --all -- --check = PASS
-cargo +1.98.1 clippy --workspace --locked --all-targets -- -D warnings = PASS
-cargo +1.98.1 test --workspace --locked --all-targets = PASS
-HIMSAT_CORE_UNIT_TESTS = 89 passed / 0 failed
-B401_APPLE_UNIT_TESTS = 6 passed / 0 failed
-```
-
-The B401 unit tests prove opaque identifier formatting/redaction, empty application metadata rejection, protected record vault/generation/policy binding, cross-vault/generation/policy reuse rejection, corruption rejection, and typed fail-closed native error mapping. These are Himsat-owned tests, but they do not substitute for signed native Keychain runtime qualification.
-
-## Signed native evidence gap
-
-The reviewed Specification 004 contract requires actual Apple implementation evidence for the stored Keychain attributes and relevant target behavior. That evidence is not yet proven for this candidate.
-
-Observed local facts:
-
-- a usable Apple Development signing identity is present on the connected development host;
-- non-interactive signing access to its private key requires SecurityAgent interaction and was not bypassed;
-- an ad-hoc signature carrying sandbox/application/keychain-access-group entitlements was rejected by macOS and is NOT PASS;
-- a separate ephemeral signing route was not executed because the available automation safety boundary rejected that credential/key-generation operation;
-- therefore no signed B401 Keychain store/read result is promoted to PASS.
-
-The exact native acceptance evidence still required before B401 may close includes, at minimum, a signed Himsat target proving the configured access-group boundary, non-synchronizable data-protection Keychain lookup, `WhenPasscodeSetThisDeviceOnly`, and the requested user-presence policy without secret fallback.
-
-## iOS evidence gap
-
-A cross-target check was attempted for `aarch64-apple-ios`. The Rust target could be selected, but the host does not provide the iPhoneOS SDK. The existing vendored OpenSSL/SQLCipher graph failed in `openssl-sys` while resolving the missing `iphoneos` SDK before a complete Himsat iOS target build could finish.
-
-This is recorded as `NOT_PROVEN`, not as a B401 PASS or a B401 code defect. No iOS runtime qualification claim is made.
-
-## Required next gate
-
-This candidate may be pushed for exact-head CI/R3 and review, but it MUST NOT be merged or marked complete until the missing signed native Apple evidence is genuinely supplied and reconciled against the exact final candidate head. Failed, unavailable, interactive, or tool-blocked evidence must remain NOT PASS.
-
-## Exact-head qualification history
-
-The first pushed candidate head was:
+The first pushed candidate remains NOT PASS and was never rerun or upgraded:
 
 ```text
 HEAD = 2e6ea72306e3ec76b4bee4062d3a07f92efa73d1
 CI = 34390554794 / run #202 / FAILURE / attempt 1 / pull_request
 R3 = 34390554771 / run #179 / FAILURE / attempt 1 / pull_request
+CAUSE = pre-B401 dependency-closure guard expected 41 external packages instead of the exact 45-package provider-plus-Apple closure
 DISPOSITION = NOT_PASS
 ```
 
-The failure was not re-run or upgraded. Formatting, Clippy, and workspace tests completed successfully on Ubuntu, macOS, and Windows, and the provenance registry/generated outputs also validated. The exact common failure was the pre-B401 `tools/004p_dependency_closure.py` assumption that the selected closure must contain exactly 41 external packages:
-
-```text
-004P CLOSURE FAIL: Cargo.lock: expected 41 external packages, found 45
-```
-
-The four additional packages are the exact Apple dependency closure already recorded above. A forward-only successor therefore extends the closure guard with exact identities/checksums/revisions and exact target-manifest validation. It does not make the gate registry-driven or permissive.
-
-Diffcipline also treats later dependency manifest/lockfile changes and diffs above 900 added lines as blocking by default. The successor extends `tools/diffcipline_adoption_gate.py` with one B401-only exact-base exception. The exception requires the exact B401 path set, exact dependency/provenance blobs, no scope violations, and all configured verification commands to pass. Its allowed path set deliberately excludes `specs/004-vault-key-crypto/tasks.md` and `specs/CURRENT.md`; therefore the exception cannot mark B401 complete or authorize B402.
-
-
-## Green predecessor rejected by self-review
-
-A later exact head passed repository automation but was not accepted because self-review found a vault-binding defect after CI completed:
+The next head passed automation but was rejected by self-review:
 
 ```text
 HEAD = 83397af010817dd4dc4f83d6ddc304f7caa53f78
 CI = 34392435440 / run #203 / SUCCESS / attempt 1 / pull_request
 R3 = 34392435528 / run #180 / SUCCESS / attempt 1 / pull_request
-DISPOSITION = GREEN_AUTOMATION_NOT_ACCEPTED
 SELF_REVIEW_FINDING = remove_protector(vault_id) ignored vault_id before deleting the opaque Keychain item
+DISPOSITION = GREEN_AUTOMATION_NOT_ACCEPTED
 ```
 
-The head is not re-run, merged, or upgraded into B401 acceptance evidence. The forward-only successor binds removal to the protected record's vault/policy before deletion, refuses reuse of an existing opaque protector identifier for a different vault/generation/policy, and zeroizes temporary Keychain record buffers after provider reads/writes.
-
-## Native-signing environment reconciliation
-
-Additional local investigation did not close the signed-native evidence gap:
+The next forward-only head repaired vault/policy removal binding, protector-ID reuse binding, and temporary-record zeroization. Its automation also passed, but later self-review found that membership in an arbitrary configured access group was insufficient evidence for `APP_EXCLUSIVE`, and the same head still exposed an unqualified iOS compilation surface:
 
 ```text
-APPLE_DEVELOPMENT_SIGNING_IDENTITY_PRESENT = YES
-NONINTERACTIVE_PRIVATE_KEY_USE = PLATFORM_AUTHENTICATION_REQUIRED_NOT_BYPASSED
+HEAD = 27e864970ac86710732adf372699825b529e22ba
+CI = 34395001464 / run #204 / SUCCESS / attempt 1 / pull_request
+R3 = 34395001338 / run #181 / SUCCESS / attempt 1 / pull_request
+DISPOSITION = GREEN_AUTOMATION_NOT_ACCEPTED
+```
+
+No green predecessor is merged or promoted merely because automation succeeded.
+
+## Local conservative-successor evidence
+
+The current working candidate passes the complete local portable gate on the connected macOS development host:
+
+```text
+OPENSSL_RUST_USE_NASM=0 python3 tools/004p_dependency_closure.py = PASS
+python3 tools/provenance_gate.py validate = PASS
+python3 tools/provenance_gate.py check-generated = PASS
+python3 tools/provenance_gate.py self-test = PASS
+cargo +1.98.1 fmt --all -- --check = PASS
+cargo +1.98.1 clippy --workspace --locked --all-targets -- -D warnings = PASS
+cargo +1.98.1 test --workspace --locked --all-targets = PASS
+HIMSAT_CORE_UNIT_TESTS = 90 passed / 0 failed
+```
+
+The added conservative-policy test proves that unqualified `APP_EXCLUSIVE` and per-unlock presence requests return `UnsupportedPolicy` before any Keychain mutation.
+
+## Native macOS evidence attempts
+
+Positive data-protection Keychain runtime qualification remains NOT PROVEN. The following attempts are preserved as negative/unavailable evidence and are not PASS:
+
+```text
+AD_HOC_STANDALONE_SANDBOX = NOT_PASS / libsecinit rejected missing bundle identity
+AD_HOC_SANDBOX_APP_DEFAULT_GROUP = NOT_PASS / OwnerMismatch
+AD_HOC_SANDBOX_APP_APPLICATION_IDENTIFIER = NOT_PASS / OwnerMismatch
+APPLE_DEVELOPMENT_SIGNING_IDENTITY = PRESENT
+APPLE_DEVELOPMENT_PRIVATE_KEY_USE = USER_AUTHORIZED_THROUGH_SECURITYAGENT
+APPLE_DEVELOPMENT_SIGNED_SANDBOX_APP_TEAM_IDENTIFIER = PRESENT
+APPLE_DEVELOPMENT_DEFAULT_GROUP_WITHOUT_APPLICATION_IDENTIFIER = NOT_PASS / OwnerMismatch
+APPLE_DEVELOPMENT_APPLICATION_IDENTIFIER_ONLY = NOT_PASS / OwnerMismatch
+APPLE_DEVELOPMENT_EXPLICIT_DEFAULT_KEYCHAIN_GROUP = NOT_PASS / runtime terminated before qualifier output
 INSTALLED_MACOS_PROVISIONING_PROFILE = PRESENT_BUT_EXPIRED_NOT_PASS
 XCODE_APP = NOT_INSTALLED
 ACTIVE_DEVELOPER_TOOLS = COMMAND_LINE_TOOLS_ONLY
-AD_HOC_RESTRICTED_ENTITLEMENT_EXECUTION = NOT_PASS
-SIGNED_NATIVE_KEYCHAIN_RUNTIME_EVIDENCE = NOT_PROVEN
+SIGNED_DATA_PROTECTION_KEYCHAIN_RUNTIME_EVIDENCE = NOT_PROVEN
 ```
 
-Apple documents `keychain-access-groups` as a restricted macOS entitlement that must be authorized by a provisioning profile. A Keychain access-group value outside the process entitlement set fails with `errSecMissingEntitlement`. Therefore an ad-hoc or self-signed substitute cannot be promoted to the required Himsat application/access-group proof.
-
-Controlling Apple references:
+The candidate probe is ready to verify, on a genuinely authorized signed macOS target, all of the following without exposing a VRK:
 
 ```text
-https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps
-https://developer.apple.com/documentation/security/errsecmissingentitlement
-https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles
+scope = SAME_USER_ACCOUNT
+presence = NOT_REQUIRED
+accessibility = WhenPasscodeSetThisDeviceOnly
+synchronizable = false
+stronger APP_EXCLUSIVE request = UnsupportedPolicy
+stronger REQUIRED_EACH_HIMSAT_UNLOCK request = UnsupportedPolicy
+wrong-vault removal = OwnerMismatch and original item remains usable
+item removal = future unlock unavailable
 ```
 
-The candidate remains Draft and B401 remains unchecked until a non-expired Apple-authorized signed target supplies the required native runtime evidence on the exact final implementation revision.
+A valid Apple-authorized runtime still must demonstrate that `kSecUseDataProtectionKeychain` actually selects the protected Keychain and that the stored item has the expected `ThisDeviceOnly` and non-synchronizable properties. Ad-hoc signatures, expired profiles, process termination, missing entitlements, and unavailable SDKs remain NOT PASS.
+
+## Required next gate
+
+Before B401 can be checked or merged as canonical, the exact final candidate revision still requires genuine macOS native runtime evidence for the conservative policy above. The repository must then reconcile exact head, CI/R3, reviews/threads/comments, mergeability, guarded transport, canonical parentage, and post-merge CI/R3.
+
+B402-B406, B501-B506, Specification 005, release authority, and final Q009 independent review remain outside this candidate until dependency-ordered governance authorizes them.

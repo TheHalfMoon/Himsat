@@ -19,6 +19,6 @@ libsqlite3-sys = { version = "=0.38.2", default-features = false, features = ["b
 rusqlite = { version = "=0.40.1", default-features = false, features = ["bundled-sqlcipher-vendored-openssl"] }
 sha2 = { version = "=0.11.0", default-features = false }
 zeroize = { version = "=1.9.0" }
-[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+[target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }
 

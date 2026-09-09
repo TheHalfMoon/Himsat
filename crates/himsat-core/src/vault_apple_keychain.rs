@@ -1,9 +1,9 @@
 //! Apple data-protection Keychain adapter for Specification 004B4 B401.
 //!
 //! The adapter stores a VRK only inside a non-synchronizable, ThisDeviceOnly
-//! generic-password item scoped to the configured Himsat access group. Provider-
-//! visible lookup metadata is limited to fixed service/access-group identifiers
-//! plus one opaque random protector identifier. Vault identity, key generation,
+//! generic-password item in the target's default application Keychain group. Provider-
+//! visible lookup metadata is limited to one fixed Himsat service identifier plus
+//! one opaque random protector identifier. Vault identity, key generation,
 //! policy binding, and VRK bytes remain inside the protected item value.
 //!
 //! Freshness anchors, full protector replacement/rotation, and non-Apple
@@ -11,13 +11,14 @@
 
 use crate::vault::{
     AccessScope, FreshnessAnchor, HardwareBacking, KeyGeneration, ProtectedFreshnessState,
-    ProtectorError, SecretProtector, UserPresencePolicy, VaultId,
+    ProtectorCapabilities, ProtectorError, SecretProtector, UserPresencePolicy, VaultId,
 };
 use crate::vault_keys::{KEY_MATERIAL_BYTES, OwnedKeyMaterial};
-use crate::vault_protector::ProtectorPolicy;
+use crate::vault_protector::{ProtectorPolicy, validate_requested_policy};
 use getrandom::fill;
 use security_framework::access_control::{ProtectionMode, SecAccessControl};
 use security_framework::base::Error as SecurityFrameworkError;
+use security_framework::item::{ItemClass, ItemSearchOptions};
 use security_framework::passwords::{
     AccessControlOptions, PasswordOptions, delete_generic_password_options, generic_password,
     set_generic_password_options,
@@ -79,29 +80,25 @@ impl core::fmt::Debug for AppleProtectorId {
     }
 }
 
-/// Apple Keychain protector configuration supplied by the signed Himsat target.
+/// Apple Keychain protector configuration for the target's default application group.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AppleKeychainConfig {
     service: String,
-    access_group: String,
     protector_id: AppleProtectorId,
 }
 
 impl AppleKeychainConfig {
-    /// Creates configuration for one signed Himsat application/access group.
+    /// Creates configuration for one fixed Himsat service in the default application group.
     pub fn new(
         service: impl Into<String>,
-        access_group: impl Into<String>,
         protector_id: AppleProtectorId,
     ) -> Result<Self, ProtectorError> {
         let service = service.into();
-        let access_group = access_group.into();
-        if service.is_empty() || access_group.is_empty() {
+        if service.is_empty() {
             return Err(ProtectorError::UnsupportedPolicy);
         }
         Ok(Self {
             service,
-            access_group,
             protector_id,
         })
     }
@@ -110,12 +107,6 @@ impl AppleKeychainConfig {
     #[must_use]
     pub fn service(&self) -> &str {
         &self.service
-    }
-
-    /// Signed target access group visible to Keychain.
-    #[must_use]
-    pub fn access_group(&self) -> &str {
-        &self.access_group
     }
 
     /// Opaque provider-visible protector identifier.
@@ -129,18 +120,15 @@ impl AppleKeychainConfig {
 pub struct AppleKeychainProtector {
     config: AppleKeychainConfig,
     policy: Option<ProtectorPolicy>,
-    app_scope_verified: bool,
 }
 
 impl AppleKeychainProtector {
-    /// Creates an unconfigured adapter. `create_protector` must prove the signed
-    /// target's access-group entitlement before `APP_EXCLUSIVE` is reported.
+    /// Creates an unconfigured conservative macOS adapter.
     #[must_use]
     pub const fn new(config: AppleKeychainConfig) -> Self {
         Self {
             config,
             policy: None,
-            app_scope_verified: false,
         }
     }
 
@@ -159,20 +147,18 @@ impl AppleKeychainProtector {
             self.config.service(),
             &self.config.protector_id().account(),
         );
-        options.set_access_group(self.config.access_group());
         options.set_access_synchronized(Some(false));
         options.use_protected_keychain();
         options
     }
 
     fn write_options(&self, policy: ProtectorPolicy) -> Result<PasswordOptions, ProtectorError> {
-        let flags = match policy.user_presence_policy() {
-            UserPresencePolicy::NotRequired => AccessControlOptions::empty(),
-            UserPresencePolicy::RequiredEachHimsatUnlock => AccessControlOptions::USER_PRESENCE,
-        };
+        if policy.user_presence_policy() != UserPresencePolicy::NotRequired {
+            return Err(ProtectorError::UnsupportedPolicy);
+        }
         let access_control = SecAccessControl::create_with_protection(
             Some(ProtectionMode::AccessibleWhenPasscodeSetThisDeviceOnly),
-            flags.bits(),
+            AccessControlOptions::empty().bits(),
         )
         .map_err(map_security_error)?;
         let mut options = self.read_options();
@@ -180,19 +166,53 @@ impl AppleKeychainProtector {
         Ok(options)
     }
 
-    fn verify_access_group_entitlement(&self) -> Result<(), ProtectorError> {
-        let mut probe = PasswordOptions::new_generic_password(
-            self.config.service(),
-            &format!("{}.entitlement-probe", self.config.protector_id().account()),
-        );
-        probe.set_access_group(self.config.access_group());
-        probe.set_access_synchronized(Some(false));
-        probe.use_protected_keychain();
-        match generic_password(probe) {
-            Ok(_) => Ok(()),
-            Err(error) if error.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(()),
+    fn synchronized_item_exists(&self) -> Result<bool, ProtectorError> {
+        let account = self.config.protector_id().account();
+        let mut synchronized = ItemSearchOptions::new();
+        synchronized
+            .class(ItemClass::generic_password())
+            .service(self.config.service())
+            .account(&account)
+            .cloud_sync(Some(true))
+            .load_attributes(true)
+            .limit(1)
+            .ignore_legacy_keychains();
+        match synchronized.search() {
+            Ok(items) => Ok(!items.is_empty()),
+            Err(error) if error.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(false),
             Err(error) => Err(map_security_error(error)),
         }
+    }
+
+    fn verify_native_item_attributes(&self) -> Result<(), ProtectorError> {
+        let account = self.config.protector_id().account();
+        let mut search = ItemSearchOptions::new();
+        search
+            .class(ItemClass::generic_password())
+            .service(self.config.service())
+            .account(&account)
+            .cloud_sync(Some(false))
+            .load_attributes(true)
+            .limit(1)
+            .ignore_legacy_keychains();
+        let results = search.search().map_err(map_security_error)?;
+        let Some(result) = results.first() else {
+            return Err(ProtectorError::ItemMissing);
+        };
+        let Some(attributes) = result.simplify_dict() else {
+            return Err(ProtectorError::CorruptOrTampered);
+        };
+        if attributes.get("svce").map(String::as_str) != Some(self.config.service())
+            || attributes.get("acct").map(String::as_str) != Some(account.as_str())
+            || attributes.get("pdmn").map(String::as_str) != Some("akpu")
+        {
+            return Err(ProtectorError::PolicyMismatch);
+        }
+
+        if self.synchronized_item_exists()? {
+            return Err(ProtectorError::PolicyMismatch);
+        }
+        Ok(())
     }
 }
 
@@ -204,11 +224,17 @@ impl SecretProtector for AppleKeychainProtector {
         requested_scope: AccessScope,
         user_presence_policy: UserPresencePolicy,
     ) -> Result<(), ProtectorError> {
-        self.verify_access_group_entitlement()?;
         let policy = ProtectorPolicy::new(requested_scope, user_presence_policy);
+        validate_requested_policy(
+            ProtectorCapabilities::new(
+                AccessScope::SameUserAccount,
+                false,
+                HardwareBacking::Unknown,
+            ),
+            policy,
+        )?;
         self.write_options(policy)?;
         self.policy = Some(policy);
-        self.app_scope_verified = true;
         Ok(())
     }
 
@@ -219,12 +245,13 @@ impl SecretProtector for AppleKeychainProtector {
         vrk: &Self::VaultRootKey,
     ) -> Result<(), ProtectorError> {
         let policy = self.policy()?;
-        if !self.app_scope_verified {
-            return Err(ProtectorError::UnsupportedPolicy);
+        if self.synchronized_item_exists()? {
+            return Err(ProtectorError::PolicyMismatch);
         }
 
         match generic_password(self.read_options()) {
             Ok(mut existing) => {
+                self.verify_native_item_attributes()?;
                 let binding =
                     validate_record_binding(&existing, vault_id, Some(key_generation), policy);
                 existing.zeroize();
@@ -247,11 +274,11 @@ impl SecretProtector for AppleKeychainProtector {
         key_generation: KeyGeneration,
     ) -> Result<Self::VaultRootKey, ProtectorError> {
         let policy = self.policy()?;
+        self.verify_native_item_attributes()?;
         let mut record = generic_password(self.read_options()).map_err(map_security_error)?;
         let vrk = decode_record(&record, vault_id, key_generation, policy);
         record.zeroize();
         let vrk = vrk?;
-        self.app_scope_verified = true;
         Ok(vrk)
     }
 
@@ -286,29 +313,22 @@ impl SecretProtector for AppleKeychainProtector {
 
     fn remove_protector(&mut self, vault_id: VaultId) -> Result<(), ProtectorError> {
         let policy = self.policy()?;
+        self.verify_native_item_attributes()?;
         let mut record = generic_password(self.read_options()).map_err(map_security_error)?;
         let binding = validate_record_binding(&record, vault_id, None, policy);
         record.zeroize();
         binding?;
         delete_generic_password_options(self.read_options()).map_err(map_security_error)?;
         self.policy = None;
-        self.app_scope_verified = false;
         Ok(())
     }
 
     fn actual_access_scope(&self) -> AccessScope {
-        if self.app_scope_verified {
-            AccessScope::AppExclusive
-        } else {
-            AccessScope::SameUserAccount
-        }
+        AccessScope::SameUserAccount
     }
 
     fn requires_user_presence(&self) -> bool {
-        matches!(
-            self.policy.map(ProtectorPolicy::user_presence_policy),
-            Some(UserPresencePolicy::RequiredEachHimsatUnlock)
-        )
+        false
     }
 
     fn hardware_backed_state(&self) -> HardwareBacking {
@@ -445,11 +465,12 @@ fn map_security_error(error: SecurityFrameworkError) -> ProtectorError {
 #[cfg(test)]
 mod tests {
     use super::{
-        AppleKeychainConfig, AppleProtectorId, decode_record, encode_record, map_security_error,
-        validate_record_binding,
+        AppleKeychainConfig, AppleKeychainProtector, AppleProtectorId, decode_record,
+        encode_record, map_security_error, validate_record_binding,
     };
     use crate::vault::{
-        AccessScope, KeyGeneration, ProtectorError, UserPresencePolicy, VAULT_ID_BYTES, VaultId,
+        AccessScope, KeyGeneration, ProtectorError, SecretProtector, UserPresencePolicy,
+        VAULT_ID_BYTES, VaultId,
     };
     use crate::vault_keys::OwnedKeyMaterial;
     use crate::vault_protector::ProtectorPolicy;
@@ -474,13 +495,35 @@ mod tests {
     fn configuration_rejects_empty_application_metadata() {
         let id = AppleProtectorId::from_bytes([1; 16]);
         assert_eq!(
-            AppleKeychainConfig::new("", "group", id),
+            AppleKeychainConfig::new("", id),
+            Err(ProtectorError::UnsupportedPolicy)
+        );
+    }
+
+    #[test]
+    fn conservative_policy_rejects_unproven_scope_and_presence() {
+        let config = AppleKeychainConfig::new(
+            "com.thehalfmoon.himsat.b401.test",
+            AppleProtectorId::from_bytes([2; 16]),
+        )
+        .expect("valid fixed service");
+        let mut protector = AppleKeychainProtector::new(config);
+        assert_eq!(
+            protector.create_protector(AccessScope::AppExclusive, UserPresencePolicy::NotRequired,),
             Err(ProtectorError::UnsupportedPolicy)
         );
         assert_eq!(
-            AppleKeychainConfig::new("service", "", id),
+            protector.create_protector(
+                AccessScope::SameUserAccount,
+                UserPresencePolicy::RequiredEachHimsatUnlock,
+            ),
             Err(ProtectorError::UnsupportedPolicy)
         );
+        assert_eq!(
+            protector.actual_access_scope(),
+            AccessScope::SameUserAccount
+        );
+        assert!(!protector.requires_user_presence());
     }
 
     #[test]

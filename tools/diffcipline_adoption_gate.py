@@ -32,11 +32,11 @@ B401_BASE = "ba32dfc21d025a189cddfdd9f46c48fdcd327e1e"
 B401_MAX_ADDED_LINES = 1600
 B401_EXPECTED_BLOBS = {
     "Cargo.lock": "d9c5aac949ec0b0b7ec12d7baa4311a46ee79f41",
-    "crates/himsat-core/Cargo.toml": "1dc4650087687e4d41a5bf40da813e256d2f2a63",
+    "crates/himsat-core/Cargo.toml": "4aefdc25644c7b54b55ac9536cbf8823a6b683d7",
     "governance/provenance/registry.json": "ebe0264d0b318e757d89d214138cb1c6ae4c2c66",
     "governance/generated/sbom.json": "dfb107acb6d647979903098518db357a1ffd1741",
     "THIRD_PARTY_NOTICES.md": "721a7022939eafdf6e5203c4ec1c57676bacc409",
-    "tools/004p_dependency_closure.py": "a0d1e254675aa5ff2721eaa6e269670b989bfe40",
+    "tools/004p_dependency_closure.py": "203f5c351154aa1de9734f47a997059a997eebe3",
 }
 B401_EXPECTED_FILES = {
     "Cargo.lock",

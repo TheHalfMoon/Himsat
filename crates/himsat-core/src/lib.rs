@@ -19,7 +19,7 @@
 pub mod vault;
 
 /// B401 Apple data-protection Keychain adapter.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 pub mod vault_apple_keychain;
 
 /// B202 versioned bounded-blob XChaCha20-Poly1305 envelope execution/parsing.

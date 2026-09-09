@@ -23,7 +23,7 @@ EXPECTED_PROVIDER_EXTERNAL_COUNT = 41
 EXPECTED_TOTAL_EXTERNAL_COUNT = 45
 EVIDENCE_REFERENCE = "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md"
 
-EXPECTED_APPLE_TARGET = 'cfg(any(target_os = "macos", target_os = "ios"))'
+EXPECTED_APPLE_TARGET = 'cfg(target_os = "macos")'
 EXPECTED_APPLE_DIRECT: dict[str, dict[str, Any]] = {
     "security-framework": {
         "version": "=3.7.0",
