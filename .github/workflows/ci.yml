@@ -210,7 +210,9 @@ jobs:
           status=$?
           set -e
           cat "$proof"
-          python tools/diffcipline_adoption_gate.py --proof "$proof" --exit-code "$status" --base "$DIFFCIPLINE_BASE" --risk R2
+          trusted_gate="$RUNNER_TEMP/diffcipline-adoption-gate.py"
+          git show "$DIFFCIPLINE_BASE:tools/diffcipline_adoption_gate.py" > "$trusted_gate"
+          python "$trusted_gate" --proof "$proof" --exit-code "$status" --base "$DIFFCIPLINE_BASE" --risk R2
 
   negative-controls:
     name: Negative controls
