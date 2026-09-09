@@ -97,3 +97,50 @@ This is recorded as `NOT_PROVEN`, not as a B401 PASS or a B401 code defect. No i
 ## Required next gate
 
 This candidate may be pushed for exact-head CI/R3 and review, but it MUST NOT be merged or marked complete until the missing signed native Apple evidence is genuinely supplied and reconciled against the exact final candidate head. Failed, unavailable, interactive, or tool-blocked evidence must remain NOT PASS.
+
+## Exact-head qualification history
+
+The first pushed candidate head was:
+
+```text
+HEAD = 2e6ea72306e3ec76b4bee4062d3a07f92efa73d1
+CI = 34390554794 / run #202 / FAILURE / attempt 1 / pull_request
+R3 = 34390554771 / run #179 / FAILURE / attempt 1 / pull_request
+DISPOSITION = NOT_PASS
+```
+
+The failure was not re-run or upgraded. Formatting, Clippy, and workspace tests completed successfully on Ubuntu, macOS, and Windows, and the provenance registry/generated outputs also validated. The exact common failure was the pre-B401 `tools/004p_dependency_closure.py` assumption that the selected closure must contain exactly 41 external packages:
+
+```text
+004P CLOSURE FAIL: Cargo.lock: expected 41 external packages, found 45
+```
+
+The four additional packages are the exact Apple dependency closure already recorded above. A forward-only successor therefore extends the closure guard with exact identities/checksums/revisions and exact target-manifest validation. It does not make the gate registry-driven or permissive.
+
+Diffcipline also treats later dependency manifest/lockfile changes and diffs above 900 added lines as blocking by default. The successor extends `tools/diffcipline_adoption_gate.py` with one B401-only exact-base exception. The exception requires the exact B401 path set, exact dependency/provenance blobs, no scope violations, and all configured verification commands to pass. Its allowed path set deliberately excludes `specs/004-vault-key-crypto/tasks.md` and `specs/CURRENT.md`; therefore the exception cannot mark B401 complete or authorize B402.
+
+## Native-signing environment reconciliation
+
+Additional local investigation did not close the signed-native evidence gap:
+
+```text
+APPLE_DEVELOPMENT_SIGNING_IDENTITY_PRESENT = YES
+NONINTERACTIVE_PRIVATE_KEY_USE = PLATFORM_AUTHENTICATION_REQUIRED_NOT_BYPASSED
+INSTALLED_MACOS_PROVISIONING_PROFILE = PRESENT_BUT_EXPIRED_NOT_PASS
+XCODE_APP = NOT_INSTALLED
+ACTIVE_DEVELOPER_TOOLS = COMMAND_LINE_TOOLS_ONLY
+AD_HOC_RESTRICTED_ENTITLEMENT_EXECUTION = NOT_PASS
+SIGNED_NATIVE_KEYCHAIN_RUNTIME_EVIDENCE = NOT_PROVEN
+```
+
+Apple documents `keychain-access-groups` as a restricted macOS entitlement that must be authorized by a provisioning profile. A Keychain access-group value outside the process entitlement set fails with `errSecMissingEntitlement`. Therefore an ad-hoc or self-signed substitute cannot be promoted to the required Himsat application/access-group proof.
+
+Controlling Apple references:
+
+```text
+https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps
+https://developer.apple.com/documentation/security/errsecmissingentitlement
+https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles
+```
+
+The candidate remains Draft and B401 remains unchecked until a non-expired Apple-authorized signed target supplies the required native runtime evidence on the exact final implementation revision.
