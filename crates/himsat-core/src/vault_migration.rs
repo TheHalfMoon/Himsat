@@ -138,15 +138,15 @@ where
     Source: EncryptedMigrationSource<Target, Error = E>,
     Target: EncryptedMigrationTarget<Error = E>,
 {
-    source
-        .verify_source()
-        .map_err(|error| CopyVerifyPublishError::new(CopyVerifyPublishStage::SourceVerification, error))?;
+    source.verify_source().map_err(|error| {
+        CopyVerifyPublishError::new(CopyVerifyPublishStage::SourceVerification, error)
+    })?;
     source
         .copy_into(target)
         .map_err(|error| CopyVerifyPublishError::new(CopyVerifyPublishStage::Copy, error))?;
-    target
-        .verify_staged_copy()
-        .map_err(|error| CopyVerifyPublishError::new(CopyVerifyPublishStage::StagedVerification, error))?;
+    target.verify_staged_copy().map_err(|error| {
+        CopyVerifyPublishError::new(CopyVerifyPublishStage::StagedVerification, error)
+    })?;
     target
         .publish_verified_copy()
         .map_err(|error| CopyVerifyPublishError::new(CopyVerifyPublishStage::Publication, error))?;
@@ -156,9 +156,9 @@ where
     target
         .reopen_published_copy()
         .map_err(|error| CopyVerifyPublishError::new(CopyVerifyPublishStage::Reopen, error))?;
-    target
-        .verify_reopened_copy()
-        .map_err(|error| CopyVerifyPublishError::new(CopyVerifyPublishStage::ReopenedVerification, error))?;
+    target.verify_reopened_copy().map_err(|error| {
+        CopyVerifyPublishError::new(CopyVerifyPublishStage::ReopenedVerification, error)
+    })?;
 
     Ok(CopyVerifyPublishComplete { _private: () })
 }
