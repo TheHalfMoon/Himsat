@@ -13,7 +13,7 @@ use himsat_core::vault_sqlcipher::{SqlCipherDatabaseHandle, open_sqlcipher_datab
 use hkdf::Hkdf;
 use rusqlite::{Connection, OpenFlags, params};
 use sha2::{Digest, Sha256};
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -184,7 +184,10 @@ impl EncryptedMigrationSource<SqlCipherTarget> for SqlCipherSource {
         target.record(CopyVerifyPublishStage::Copy)?;
         fs::copy(&self.path, &target.staged_path)
             .map_err(|_| FixtureError(CopyVerifyPublishStage::Copy))?;
-        fs::File::open(&target.staged_path)
+        OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&target.staged_path)
             .and_then(|file| file.sync_all())
             .map_err(|_| FixtureError(CopyVerifyPublishStage::Copy))?;
         Ok(())
