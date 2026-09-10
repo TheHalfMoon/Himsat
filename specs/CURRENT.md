@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B401_CANONICAL_RECONCILING_B402_BOUND
+PROGRAM_STATE = SPEC_004_B402_B403_RECONCILIATION_ACTIVE_NOT_YET_CANONICAL
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -53,10 +53,17 @@ B401_TRUSTED_GATE_HARDENING_STATE = CANONICAL_QUALIFIED
 B401_TRUSTED_GATE_HARDENING_CANONICAL_MERGE = 96b74783013f79eac39e8b942f89e6c1a32fbabc
 B401_DISPOSITION = CANONICAL_CLOSED
 B401_CANONICAL_MERGE = 880165a40108bdf0c27e7246c1b890e8456e9768
-B401_B402_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B402_ANDROID_KEYSTORE_ADAPTER_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B402_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B402_ANDROID_KEYSTORE_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
+B401_B402_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B401_B402_RECONCILIATION_CANONICAL_MERGE = 6a572d0e7bfe62d5ca2c46346fed0b29f8a4060d
+B402A_NATIVE_BRIDGE_STATE = CANONICAL_QUALIFIED
+B402A_NATIVE_BRIDGE_CANONICAL_MERGE = d8d73df728d24994e9dfe9677d61e3c158c5db3e
+B402B_RUST_ADAPTER_STATE = CANONICAL_QUALIFIED
+B402B_RUST_ADAPTER_CANONICAL_MERGE = e8aeb1e09591358850b109fdf423a6bfd0b60003
+B402_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B402_B403_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B403_WINDOWS_DPAPI_CNG_ADAPTER_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B403_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B403_WINDOWS_DPAPI_CNG_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -521,13 +528,25 @@ Push-triggered post-merge CI `34419047465` / run #212 and R3 `34419047471` / run
 
 B401 is therefore canonical and closed only for the bounded macOS Apple Keychain adapter and exact native qualification path. It does not qualify iOS, Secure Enclave backing, stronger universal scope/presence, or any later platform/freshness/backup/rotation/deletion behavior.
 
-## B401/B402 reconciliation bound
+## Canonical B401/B402 reconciliation
 
-This reconciliation changes only Specification 004 evidence/state surfaces. It does not change runtime/security semantics, Cargo manifests/lockfiles, dependency bytes, provider/provenance registry, generated artifacts, workflows, donor material, B402 implementation bytes, freshness/backup/rotation/deletion behavior, Specification 005, P011, B305R002, Q009, or release/FIPS/compliance posture.
+PR #80 exact head `f04233427534f9bcfd6f3f372666e4fc83aedd3f` passed pull-request CI `34420046811` and R3 `34420046823` on attempt 1, merged through explicit expected-head protection as canonical `6a572d0e7bfe62d5ca2c46346fed0b29f8a4060d`, and passed push-triggered CI `34420997501` plus R3 `34420997528` on attempt 1. Durable post-merge qualification comment: `5610804530`. That qualification resolved the prior conditional authority to `B402_ONLY` before B402 implementation began.
 
-B402 may begin only after this reconciliation exact head passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+## Canonical B402 disposition
 
-After those conditions become true, the conditional authority in the current-state block resolves to `B402_ONLY` without another state mutation. B402 is bounded to the Android Keystore adapter with actual app/UID scope, authentication policy, invalidation, and hardware capability reporting. B403-B406 and B501-B506 remain separate later leaves. Any new native dependency requires exact provenance/license/closure evidence before canonical adoption; this reconciliation itself adopts none.
+B402A PR #81 accepted head `bbd8a95924cb998f1651deb984fced3157239ff9` qualified the Android-native bridge on an Android 17 / API 37 ARM64 emulator. The runtime reported `APP_EXCLUSIVE` under package/UID isolation, `NOT_REQUIRED` presence, and `SOFTWARE_BACKED` hardware state. The qualifier did not claim TEE, StrongBox, a physical Android device, or per-unlock user presence. The guarded canonical merge is `d8d73df728d24994e9dfe9677d61e3c158c5db3e`; post-merge CI `34428219440` and R3 `34428219449` succeeded on attempt 1.
+
+B402B PR #82 accepted head `b88c3aee7e674f7981457b2891b356ef23e8b1bb` added the portable Rust `SecretProtector` adapter with no new dependency and no Kotlin↔Rust FFI selection. CodeRabbit substantive predecessor review `5168407521` identified three lifecycle/data-integrity findings; all were repaired forward-only before the accepted head and the threads were resolved. The final head passed CI `34491693211` and R3 `34491693214` on attempt 1, merged through observed explicit expected-head protection as canonical `e8aeb1e09591358850b109fdf423a6bfd0b60003`, and passed push-triggered CI `34493112106` plus R3 `34493112084` on attempt 1. Durable post-merge qualification comment: `5620945182`.
+
+Complete B402 scope, runtime markers, review lineage, transport evidence, and residual limits are recorded in `b402-android-keystore-final-evidence.md`. Q009 remains unsatisfied; B402's local/native/CI evidence and repository-owner reconciliation do not substitute for the required final independent implementation review.
+
+## B402/B403 reconciliation bound
+
+This reconciliation changes only Specification 004 evidence/state surfaces. It adopts no runtime/security code, Cargo/native dependency, provider/provenance byte, generated artifact, workflow, donor material, B403 implementation byte, freshness/backup/rotation/deletion behavior, Specification 005 behavior, or release/FIPS/compliance claim.
+
+B403 may begin only after this reconciliation exact head passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+
+After those conditions become true, conditional authority resolves to `B403_ONLY` without another state mutation. B403 is bounded to the Windows current-user DPAPI/CNG-class adapter reporting `SAME_USER_ACCOUNT`; stronger `APP_EXCLUSIVE` or `REQUIRED_EACH_HIMSAT_UNLOCK` policy fails closed unless a separately reviewed Windows mechanism proves it. B404-B406 and B501-B506 remain separate later leaves. Any new native dependency requires exact provenance/license/closure evidence before canonical adoption.
 
 ## Specification 004 delivery chain
 
@@ -555,9 +574,13 @@ After those conditions become true, the conditional authority in the current-sta
   -> B307/B401 state reconciliation           CANONICAL_QUALIFIED
   -> B401 trusted adoption-gate hardening      CANONICAL_QUALIFIED
   -> B401 Apple Keychain adapter              CANONICAL_QUALIFIED
-  -> B401/B402 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B402 Android Keystore adapter            BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B403-B406 remaining platform protectors  BLOCKED_PENDING_PRIOR_LEAVES
+  -> B401/B402 state reconciliation           CANONICAL_QUALIFIED
+  -> B402A Android native bridge              CANONICAL_QUALIFIED
+  -> B402B Android Rust adapter               CANONICAL_QUALIFIED
+  -> B402 Android Keystore adapter            CANONICAL_CLOSED_IF_RECONCILIATION_QUALIFIED
+  -> B402/B403 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B403 Windows DPAPI/CNG adapter           BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B404-B406 remaining platform protectors  BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
