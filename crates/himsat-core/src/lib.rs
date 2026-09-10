@@ -22,6 +22,9 @@ pub mod vault;
 #[cfg(target_os = "macos")]
 pub mod vault_apple_keychain;
 
+/// B402 Android Keystore policy adapter over an injected native backend.
+pub mod vault_android_keystore;
+
 /// B202 versioned bounded-blob XChaCha20-Poly1305 envelope execution/parsing.
 pub mod vault_blob;
 
