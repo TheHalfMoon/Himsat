@@ -1,10 +1,5 @@
-//! Android Keystore adapter for Specification 004B4 B402.
-//!
-//! The native boundary keeps a non-exportable AES protector key in the calling
-//! Android application UID. Himsat persists only authenticated ciphertext in
-//! the application's no-backup directory. Native names contain one fixed Himsat
-//! prefix plus an opaque random protector identifier and never embed `VaultId`,
-//! key generation, user content, or secret material.
+//! B402 Android Keystore adapter: non-exportable app-UID key, no-backup ciphertext,
+//! and opaque provider names that never embed vault, generation, or user content.
 
 use crate::vault::{
     AccessScope, FreshnessAnchor, HardwareBacking, KeyGeneration, ProtectedFreshnessState,
@@ -13,6 +8,7 @@ use crate::vault::{
 use crate::vault_keys::{KEY_MATERIAL_BYTES, OwnedKeyMaterial};
 use crate::vault_protector::{ProtectorPolicy, validate_requested_policy};
 use getrandom::fill;
+use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
 const RECORD_MAGIC: &[u8] = b"HIMSAT/ANDROID/VRK/v1\0";
@@ -68,8 +64,13 @@ pub struct AndroidKeystoreConfig {
 }
 
 impl AndroidKeystoreConfig {
-    /// Creates configuration bound to one exact Android package identity.
-    pub fn new(
+    /// Creates a fresh protector configuration with a new OS-CSPRNG identifier.
+    pub fn new(expected_package: impl Into<String>) -> Result<Self, ProtectorError> {
+        Self::from_persisted_id(expected_package, AndroidProtectorId::generate()?)
+    }
+
+    /// Restores the same protector from its previously persisted opaque identifier.
+    pub fn from_persisted_id(
         expected_package: impl Into<String>,
         protector_id: AndroidProtectorId,
     ) -> Result<Self, ProtectorError> {
@@ -104,10 +105,7 @@ impl AndroidKeystoreConfig {
     }
 }
 
-/// Host boundary implemented by the Android application integration layer.
-///
-/// B402 defines the secure-store behavior without choosing the repository-wide
-/// Kotlin↔Rust FFI mechanism, which remains a separately governed architecture decision.
+/// Android host boundary; repository-wide Kotlin↔Rust FFI remains separately governed.
 pub trait AndroidKeystoreBackend {
     fn verify_environment(&self, expected_package: &str) -> Result<(), ProtectorError>;
     fn create_key(&self, alias: &str) -> Result<HardwareBacking, ProtectorError>;
@@ -149,10 +147,15 @@ impl<B: AndroidKeystoreBackend> AndroidKeystoreProtector<B> {
         vault_id: VaultId,
         generation: KeyGeneration,
         policy: ProtectorPolicy,
+        expected_vrk: &OwnedKeyMaterial,
     ) -> Result<(), ProtectorError> {
         let ciphertext = self.backend.read_record(&self.config.record_name())?;
         let plaintext = Zeroizing::new(self.backend.open(&self.config.alias(), &ciphertext)?);
-        validate_record_binding(&plaintext, vault_id, Some(generation), policy)
+        validate_record_binding(&plaintext, vault_id, Some(generation), policy)?;
+        if !record_vrk_matches(&plaintext, expected_vrk) {
+            return Err(ProtectorError::PolicyMismatch);
+        }
+        Ok(())
     }
 }
 
@@ -196,7 +199,7 @@ impl<B: AndroidKeystoreBackend> SecretProtector for AndroidKeystoreProtector<B> 
         vrk: &Self::VaultRootKey,
     ) -> Result<(), ProtectorError> {
         let policy = self.policy()?;
-        match self.validate_existing_record(vault_id, key_generation, policy) {
+        match self.validate_existing_record(vault_id, key_generation, policy, vrk) {
             Ok(()) | Err(ProtectorError::ItemMissing) => {}
             Err(error) => return Err(error),
         }
@@ -249,16 +252,33 @@ impl<B: AndroidKeystoreBackend> SecretProtector for AndroidKeystoreProtector<B> 
 
     fn remove_protector(&mut self, vault_id: VaultId) -> Result<(), ProtectorError> {
         let policy = self.policy()?;
-        let ciphertext = Zeroizing::new(self.backend.read_record(&self.config.record_name())?);
-        let plaintext = Zeroizing::new(self.backend.open(&self.config.alias(), &ciphertext)?);
-        validate_record_binding(&plaintext, vault_id, None, policy)?;
-        self.backend.delete_key(&self.config.alias())?;
-        match self.backend.delete_record(&self.config.record_name()) {
-            Ok(()) | Err(ProtectorError::ItemMissing) => {}
-            Err(error) => return Err(error),
+        let alias = self.config.alias();
+        let record_name = self.config.record_name();
+        let key_state = self.backend.inspect_key(&alias);
+        let record_state = self.backend.read_record(&record_name);
+
+        match (key_state, record_state) {
+            (Ok(_), Ok(ciphertext)) => {
+                let plaintext = Zeroizing::new(self.backend.open(&alias, &ciphertext)?);
+                validate_record_binding(&plaintext, vault_id, None, policy)?;
+            }
+            (Err(ProtectorError::ItemMissing | ProtectorError::Invalidated), Ok(_))
+            | (Ok(_), Err(ProtectorError::ItemMissing))
+            | (
+                Err(ProtectorError::ItemMissing | ProtectorError::Invalidated),
+                Err(ProtectorError::ItemMissing),
+            ) => {}
+            (Err(error), _) | (_, Err(error)) => return Err(error),
         }
+
+        let key_result = normalize_delete(self.backend.delete_key(&alias));
+        let record_result = normalize_delete(self.backend.delete_record(&record_name));
+        if key_result.is_ok() {
+            self.hardware = HardwareBacking::Unknown;
+        }
+        key_result?;
+        record_result?;
         self.policy = None;
-        self.hardware = HardwareBacking::Unknown;
         Ok(())
     }
 
@@ -273,6 +293,19 @@ impl<B: AndroidKeystoreBackend> SecretProtector for AndroidKeystoreProtector<B> 
     fn hardware_backed_state(&self) -> HardwareBacking {
         self.hardware
     }
+}
+
+fn normalize_delete(result: Result<(), ProtectorError>) -> Result<(), ProtectorError> {
+    match result {
+        Ok(()) | Err(ProtectorError::ItemMissing) => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
+fn record_vrk_matches(record: &[u8], expected_vrk: &OwnedKeyMaterial) -> bool {
+    let key_offset = RECORD_BYTES - KEY_MATERIAL_BYTES;
+    let stored_digest = Sha256::digest(&record[key_offset..]);
+    expected_vrk.with_bytes(|bytes| stored_digest == Sha256::digest(bytes))
 }
 
 fn encode_record(
@@ -393,12 +426,16 @@ mod tests {
     use crate::vault_keys::OwnedKeyMaterial;
     use std::{cell::RefCell, rc::Rc};
 
+    const PACKAGE: &str = "com.thehalfmoon.himsat";
+
     #[derive(Debug)]
     struct MemoryState {
         key_present: bool,
         record: Option<Vec<u8>>,
         hardware: HardwareBacking,
         open_error: Option<ProtectorError>,
+        delete_key_error: Option<ProtectorError>,
+        delete_record_error: Option<ProtectorError>,
     }
 
     #[derive(Clone, Debug)]
@@ -416,6 +453,8 @@ mod tests {
                     record: None,
                     hardware,
                     open_error: None,
+                    delete_key_error: None,
+                    delete_record_error: None,
                 })),
             }
         }
@@ -430,6 +469,14 @@ mod tests {
             {
                 *first ^= 0x55;
             }
+        }
+
+        fn fail_next_key_delete(&self) {
+            self.state.borrow_mut().delete_key_error = Some(ProtectorError::Unavailable);
+        }
+
+        fn fail_next_record_delete(&self) {
+            self.state.borrow_mut().delete_record_error = Some(ProtectorError::Unavailable);
         }
     }
 
@@ -493,21 +540,27 @@ mod tests {
         }
 
         fn delete_record(&self, _record_name: &str) -> Result<(), ProtectorError> {
-            if self.state.borrow_mut().record.take().is_some() {
-                Ok(())
-            } else {
-                Err(ProtectorError::ItemMissing)
+            let mut state = self.state.borrow_mut();
+            if let Some(error) = state.delete_record_error.take() {
+                return Err(error);
             }
+            state
+                .record
+                .take()
+                .map(|_| ())
+                .ok_or(ProtectorError::ItemMissing)
         }
 
         fn delete_key(&self, _alias: &str) -> Result<(), ProtectorError> {
             let mut state = self.state.borrow_mut();
-            if state.key_present {
-                state.key_present = false;
-                Ok(())
-            } else {
-                Err(ProtectorError::ItemMissing)
+            if let Some(error) = state.delete_key_error.take() {
+                return Err(error);
             }
+            if !state.key_present {
+                return Err(ProtectorError::ItemMissing);
+            }
+            state.key_present = false;
+            Ok(())
         }
     }
 
@@ -518,12 +571,12 @@ mod tests {
         VaultId,
         KeyGeneration,
     ) {
-        let config = AndroidKeystoreConfig::new(
-            "com.thehalfmoon.himsat",
+        let config = AndroidKeystoreConfig::from_persisted_id(
+            PACKAGE,
             AndroidProtectorId::from_bytes([0xA5; 16]),
         )
         .expect("valid Android config");
-        let backend = MemoryBackend::new("com.thehalfmoon.himsat", hardware);
+        let backend = MemoryBackend::new(PACKAGE, hardware);
         let protector =
             AndroidKeystoreProtector::new(config, backend).expect("matching package must bind");
         let vault = VaultId::from_bytes([0x41; VAULT_ID_BYTES]);
@@ -535,14 +588,14 @@ mod tests {
     fn config_rejects_empty_or_nul_package_and_uses_opaque_names() {
         let id = AndroidProtectorId::from_bytes([0xAB; 16]);
         assert_eq!(
-            AndroidKeystoreConfig::new("", id),
+            AndroidKeystoreConfig::from_persisted_id("", id),
             Err(ProtectorError::UnsupportedPolicy)
         );
         assert_eq!(
-            AndroidKeystoreConfig::new("com.example\0bad", id),
+            AndroidKeystoreConfig::from_persisted_id("com.example\0bad", id),
             Err(ProtectorError::UnsupportedPolicy)
         );
-        let config = AndroidKeystoreConfig::new("com.thehalfmoon.himsat", id).expect("valid");
+        let config = AndroidKeystoreConfig::from_persisted_id(PACKAGE, id).expect("valid");
         assert_eq!(
             config.alias(),
             "himsat.vault.protector.v1.abababababababababababababababab"
@@ -555,9 +608,29 @@ mod tests {
     }
 
     #[test]
+    fn fresh_config_persists_identifier_and_distinct_ids_separate_namespaces() {
+        let fresh = AndroidKeystoreConfig::new(PACKAGE).expect("fresh config");
+        let persisted = *fresh.protector_id().as_bytes();
+        let restored = AndroidKeystoreConfig::from_persisted_id(
+            PACKAGE,
+            AndroidProtectorId::from_bytes(persisted),
+        )
+        .expect("persisted config");
+        assert_eq!(fresh, restored);
+
+        let other = AndroidKeystoreConfig::from_persisted_id(
+            PACKAGE,
+            AndroidProtectorId::from_bytes([0xCD; 16]),
+        )
+        .expect("other config");
+        assert_ne!(fresh.alias(), other.alias());
+        assert_ne!(fresh.record_name(), other.record_name());
+    }
+
+    #[test]
     fn package_or_uid_environment_mismatch_fails_closed() {
-        let config = AndroidKeystoreConfig::new(
-            "com.thehalfmoon.himsat",
+        let config = AndroidKeystoreConfig::from_persisted_id(
+            PACKAGE,
             AndroidProtectorId::from_bytes([7; 16]),
         )
         .expect("valid config");
@@ -593,12 +666,12 @@ mod tests {
 
     #[test]
     fn process_restart_reconfigures_policy_then_unlocks_existing_record() {
-        let config = AndroidKeystoreConfig::new(
-            "com.thehalfmoon.himsat",
+        let config = AndroidKeystoreConfig::from_persisted_id(
+            PACKAGE,
             AndroidProtectorId::from_bytes([0xA5; 16]),
         )
         .expect("valid config");
-        let backend = MemoryBackend::new("com.thehalfmoon.himsat", HardwareBacking::SoftwareBacked);
+        let backend = MemoryBackend::new(PACKAGE, HardwareBacking::SoftwareBacked);
         let mut first = AndroidKeystoreProtector::new(config.clone(), backend.clone())
             .expect("first process environment");
         let vault = VaultId::from_bytes([0x41; VAULT_ID_BYTES]);
@@ -628,12 +701,12 @@ mod tests {
 
     #[test]
     fn orphaned_record_never_recreates_a_missing_native_key() {
-        let config = AndroidKeystoreConfig::new(
-            "com.thehalfmoon.himsat",
+        let config = AndroidKeystoreConfig::from_persisted_id(
+            PACKAGE,
             AndroidProtectorId::from_bytes([0x44; 16]),
         )
         .expect("valid config");
-        let backend = MemoryBackend::new("com.thehalfmoon.himsat", HardwareBacking::Unknown);
+        let backend = MemoryBackend::new(PACKAGE, HardwareBacking::Unknown);
         backend.state.borrow_mut().record = Some(vec![0xA5; 48]);
         let mut protector =
             AndroidKeystoreProtector::new(config, backend).expect("matching package must bind");
@@ -706,6 +779,29 @@ mod tests {
     }
 
     #[test]
+    fn same_generation_rejects_a_different_vrk_without_overwrite() {
+        let (mut protector, vault, generation) = fixture(HardwareBacking::Unknown);
+        protector
+            .create_protector(AccessScope::AppExclusive, UserPresencePolicy::NotRequired)
+            .expect("create");
+        protector
+            .protect_or_store_vrk(vault, generation, &OwnedKeyMaterial::from_bytes([0x31; 32]))
+            .expect("initial store");
+        assert_eq!(
+            protector.protect_or_store_vrk(
+                vault,
+                generation,
+                &OwnedKeyMaterial::from_bytes([0x32; 32]),
+            ),
+            Err(ProtectorError::PolicyMismatch)
+        );
+        let unlocked = protector
+            .unlock_vrk(vault, generation)
+            .expect("original VRK remains");
+        unlocked.with_bytes(|bytes| assert_eq!(bytes, &[0x31; 32]));
+    }
+
+    #[test]
     fn corrupted_record_and_native_invalidation_fail_closed() {
         let (mut protector, vault, generation) = fixture(HardwareBacking::Unknown);
         protector
@@ -748,6 +844,35 @@ mod tests {
             protector.unlock_vrk(vault, generation),
             Err(ProtectorError::UnsupportedPolicy)
         ));
+    }
+
+    #[test]
+    fn each_partial_delete_failure_is_retryable() {
+        for fail_key in [true, false] {
+            let (mut protector, vault, generation) = fixture(HardwareBacking::Unknown);
+            protector
+                .create_protector(AccessScope::AppExclusive, UserPresencePolicy::NotRequired)
+                .unwrap();
+            protector
+                .protect_or_store_vrk(vault, generation, &OwnedKeyMaterial::from_bytes([0x61; 32]))
+                .unwrap();
+            if fail_key {
+                protector.backend.fail_next_key_delete();
+            } else {
+                protector.backend.fail_next_record_delete();
+            }
+            assert_eq!(
+                protector.remove_protector(vault),
+                Err(ProtectorError::Unavailable)
+            );
+            assert_eq!(protector.backend.state.borrow().key_present, fail_key);
+            assert_eq!(protector.backend.state.borrow().record.is_some(), !fail_key);
+            protector
+                .remove_protector(vault)
+                .expect("retry removes orphaned component");
+            assert!(!protector.backend.state.borrow().key_present);
+            assert!(protector.backend.state.borrow().record.is_none());
+        }
     }
 
     #[test]
