@@ -5,10 +5,9 @@ Repository Diffcipline policy remains conservative. The historical 004P
 P005/P006 adoption diff is exceptional because it intentionally introduces the
 reviewed dependency graph and generated provenance closure in one bounded leaf.
 This bridge accepts Diffcipline's otherwise-blocking REVIEW/size findings only
-for explicitly bounded historical/provider or B401 candidate transitions. The
-B401 exception is available only when this gate is executed from the trusted
-immutable PR base and every permitted B401 candidate artifact matches its pinned
-Git blob. Every configured verification still has to pass.
+for explicitly bounded historical/provider, B401, or B403A candidate transitions. The B401 and B403A exceptions are available only when this gate is executed
+from the corresponding trusted immutable PR base and every permitted candidate
+artifact matches its pinned Git blob. Every configured verification still has to pass.
 
 After the adoption merge the comparison base changes, so this exception cannot
 approve later dependency or oversized diffs.
@@ -50,6 +49,20 @@ B401_EXPECTED_BLOBS = {
     "tools/004p_dependency_closure.py": "203f5c351154aa1de9734f47a997059a997eebe3",
 }
 B401_EXPECTED_FILES = set(B401_EXPECTED_BLOBS)
+
+B403_PRECONDITION_BASE = "b2d62613b192c54cc501513ee6bb40059c90817c"
+B403_MAX_ADDED_LINES = 1400
+B403_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B403_EXPECTED_BLOBS = {
+    "Cargo.lock": "8b4b0e96828bc781395fc6a880f62480839b228e",
+    "THIRD_PARTY_NOTICES.md": "38cebb18c59b8a334d0011ff7c5121f4e16d7239",
+    "crates/himsat-core/Cargo.toml": "77872a29fa32c32d893e438c757b6e7161fe0583",
+    "governance/generated/sbom.json": "64542dda6d2a7cb33a907ee36ac5478f731f62dc",
+    "governance/provenance/registry.json": "32c3853af124f670d2207f81af312df47eb3f23a",
+    "specs/004-vault-key-crypto/b403a-windows-dependency-adoption-evidence.md": "95104aa22baa1c71b7588fd072af63c25378cb88",
+    "tools/004p_dependency_closure.py": "1b3b3ed59972a00cd0ced0c52fa0d05540f9ee3c",
+}
+B403_EXPECTED_FILES = set(B403_EXPECTED_BLOBS)
 
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
@@ -132,7 +145,7 @@ def b401_trusted_base(base: str) -> bool:
     """Return whether base is the exact canonical B401 gate-hardening successor.
 
     The secure B401 exception is available only after the precondition base has
-    changed by exactly the trusted workflow/gate hardening paths. The workflow
+    changed by exactly the trusted gate-hardening path. The workflow
     then executes this gate from that immutable base rather than from PR HEAD.
     Any unrelated base drift disables the exception until separately reconciled.
     """
@@ -223,6 +236,101 @@ def check_b401_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int
     return 0
 
 
+def b403_trusted_base(base: str) -> bool:
+    """Return whether base is the exact canonical B403 gate-hardening successor.
+
+    The secure B403 exception is available only after the precondition base has
+    changed by exactly the trusted gate-hardening path. The workflow
+    then executes this gate from that immutable base rather than from PR HEAD.
+    Any unrelated base drift disables the exception until separately reconciled.
+    """
+
+    try:
+        raw = git("diff", "--no-renames", "--name-only", B403_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B403_TRUSTED_BASE_DELTA and len(paths) == len(B403_TRUSTED_BASE_DELTA)
+
+
+def check_b403_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the exact B403 candidate dependency-adoption diff.
+
+    This bridge qualifies repository review mechanics only. The exact path set
+    deliberately excludes `tasks.md` and `specs/CURRENT.md`, so this exception
+    cannot mark B403 complete or advance B404 authority. Native Windows
+    runtime qualification remains a separate controlling requirement.
+    """
+
+    if args.exit_code != 2 or proof.get("verdict") != "FAIL":
+        return fail(
+            f"unexpected B403 non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B403 Git diff: {exc}")
+
+    if set(actual_files) != B403_EXPECTED_FILES or len(actual_files) != len(B403_EXPECTED_FILES):
+        return fail("actual B403 Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B403 Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B403_EXPECTED_FILES or len(files) != len(B403_EXPECTED_FILES):
+        return fail("B403 exception changed-path set is not exact")
+
+    changed_files = proof.get("changed_files")
+    if changed_files != len(actual_files) or changed_files != len(B403_EXPECTED_FILES):
+        return fail("B403 Diffcipline changed-file count is not exact")
+
+    added = proof.get("added_lines")
+    if added != actual_added:
+        return fail("B403 Diffcipline added-line count does not equal the actual Git diff")
+    if not isinstance(added, int) or not (POLICY_MAX_ADDED_LINES < added <= B403_MAX_ADDED_LINES):
+        return fail("B403 exception added-line count is outside the bounded window")
+
+    deleted = proof.get("deleted_lines")
+    if deleted != actual_deleted:
+        return fail("B403 Diffcipline deleted-line count does not equal the actual Git diff")
+
+    expected_reasons = {
+        f"added lines {added} exceed maximum {POLICY_MAX_ADDED_LINES}",
+        "dependency manifest changed: crates/himsat-core/Cargo.toml",
+        "lockfile changed: Cargo.lock",
+    }
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != len(expected_reasons):
+        return fail(f"unexpected B403 Diffcipline reason set: {reasons!r}")
+
+    if proof.get("scope_violations") != []:
+        return fail("B403 scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B403 verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B403 verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B403_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(f"B403 candidate artifact blob drift: {path} expected {expected} got {actual}")
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B403 candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B403 DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--proof", type=Path, required=True)
@@ -249,6 +357,11 @@ def main() -> int:
     if args.exit_code == 0 and verdict == "PASS":
         print("DIFFCIPLINE PASS")
         return 0
+
+    # B403A has one exact dependency-adoption exception, enabled only from
+    # its canonical trusted-base hardening successor and pinned candidate blobs.
+    if b403_trusted_base(args.base):
+        return check_b403_exception(args, proof)
 
     # B401 has one later exact dependency-adoption exception. It is enabled
     # only from the canonical trusted-base hardening successor and pins every
