@@ -57,11 +57,11 @@ This recovery does not amend PR #85, alter its merge tree, change the trusted ga
 
 The recovery may release B403A qualification only after this exact recovery revision independently proves all of:
 
-1. original-attempt pull-request CI and R3 terminal SUCCESS;
+1. first-attempt pull-request CI and R3 terminal SUCCESS for the exact recovery revision;
 2. live reconciliation of canonical `main`, exact base/head/diff, reviews, threads, comments, and mergeability;
 3. an observed merge invocation using the exact recovery head as `expected_head_sha` with `merge_method = merge`;
 4. exact canonical parentage and exact recovery-tree equality; and
-5. original-attempt push-triggered post-merge CI and R3 terminal SUCCESS.
+5. first-attempt push-triggered post-merge CI and R3 terminal SUCCESS for the exact recovery merge.
 
 If and only if all five conditions become true, B403A may be treated as `CANONICAL_QUALIFIED_BY_FORWARD_RECOVERY`. The original PR #85 post-merge failures remain NOT PASS evidence. No additional state mutation is required to release the already-authorized bounded successor: authority resolves to `B403B_WINDOWS_DPAPI_RUNTIME_ONLY` by this recovery condition.
 
