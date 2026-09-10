@@ -20,7 +20,7 @@ LOCK_PATH = ROOT / "Cargo.lock"
 REGISTRY_SCHEMA = "himsat.provenance-registry/v2"
 REGISTRY_SOURCE = "registry+https://github.com/rust-lang/crates.io-index"
 EXPECTED_PROVIDER_EXTERNAL_COUNT = 41
-EXPECTED_TOTAL_EXTERNAL_COUNT = 58
+EXPECTED_TOTAL_EXTERNAL_COUNT = 59
 EVIDENCE_REFERENCE = "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md"
 
 EXPECTED_APPLE_TARGET = 'cfg(target_os = "macos")'
@@ -36,6 +36,7 @@ EXPECTED_WINDOWS_TARGET = 'cfg(target_os = "windows")'
 EXPECTED_WINDOWS_DIRECT: dict[str, dict[str, Any]] = {
     "windows-acl": {"version": "=0.3.0"},
     "windows-dpapi": {"version": "=0.2.0"},
+    "winsafe": {"version": "=0.0.29", "default-features": False, "features": ["advapi"]},
 }
 
 EXPECTED_PLATFORM_PACKAGES: dict[tuple[str, str], dict[str, str]] = {
@@ -173,6 +174,15 @@ EXPECTED_PLATFORM_PACKAGES: dict[tuple[str, str], dict[str, str]] = {
         "license_expression": 'MIT/Apache-2.0',
         "selected_license": "MIT",
         "license_evidence": 'root LICENSE-MIT plus byte-identical published subcrate at immutable VCS revision',
+    },
+    ('winsafe', '0.0.29'): {
+        "checksum": '9ef0ffc427f045c0cc9ebffd6f4f91153dcd2a1547b5c3c29ee3f541e16e95c6',
+        "repository": 'https://github.com/rodrigocfd/winsafe',
+        "revision": '71ed88c2a0d18b03ee452f6d4261f4c22f443483',
+        "source_path": '.',
+        "license_expression": 'MIT',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
     },
     ('windows-acl', '0.3.0'): {
         "checksum": '177b1723986bcb4c606058e77f6e8614b51c7f9ad2face6f6fd63dd5c8b3cec3',

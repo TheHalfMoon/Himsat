@@ -1167,6 +1167,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-winsafe-0.0.29",
+      "kind": "dependency",
+      "name": "Cargo: winsafe 0.0.29",
+      "package": {
+        "checksum": "9ef0ffc427f045c0cc9ebffd6f4f91153dcd2a1547b5c3c29ee3f541e16e95c6",
+        "ecosystem": "cargo",
+        "name": "winsafe",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.0.29"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rodrigocfd/winsafe",
+      "source_revision": "71ed88c2a0d18b03ee452f6d4261f4c22f443483"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-zeroize-1.9.0",
       "kind": "dependency",
       "name": "Cargo: zeroize 1.9.0",
