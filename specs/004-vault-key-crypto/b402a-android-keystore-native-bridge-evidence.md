@@ -6,11 +6,11 @@
 BASE_CANONICAL = 6a572d0e7bfe62d5ca2c46346fed0b29f8a4060d
 SUBGRAIN = B402A_ANDROID_KEYSTORE_NATIVE_BRIDGE_AND_QUALIFIER
 IMPLEMENTATION_STATUS = CANDIDATE_NOT_CANONICAL
-IMPLEMENTATION_COMMIT = acdbcb13abe3e981e44054e4c507ed1669d07f6e
-IMPLEMENTATION_TREE = 160e3ced5f0ba09c24602e97da30816bccb180b4
-BRIDGE_BLOB = e61c329a45837f09a6e37c9802d2dd7c7a757476
-QUALIFIER_BLOB = 33756875f1d6504535a3cb8d9b07e4e3ca6e2de5
-MANIFEST_BLOB = d5d323420265c2e88d2a301f6b7e2c9eba873cc7
+QUALIFIED_IMPLEMENTATION_COMMIT = b2543674a7f7e50752dbedd344a39e9c47941259
+QUALIFIED_IMPLEMENTATION_TREE = e170adb41b1ea8455aae1639b514a7fa8ac6b9c3
+BRIDGE_BLOB = cd3cccfe7a5724f5447d843aa47da71510e75f30
+QUALIFIER_BLOB = a60469443bb21f1b1389d64d96502a76fcca23e9
+MANIFEST_BLOB = 4298d2efcab381f319896e3755173c1802120f5a
 B402_TASK_DISPOSITION = UNCHECKED_NOT_PASS
 AUTHORIZED_PARENT_LEAF = B402_ANDROID_KEYSTORE_ADAPTER_ONLY
 RUST_ADAPTER = NOT_INCLUDED_IN_B402A
@@ -45,10 +45,10 @@ ANDROID_API = 37
 EMULATOR_PRODUCT = sdk_gphone64_arm64
 EMULATOR_FINGERPRINT = google/sdk_gphone64_arm64/emu64a:17/CE2A.260420.019/15611780:userdebug/dev-keys
 QUALIFIER_PACKAGE = com.thehalfmoon.himsat.b402.qualifier
-QUALIFIER_APK_SHA256 = fc4369e1a6fad5cef600da7f71aa79752b6262432053fd9eda88d044eaefea87
+QUALIFIER_APK_SHA256 = 577797b71b4a0269a18fb539607b2a69178e71e69afadb210f2b117450be6ed0
 APK_SIGNATURE_VERIFICATION = PASS / v3
 JAVA_BRIDGE_COMPILE = PASS / javac --release 17 -Xlint:all / android-37.0 android.jar
-NATIVE_RUNTIME_RECHECK = PASS / implementation commit acdbcb13abe3e981e44054e4c507ed1669d07f6e
+NATIVE_RUNTIME_RECHECK = PASS / qualified implementation commit b2543674a7f7e50752dbedd344a39e9c47941259
 ```
 
 Exact runtime markers:
@@ -61,6 +61,7 @@ B402_NATIVE_NAME_BOUNDARY=PASS
 B402_NATIVE_HARDWARE=SOFTWARE_BACKED
 B402_NATIVE_KEY_POLICY=PASS
 B402_NATIVE_PRESENCE=NOT_REQUIRED
+B402_NATIVE_SIZE_BOUNDARY=PASS
 B402_NATIVE_NON_EXPORTABLE_SEAL=PASS
 B402_NATIVE_NO_BACKUP_STORAGE=PASS
 B402_NATIVE_ROUND_TRIP=PASS
@@ -72,6 +73,29 @@ B402_NATIVE_KEYSTORE_QUALIFICATION=PASS
 ```
 
 The emulator reported software backing. This evidence therefore does not claim TEE, StrongBox, physical hardware backing, or behavior on any production Android device.
+
+## Exact PR-head source mapping
+
+The qualified implementation commit above is intentionally followed only by evidence/reconciliation commits. Any final PR head is accepted as referring to this native run only when the following command is empty and exits successfully:
+
+```text
+git diff --exit-code b2543674a7f7e50752dbedd344a39e9c47941259..HEAD -- \
+  crates/himsat-core/android/com/thehalfmoon/himsat/crypto/HimsatAndroidKeystoreBridge.java \
+  crates/himsat-core/android/qualifier/AndroidManifest.xml \
+  crates/himsat-core/android/qualifier/com/thehalfmoon/himsat/b402/qualifier/B402QualificationActivity.java
+```
+
+The three pinned Git blobs above are the controlling source identity. A final-head GitHub reconciliation comment must record the actual empty mapping result; otherwise the native evidence is not transferable to that head.
+
+## CodeRabbit remediation
+
+The exact-head review on predecessor `a3d9c341b336b88360564eab739f7f8de20b673a` produced four actionable comments. Forward-only implementation commit `b2543674a7f7e50752dbedd344a39e9c47941259` addresses the three implementation findings by:
+
+- enforcing API 31 before `createKey` or `inspectKey` can reach `KeyInfo.getSecurityLevel()`, while the checked-in qualifier manifest also declares `minSdkVersion=31`;
+- rejecting any AES-GCM serialized result that would exceed the bounded ciphertext record limit, with a native 1024-byte boundary assertion;
+- using a unique `File.createTempFile` path in `getNoBackupFilesDir()` for every write before atomic replacement, so separate bridge instances do not share one temporary pathname.
+
+The fourth finding is addressed by the pinned source blobs and the reproducible final-head mapping above. Review threads still require live GitHub reconciliation; this document does not self-resolve them.
 
 ## Deliberate limitations
 
