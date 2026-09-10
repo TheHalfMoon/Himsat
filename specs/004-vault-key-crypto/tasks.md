@@ -182,7 +182,7 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 
 ## 004B4 platform protectors
 
-- [ ] B401 Apple Keychain adapter with proven scope/presence policy; Secure Enclave only for supported reviewed operations.
+- [x] B401 Apple Keychain adapter with proven scope/presence policy; Secure Enclave only for supported reviewed operations. PR #78 accepted head `145e0db14a957760adb811e557372f4aa8f24bd5` passed CI `34407235044` / run #211 and R3 `34407235017` / run #188 on attempt 1, passed genuine Apple-authorized native macOS Data Protection Keychain qualification with `SAME_USER_ACCOUNT`, `NOT_REQUIRED`, `WHEN_PASSCODE_SET_THIS_DEVICE_ONLY`, synchronization disabled, and stronger policy rejection (comment `5610427033`), merged through observed `expected_head_sha` protection as canonical `880165a40108bdf0c27e7246c1b890e8456e9768`, has exact parentage/tree, and passed push-triggered CI `34419047465` / run #212 plus R3 `34419047471` / run #189 on attempt 1. Durable post-merge qualification comment: `5610513209`. Complete evidence is recorded in `b401-apple-keychain-final-evidence.md`.
 - [ ] B402 Android Keystore adapter with actual app/UID scope, auth policy, invalidation, and hardware capability state.
 - [ ] B403 Windows current-user DPAPI/CNG-class adapter reporting `SAME_USER_ACCOUNT`; stronger scope/presence fails unless separately proven.
 - [ ] B404 Linux Secret Service adapter reporting actual scope, minimal non-secret attributes, and no plaintext fallback.
