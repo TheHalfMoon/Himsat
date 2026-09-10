@@ -169,7 +169,21 @@ impl<B: AndroidKeystoreBackend> SecretProtector for AndroidKeystoreProtector<B> 
             ProtectorCapabilities::new(AccessScope::AppExclusive, false, HardwareBacking::Unknown),
             requested,
         )?;
-        let hardware = self.backend.create_key(&self.config.alias())?;
+        let alias = self.config.alias();
+        let hardware = match self.backend.inspect_key(&alias) {
+            Ok(hardware) => hardware,
+            Err(ProtectorError::ItemMissing) => {
+                match self.backend.read_record(&self.config.record_name()) {
+                    Ok(record) => {
+                        drop(Zeroizing::new(record));
+                        return Err(ProtectorError::Invalidated);
+                    }
+                    Err(ProtectorError::ItemMissing) => self.backend.create_key(&alias)?,
+                    Err(error) => return Err(error),
+                }
+            }
+            Err(error) => return Err(error),
+        };
         self.hardware = hardware;
         self.policy = Some(requested);
         Ok(())
@@ -610,6 +624,24 @@ mod tests {
             .unlock_vrk(vault, generation)
             .expect("restart unlock must recover only through the protector");
         unlocked.with_bytes(|bytes| assert_eq!(bytes, &[0x77; 32]));
+    }
+
+    #[test]
+    fn orphaned_record_never_recreates_a_missing_native_key() {
+        let config = AndroidKeystoreConfig::new(
+            "com.thehalfmoon.himsat",
+            AndroidProtectorId::from_bytes([0x44; 16]),
+        )
+        .expect("valid config");
+        let backend = MemoryBackend::new("com.thehalfmoon.himsat", HardwareBacking::Unknown);
+        backend.state.borrow_mut().record = Some(vec![0xA5; 48]);
+        let mut protector =
+            AndroidKeystoreProtector::new(config, backend).expect("matching package must bind");
+        assert_eq!(
+            protector.create_protector(AccessScope::AppExclusive, UserPresencePolicy::NotRequired),
+            Err(ProtectorError::Invalidated)
+        );
+        assert!(!protector.backend.state.borrow().key_present);
     }
 
     #[test]
