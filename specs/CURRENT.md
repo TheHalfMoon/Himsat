@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B307_CANONICAL_RECONCILING_B401_BOUND
+PROGRAM_STATE = SPEC_004_B401_CANONICAL_RECONCILING_B402_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -47,10 +47,16 @@ B306_B307_RECONCILIATION_STATE = CANONICAL_QUALIFIED
 B306_B307_RECONCILIATION_CANONICAL_MERGE = 1132b94d2185efbdaadd5d60e1c98a3ce4ca08e4
 B307_DISPOSITION = CANONICAL_CLOSED
 B307_CANONICAL_MERGE = fdc1d17a8df49c007f5038336ce267ea5eaf28a8
-B307_B401_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B401_APPLE_KEYCHAIN_ADAPTER_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B401_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B401_APPLE_KEYCHAIN_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
+B307_B401_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B307_B401_RECONCILIATION_CANONICAL_MERGE = ba32dfc21d025a189cddfdd9f46c48fdcd327e1e
+B401_TRUSTED_GATE_HARDENING_STATE = CANONICAL_QUALIFIED
+B401_TRUSTED_GATE_HARDENING_CANONICAL_MERGE = 96b74783013f79eac39e8b942f89e6c1a32fbabc
+B401_DISPOSITION = CANONICAL_CLOSED
+B401_CANONICAL_MERGE = 880165a40108bdf0c27e7246c1b890e8456e9768
+B401_B402_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B402_ANDROID_KEYSTORE_ADAPTER_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B402_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B402_ANDROID_KEYSTORE_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -487,13 +493,41 @@ Push-triggered post-merge CI `34384441066` / run #199 and R3 `34384441018` / run
 
 B307 is therefore canonical and closed only for the bounded copy-verify-publish migration coordinator and qualification fixture. Full seven-phase VRK rotation, source retirement, write quiescing, freshness implementation, native platform protectors, and deletion remain later leaves.
 
-## B307/B401 reconciliation bound
+## Canonical B307/B401 reconciliation disposition
 
-This reconciliation changes only Specification 004 evidence/state surfaces. It does not change runtime/security semantics, Cargo manifests/lockfiles, dependency bytes, provider/provenance registry, generated artifacts, workflows, donor material, B401 implementation bytes, freshness/backup/rotation/deletion behavior, Specification 005, P011, B305R002, Q009, or release/FIPS/compliance posture.
+PR #77 exact head `1efe173b95f71e6d4b075d4e70cf6d7c1fae7734` changed only Specification 004 evidence/state surfaces. Pre-merge CI `34385853808` / run #200 and R3 `34385853809` / run #177 succeeded on attempt 1. Repository-owner reconciliation review `5158089505` is governance evidence only and explicitly `NOT_Q009`. Durable transport binding comment `5606508666` bound the exact head.
 
-B401 may begin only after this reconciliation exact head passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+The observed actual merge invocation used `expected_head_sha = 1efe173b95f71e6d4b075d4e70cf6d7c1fae7734` and `merge_method = merge`; GitHub returned canonical merge `ba32dfc21d025a189cddfdd9f46c48fdcd327e1e` with exact parents `fdc1d17a8df49c007f5038336ce267ea5eaf28a8` + `1efe173b95f71e6d4b075d4e70cf6d7c1fae7734` and tree `c6f599556934eb9601587b0abe0cd50946dd5d47`. Push-triggered CI `34387075554` / run #201 and R3 `34387075495` / run #178 both succeeded on attempt 1; Windows Rust job `102585926143` succeeded. Durable post-merge qualification comment: `5606684163`.
 
-After those conditions become true, the conditional authority in the current-state block resolves to `B401_ONLY` without another state mutation. B401 is bounded to the Apple Keychain adapter and exact platform evidence. B402-B406 and B501-B506 remain separate later leaves. Any new native dependency requires exact provenance/license/closure evidence before canonical adoption; this reconciliation itself adopts none.
+The B307/B401 reconciliation is therefore canonical-qualified and resolved B401-only authority before the accepted B401 implementation began.
+
+## Canonical B401 trusted-gate hardening
+
+PR #79 independently hardened the B401 adoption gate before the final implementation head was accepted. Exact gate head `c98d4375804e519886b08731f652861189b978c9` passed pre-merge CI `34404865951` / run #209 and R3 `34404866182` / run #186 on attempt 1, merged through expected-head protection as canonical `96b74783013f79eac39e8b942f89e6c1a32fbabc`, and passed push-triggered CI `34406084492` / run #210 plus R3 `34406084590` / run #187 on attempt 1. The canonical gate materializes its trusted logic from the immutable comparison base and authenticates the complete bounded B401 candidate artifact set.
+
+## Canonical B401 disposition
+
+B401 implementation PR #78 accepted head `145e0db14a957760adb811e557372f4aa8f24bd5` and tree `21aff2e9260020471c9537b9d751ef4995157e48` implement only the conservative macOS Apple Data Protection Keychain adapter. The adapter reports `SAME_USER_ACCOUNT`, `NOT_REQUIRED`, `WHEN_PASSCODE_SET_THIS_DEVICE_ONLY`, non-synchronizable storage, and hardware backing `Unknown`; stronger unproven scope/presence requests return `UnsupportedPolicy`. iOS is not adopted by B401.
+
+The accepted implementation's exact Apple dependency closure adds only `core-foundation 0.10.1`, `core-foundation-sys 0.8.7`, `security-framework 3.7.0`, and `security-framework-sys 2.17.0` under the macOS target boundary, with exact provenance/license/notices/SBOM closure. Preserved predecessor failures and green-but-rejected heads remain NOT PASS or NOT ACCEPTED as recorded in `b401-apple-keychain-final-evidence.md`.
+
+Final exact head `145e0db14a957760adb811e557372f4aa8f24bd5` passed pull-request CI `34407235044` / run #211 and R3 `34407235017` / run #188 on attempt 1. All inline review threads were resolved; CodeRabbit status was successful on the exact head. Repository-owner reconciliation review `5161109268` is governance evidence only and explicitly `NOT_Q009`.
+
+A genuinely Apple-authorized signed macOS target then executed the exact-head qualifier successfully. Probe SHA-256 `fe6fd497331f8ff5ed3ca50ee98029dfa4f2d889b5848b1fd67a3abf6490ca1e` exited 0 and printed the complete conservative PASS marker set for scope, presence, `WhenPasscodeSetThisDeviceOnly`, synchronization disabled, and stronger-policy rejection. Durable native qualification comment: `5610427033`.
+
+Durable transport binding comment `5610437045` bound the exact accepted head. The actual observed merge invocation used `expected_head_sha = 145e0db14a957760adb811e557372f4aa8f24bd5` with `merge_method = merge`; GitHub returned `merged = true` with canonical merge `880165a40108bdf0c27e7246c1b890e8456e9768`. Exact parentage is `96b74783013f79eac39e8b942f89e6c1a32fbabc` + `145e0db14a957760adb811e557372f4aa8f24bd5`; merge tree `21aff2e9260020471c9537b9d751ef4995157e48` exactly matches the accepted head tree.
+
+Push-triggered post-merge CI `34419047465` / run #212 and R3 `34419047471` / run #189 both succeeded on attempt 1 on exact canonical merge `880165a40108bdf0c27e7246c1b890e8456e9768`; Windows Rust job `102690257334` succeeded. Durable post-merge qualification comment: `5610513209`. Complete evidence is recorded in `b401-apple-keychain-final-evidence.md`.
+
+B401 is therefore canonical and closed only for the bounded macOS Apple Keychain adapter and exact native qualification path. It does not qualify iOS, Secure Enclave backing, stronger universal scope/presence, or any later platform/freshness/backup/rotation/deletion behavior.
+
+## B401/B402 reconciliation bound
+
+This reconciliation changes only Specification 004 evidence/state surfaces. It does not change runtime/security semantics, Cargo manifests/lockfiles, dependency bytes, provider/provenance registry, generated artifacts, workflows, donor material, B402 implementation bytes, freshness/backup/rotation/deletion behavior, Specification 005, P011, B305R002, Q009, or release/FIPS/compliance posture.
+
+B402 may begin only after this reconciliation exact head passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+
+After those conditions become true, the conditional authority in the current-state block resolves to `B402_ONLY` without another state mutation. B402 is bounded to the Android Keystore adapter with actual app/UID scope, authentication policy, invalidation, and hardware capability reporting. B403-B406 and B501-B506 remain separate later leaves. Any new native dependency requires exact provenance/license/closure evidence before canonical adoption; this reconciliation itself adopts none.
 
 ## Specification 004 delivery chain
 
@@ -518,9 +552,12 @@ After those conditions become true, the conditional authority in the current-sta
   -> B306 plaintext-spill qualification       CANONICAL_QUALIFIED
   -> B306/B307 state reconciliation           CANONICAL_QUALIFIED
   -> B307 copy-verify-publish migration       CANONICAL_QUALIFIED
-  -> B307/B401 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B401 Apple Keychain adapter              BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B402-B406 remaining platform protectors  BLOCKED_PENDING_PRIOR_LEAVES
+  -> B307/B401 state reconciliation           CANONICAL_QUALIFIED
+  -> B401 trusted adoption-gate hardening      CANONICAL_QUALIFIED
+  -> B401 Apple Keychain adapter              CANONICAL_QUALIFIED
+  -> B401/B402 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B402 Android Keystore adapter            BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B403-B406 remaining platform protectors  BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
