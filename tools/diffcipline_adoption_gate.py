@@ -145,7 +145,7 @@ def b401_trusted_base(base: str) -> bool:
     """Return whether base is the exact canonical B401 gate-hardening successor.
 
     The secure B401 exception is available only after the precondition base has
-    changed by exactly the trusted gate-hardening path. The workflow
+    changed by exactly the trusted workflow and gate-hardening paths. The workflow
     then executes this gate from that immutable base rather than from PR HEAD.
     Any unrelated base drift disables the exception until separately reconciled.
     """
@@ -239,13 +239,20 @@ def check_b401_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int
 def b403_trusted_base(base: str) -> bool:
     """Return whether base is the exact canonical B403 gate-hardening successor.
 
-    The secure B403 exception is available only after the precondition base has
-    changed by exactly the trusted gate-hardening path. The workflow
+    The secure B403 exception is available only when the comparison base is the
+    exact fetched canonical main revision, has the precondition base as first
+    parent, and changes exactly the trusted gate-hardening path. The workflow
     then executes this gate from that immutable base rather than from PR HEAD.
     Any unrelated base drift disables the exception until separately reconciled.
     """
 
     try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            return False
+        parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(parent_row) != 3 or parent_row[1] != B403_PRECONDITION_BASE:
+            return False
         raw = git("diff", "--no-renames", "--name-only", B403_PRECONDITION_BASE, base)
     except subprocess.CalledProcessError:
         return False
