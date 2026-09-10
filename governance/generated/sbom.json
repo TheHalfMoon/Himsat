@@ -21,6 +21,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-anyhow-1.0.104",
+      "kind": "dependency",
+      "name": "Cargo: anyhow 1.0.104",
+      "package": {
+        "checksum": "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470",
+        "ecosystem": "cargo",
+        "name": "anyhow",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.104"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/anyhow",
+      "source_revision": "1dbe1862aae650423e3361fbd20b7d17c5109cc3"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-argon2-0.6.0",
       "kind": "dependency",
       "name": "Cargo: argon2 0.6.0",
@@ -37,6 +57,26 @@
       ],
       "source_repository": "https://github.com/RustCrypto/password-hashes",
       "source_revision": "b1e0ad6fe229b1ba74e4696c7359ab45d7e931f0"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-autocfg-1.5.1",
+      "kind": "dependency",
+      "name": "Cargo: autocfg 1.5.1",
+      "package": {
+        "checksum": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53",
+        "ecosystem": "cargo",
+        "name": "autocfg",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.5.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/cuviper/autocfg",
+      "source_revision": "2799b09c24e6632f8e653c5cd8fc303e85a906ba"
     },
     {
       "adoption_mode": "depend",
@@ -387,6 +427,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-field-offset-0.3.6",
+      "kind": "dependency",
+      "name": "Cargo: field-offset 0.3.6",
+      "package": {
+        "checksum": "38e2275cc4e4fc009b0669731a1e5ab7ebf11f469eaede2bab9309a5b4d6057f",
+        "ecosystem": "cargo",
+        "name": "field-offset",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.6"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/Diggsey/rust-field-offset",
+      "source_revision": "95b242e2bd69b7dec41cdd82b780232fcbba15ca"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-find-msvc-tools-0.1.12",
       "kind": "dependency",
       "name": "Cargo: find-msvc-tools 0.1.12",
@@ -576,6 +636,46 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-log-0.4.34",
+      "kind": "dependency",
+      "name": "Cargo: log 0.4.34",
+      "package": {
+        "checksum": "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6",
+        "ecosystem": "cargo",
+        "name": "log",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/log",
+      "source_revision": "8034743dd9d7f7583bd9a670271483d176130911"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-memoffset-0.9.1",
+      "kind": "dependency",
+      "name": "Cargo: memoffset 0.9.1",
+      "package": {
+        "checksum": "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a",
+        "ecosystem": "cargo",
+        "name": "memoffset",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/Gilnaa/memoffset",
+      "source_revision": "153fc3d50f03755be53148bc3eb97390f9011e45"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-openssl-src-300.6.1-3.6.3",
       "kind": "dependency",
       "name": "Cargo: openssl-src 300.6.1+3.6.3",
@@ -753,6 +853,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-rustc_version-0.4.1",
+      "kind": "dependency",
+      "name": "Cargo: rustc_version 0.4.1",
+      "package": {
+        "checksum": "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92",
+        "ecosystem": "cargo",
+        "name": "rustc_version",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/djc/rustc-version-rs",
+      "source_revision": "eeca449cca83e24150e46739e797aa82e9142809"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-security-framework-3.7.0",
       "kind": "dependency",
       "name": "Cargo: security-framework 3.7.0",
@@ -788,6 +908,26 @@
       ],
       "source_repository": "https://github.com/kornelski/rust-security-framework",
       "source_revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-semver-1.0.28",
+      "kind": "dependency",
+      "name": "Cargo: semver 1.0.28",
+      "package": {
+        "checksum": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd",
+        "ecosystem": "cargo",
+        "name": "semver",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.28"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/semver",
+      "source_revision": "7625c7aa3f0e8ba21e099d1765bcebcb72aa8816"
     },
     {
       "adoption_mode": "depend",
@@ -906,6 +1046,124 @@
       ],
       "source_repository": "https://github.com/mcgoo/vcpkg-rs",
       "source_revision": "e7d37e095ef2aa85c80242aa3850d442832b7b54"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-widestring-0.4.3",
+      "kind": "dependency",
+      "name": "Cargo: widestring 0.4.3",
+      "package": {
+        "checksum": "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c",
+        "ecosystem": "cargo",
+        "name": "widestring",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/starkat99/widestring-rs.git",
+      "source_revision": "e7236b62b9ffe8bf159644dfbf9b624060c8a843"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-winapi-0.3.9",
+      "kind": "dependency",
+      "name": "Cargo: winapi 0.3.9",
+      "package": {
+        "checksum": "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419",
+        "ecosystem": "cargo",
+        "name": "winapi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.9"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/retep998/winapi-rs",
+      "source_revision": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-winapi-i686-pc-windows-gnu-0.4.0",
+      "kind": "dependency",
+      "name": "Cargo: winapi-i686-pc-windows-gnu 0.4.0",
+      "package": {
+        "checksum": "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6",
+        "ecosystem": "cargo",
+        "name": "winapi-i686-pc-windows-gnu",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "i686"
+      ],
+      "source_repository": "https://github.com/retep998/winapi-rs",
+      "source_revision": "9497609ef44cc9bcd16cd2411c0ee6ccaf5483aa"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-winapi-x86_64-pc-windows-gnu-0.4.0",
+      "kind": "dependency",
+      "name": "Cargo: winapi-x86_64-pc-windows-gnu 0.4.0",
+      "package": {
+        "checksum": "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f",
+        "ecosystem": "cargo",
+        "name": "winapi-x86_64-pc-windows-gnu",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "x86_64"
+      ],
+      "source_repository": "https://github.com/retep998/winapi-rs",
+      "source_revision": "9497609ef44cc9bcd16cd2411c0ee6ccaf5483aa"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-windows-acl-0.3.0",
+      "kind": "dependency",
+      "name": "Cargo: windows-acl 0.3.0",
+      "package": {
+        "checksum": "177b1723986bcb4c606058e77f6e8614b51c7f9ad2face6f6fd63dd5c8b3cec3",
+        "ecosystem": "cargo",
+        "name": "windows-acl",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/trailofbits/windows-acl",
+      "source_revision": "09f87952649080c38b085e9759e84aa88ccbb2e2"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-windows-dpapi-0.2.0",
+      "kind": "dependency",
+      "name": "Cargo: windows-dpapi 0.2.0",
+      "package": {
+        "checksum": "2981752d6f11bdcab4db52be8ad5c0e6a6d4d6d566764b3058cc1ee473e6479e",
+        "ecosystem": "cargo",
+        "name": "windows-dpapi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/sheridans/windows-dpapi",
+      "source_revision": "4ac261cc789ab046dd8bac3e914f49b26b8b7d77"
     },
     {
       "adoption_mode": "depend",
