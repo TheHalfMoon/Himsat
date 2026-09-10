@@ -9,9 +9,9 @@ BASE_CANONICAL = d8d73df728d24994e9dfe9677d61e3c158c5db3e
 B402A_POSTMERGE_CI = 34428219440 / SUCCESS / attempt 1 / push
 B402A_POSTMERGE_R3 = 34428219449 / SUCCESS / attempt 1 / push
 B402A_POSTMERGE_COMMENT = 5611691258
-IMPLEMENTATION_COMMIT = c45188694076dd4c76cfc7abf5786717fac2f7ad
-IMPLEMENTATION_TREE = b76cc1e6aed2c4537471fdc5be15e4f55c87b5da
-ANDROID_RUST_BLOB = 9d4cfbecc027c0d4d86878e704c44b088be3ffb3
+IMPLEMENTATION_COMMIT = c160b3e78d2263eb15fcae69671f97a8a7206433
+IMPLEMENTATION_TREE = f5cad197f826ab67fcd860135ec72f5af571e202
+ANDROID_RUST_BLOB = 1caed99b9b8668b30225dbfe5faec538337528ae
 LIB_BLOB = bda050559f9efc43196b8a42eb21f94416c7a553
 IMPLEMENTATION_STATUS = CANDIDATE_NOT_CANONICAL
 B402_TASK_DISPOSITION = UNCHECKED_NOT_PASS
@@ -33,6 +33,8 @@ A fresh Rust adapter instance starts without plaintext VRK state. The caller mus
 
 Wrong-vault removal validates the protected record first and preserves the protector. Correct removal deletes the native key before deleting the ciphertext record, so a later record-cleanup failure cannot leave future VRK unlock possible through that key. Successful removal resets in-memory policy/hardware state.
 
+If an encrypted record exists but its native key is missing at reconfiguration time, the adapter returns `Invalidated` and does not create a replacement key under the same alias. This prevents an orphaned record from being silently rebound to new native key material.
+
 Hardware state is taken from the backend result and preserved without upgrade across `Unknown`, `SoftwareBacked`, and `HardwareBacked`. B402B does not infer TEE or StrongBox.
 ## Local qualification
 
@@ -46,7 +48,7 @@ PROVENANCE_SELF_TEST = PASS
 CARGO_FMT = PASS
 CARGO_CLIPPY_WORKSPACE_ALL_TARGETS_ALL_FEATURES = PASS
 CARGO_TEST_WORKSPACE_ALL_FEATURES = PASS
-B402B_FOCUSED_TESTS = 11 passed / 0 failed
+B402B_FOCUSED_TESTS = 12 passed / 0 failed
 ANDROID_AARCH64_CARGO_CHECK = PASS
 DIFF_CHECK = PASS
 NEW_CARGO_DEPENDENCIES = NONE
@@ -73,7 +75,7 @@ No release, FIPS/compliance, universal hardware-backing, universal user-presence
 The final PR head may follow the qualified implementation commit only with evidence/reconciliation changes. Transfer of the local implementation results requires this command to be empty and successful:
 
 ```text
-git diff --exit-code c45188694076dd4c76cfc7abf5786717fac2f7ad..HEAD -- \
+git diff --exit-code c160b3e78d2263eb15fcae69671f97a8a7206433..HEAD -- \
   crates/himsat-core/src/lib.rs \
   crates/himsat-core/src/vault_android_keystore.rs
 ```
