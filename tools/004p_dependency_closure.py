@@ -20,7 +20,7 @@ LOCK_PATH = ROOT / "Cargo.lock"
 REGISTRY_SCHEMA = "himsat.provenance-registry/v2"
 REGISTRY_SOURCE = "registry+https://github.com/rust-lang/crates.io-index"
 EXPECTED_PROVIDER_EXTERNAL_COUNT = 41
-EXPECTED_TOTAL_EXTERNAL_COUNT = 45
+EXPECTED_TOTAL_EXTERNAL_COUNT = 58
 EVIDENCE_REFERENCE = "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md"
 
 EXPECTED_APPLE_TARGET = 'cfg(target_os = "macos")'
@@ -30,6 +30,12 @@ EXPECTED_APPLE_DIRECT: dict[str, dict[str, Any]] = {
         "default-features": False,
         "features": ["OSX_10_15"],
     },
+}
+
+EXPECTED_WINDOWS_TARGET = 'cfg(target_os = "windows")'
+EXPECTED_WINDOWS_DIRECT: dict[str, dict[str, Any]] = {
+    "windows-acl": {"version": "=0.3.0"},
+    "windows-dpapi": {"version": "=0.2.0"},
 }
 
 EXPECTED_PLATFORM_PACKAGES: dict[tuple[str, str], dict[str, str]] = {
@@ -68,6 +74,123 @@ EXPECTED_PLATFORM_PACKAGES: dict[tuple[str, str], dict[str, str]] = {
         "license_expression": "MIT OR Apache-2.0",
         "selected_license": "MIT",
         "license_evidence": "crate LICENSE-MIT at immutable VCS revision",
+    },
+    ('anyhow', '1.0.104'): {
+        "checksum": '330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470',
+        "repository": 'https://github.com/dtolnay/anyhow',
+        "revision": '1dbe1862aae650423e3361fbd20b7d17c5109cc3',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('autocfg', '1.5.1'): {
+        "checksum": 'f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53',
+        "repository": 'https://github.com/cuviper/autocfg',
+        "revision": '2799b09c24e6632f8e653c5cd8fc303e85a906ba',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'Apache-2.0 OR MIT',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('field-offset', '0.3.6'): {
+        "checksum": '38e2275cc4e4fc009b0669731a1e5ab7ebf11f469eaede2bab9309a5b4d6057f',
+        "repository": 'https://github.com/Diggsey/rust-field-offset',
+        "revision": '95b242e2bd69b7dec41cdd82b780232fcbba15ca',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('log', '0.4.34'): {
+        "checksum": 'f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6',
+        "repository": 'https://github.com/rust-lang/log',
+        "revision": '8034743dd9d7f7583bd9a670271483d176130911',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('memoffset', '0.9.1'): {
+        "checksum": '488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a',
+        "repository": 'https://github.com/Gilnaa/memoffset',
+        "revision": '153fc3d50f03755be53148bc3eb97390f9011e45',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('rustc_version', '0.4.1'): {
+        "checksum": 'cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92',
+        "repository": 'https://github.com/djc/rustc-version-rs',
+        "revision": 'eeca449cca83e24150e46739e797aa82e9142809',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('semver', '1.0.28'): {
+        "checksum": '8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd',
+        "repository": 'https://github.com/dtolnay/semver',
+        "revision": '7625c7aa3f0e8ba21e099d1765bcebcb72aa8816',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('widestring', '0.4.3'): {
+        "checksum": 'c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c',
+        "repository": 'https://github.com/starkat99/widestring-rs.git',
+        "revision": 'e7236b62b9ffe8bf159644dfbf9b624060c8a843',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT/Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('winapi', '0.3.9'): {
+        "checksum": '5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419',
+        "repository": 'https://github.com/retep998/winapi-rs',
+        "revision": '796a8e6c2971dc2ff1bcff166e6671284f9b5b6b',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT/Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('winapi-i686-pc-windows-gnu', '0.4.0'): {
+        "checksum": 'ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6',
+        "repository": 'https://github.com/retep998/winapi-rs',
+        "revision": '9497609ef44cc9bcd16cd2411c0ee6ccaf5483aa',
+        "source_path": 'i686',
+        "license_expression": 'MIT/Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'root LICENSE-MIT plus byte-identical published subcrate at immutable VCS revision',
+    },
+    ('winapi-x86_64-pc-windows-gnu', '0.4.0'): {
+        "checksum": '712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f',
+        "repository": 'https://github.com/retep998/winapi-rs',
+        "revision": '9497609ef44cc9bcd16cd2411c0ee6ccaf5483aa',
+        "source_path": 'x86_64',
+        "license_expression": 'MIT/Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'root LICENSE-MIT plus byte-identical published subcrate at immutable VCS revision',
+    },
+    ('windows-acl', '0.3.0'): {
+        "checksum": '177b1723986bcb4c606058e77f6e8614b51c7f9ad2face6f6fd63dd5c8b3cec3',
+        "repository": 'https://github.com/trailofbits/windows-acl',
+        "revision": '09f87952649080c38b085e9759e84aa88ccbb2e2',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('windows-dpapi', '0.2.0'): {
+        "checksum": '2981752d6f11bdcab4db52be8ad5c0e6a6d4d6d566764b3058cc1ee473e6479e',
+        "repository": 'https://github.com/sheridans/windows-dpapi',
+        "revision": '4ac261cc789ab046dd8bac3e914f49b26b8b7d77',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": "MIT",
+        "license_evidence": 'crate MIT license text at immutable VCS revision',
     },
 }
 
@@ -214,7 +337,8 @@ def check_direct_manifest() -> None:
             raise ClosureError(f"himsat-core: {name} exact pin/features mismatch: observed={observed!r}")
 
     targets = manifest.get("target")
-    if not isinstance(targets, dict) or set(targets) != {EXPECTED_APPLE_TARGET}:
+    expected_targets = {EXPECTED_APPLE_TARGET, EXPECTED_WINDOWS_TARGET}
+    if not isinstance(targets, dict) or set(targets) != expected_targets:
         raise ClosureError(
             f"himsat-core: exact target dependency table mismatch; observed={sorted(targets) if isinstance(targets, dict) else targets!r}"
         )
@@ -225,6 +349,14 @@ def check_direct_manifest() -> None:
     if apple_dependencies != EXPECTED_APPLE_DIRECT:
         raise ClosureError(
             f"himsat-core: Apple target dependency pin/features mismatch: observed={apple_dependencies!r}"
+        )
+    windows = targets[EXPECTED_WINDOWS_TARGET]
+    if not isinstance(windows, dict) or set(windows) != {"dependencies"}:
+        raise ClosureError("himsat-core: Windows target must contain only dependencies")
+    windows_dependencies = windows["dependencies"]
+    if windows_dependencies != EXPECTED_WINDOWS_DIRECT:
+        raise ClosureError(
+            f"himsat-core: Windows target dependency pin/features mismatch: observed={windows_dependencies!r}"
         )
 
 

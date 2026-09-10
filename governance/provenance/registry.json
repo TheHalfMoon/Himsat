@@ -28,6 +28,30 @@
       "adoption_mode": "depend",
       "artifacts": [],
       "destination_paths": [],
+      "id": "cargo-anyhow-1.0.104",
+      "kind": "dependency",
+      "name": "Cargo: anyhow 1.0.104",
+      "notice": "Permission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470",
+        "ecosystem": "cargo",
+        "name": "anyhow",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.104"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/anyhow",
+      "source_revision": "1dbe1862aae650423e3361fbd20b7d17c5109cc3"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
       "id": "cargo-argon2-0.6.0",
       "kind": "dependency",
       "name": "Cargo: argon2 0.6.0",
@@ -45,6 +69,30 @@
       ],
       "source_repository": "https://github.com/RustCrypto/password-hashes",
       "source_revision": "b1e0ad6fe229b1ba74e4696c7359ab45d7e931f0"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-autocfg-1.5.1",
+      "kind": "dependency",
+      "name": "Cargo: autocfg 1.5.1",
+      "notice": "Copyright (c) 2018 Josh Stone\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53",
+        "ecosystem": "cargo",
+        "name": "autocfg",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.5.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/cuviper/autocfg",
+      "source_revision": "2799b09c24e6632f8e653c5cd8fc303e85a906ba"
     },
     {
       "adopted": true,
@@ -470,6 +518,30 @@
       "adoption_mode": "depend",
       "artifacts": [],
       "destination_paths": [],
+      "id": "cargo-field-offset-0.3.6",
+      "kind": "dependency",
+      "name": "Cargo: field-offset 0.3.6",
+      "notice": "MIT License\n\nCopyright (c) 2016-2021 Diggory Blake, and other contributors.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "38e2275cc4e4fc009b0669731a1e5ab7ebf11f469eaede2bab9309a5b4d6057f",
+        "ecosystem": "cargo",
+        "name": "field-offset",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.6"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/Diggsey/rust-field-offset",
+      "source_revision": "95b242e2bd69b7dec41cdd82b780232fcbba15ca"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
       "id": "cargo-find-msvc-tools-0.1.12",
       "kind": "dependency",
       "name": "Cargo: find-msvc-tools 0.1.12",
@@ -693,6 +765,54 @@
       "adoption_mode": "depend",
       "artifacts": [],
       "destination_paths": [],
+      "id": "cargo-log-0.4.34",
+      "kind": "dependency",
+      "name": "Cargo: log 0.4.34",
+      "notice": "Copyright (c) 2014 The Rust Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6",
+        "ecosystem": "cargo",
+        "name": "log",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/log",
+      "source_revision": "8034743dd9d7f7583bd9a670271483d176130911"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-memoffset-0.9.1",
+      "kind": "dependency",
+      "name": "Cargo: memoffset 0.9.1",
+      "notice": "Copyright (c) 2017 Gilad Naaman\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a",
+        "ecosystem": "cargo",
+        "name": "memoffset",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/Gilnaa/memoffset",
+      "source_revision": "153fc3d50f03755be53148bc3eb97390f9011e45"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
       "id": "cargo-openssl-src-300.6.1-3.6.3",
       "kind": "dependency",
       "name": "Cargo: openssl-src 300.6.1+3.6.3",
@@ -858,7 +978,7 @@
       "id": "cargo-r-efi-6.0.0",
       "kind": "dependency",
       "name": "Cargo: r-efi 6.0.0",
-      "notice": "LICENSE:\n        This project is triple-licensed under the MIT License, the Apache\n        License, Version 2.0, and the GNU Lesser General Public License,\n        Version 2.1+.\n\nAUTHORS-MIT:\n        Permission is hereby granted, free of charge, to any person obtaining a\n        copy of this software and associated documentation files (the\n        \"Software\"), to deal in the Software without restriction, including\n        without limitation the rights to use, copy, modify, merge, publish,\n        distribute, sublicense, and/or sell copies of the Software, and to\n        permit persons to whom the Software is furnished to do so, subject to\n        the following conditions:\n\n        The above copyright notice and this permission notice shall be included\n        in all copies or substantial portions of the Software.\n\n        THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS\n        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\nAUTHORS-ASL:\n        Licensed under the Apache License, Version 2.0 (the \"License\");\n        you may not use this file except in compliance with the License.\n        You may obtain a copy of the License at\n\n                http://www.apache.org/licenses/LICENSE-2.0\n\n        Unless required by applicable law or agreed to in writing, software\n        distributed under the License is distributed on an \"AS IS\" BASIS,\n        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n        See the License for the specific language governing permissions and\n        limitations under the License.\n\nAUTHORS-LGPL:\n        This program is free software; you can redistribute it and/or modify it\n        under the terms of the GNU Lesser General Public License as published\n        by the Free Software Foundation; either version 2.1 of the License, or\n        (at your option) any later version.\n\n        This program is distributed in the hope that it will be useful, but\n        WITHOUT ANY WARRANTY; without even the implied warranty of\n        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU\n        Lesser General Public License for more details.\n\n        You should have received a copy of the GNU Lesser General Public License\n        along with this program; If not, see <http://www.gnu.org/licenses/>.\n\nCOPYRIGHT: (ordered alphabetically)\n        Copyright (C) 2017-2023 Red Hat, Inc.\n        Copyright (C) 2019-2023 Microsoft Corporation\n        Copyright (C) 2022-2023 David Rheinsberg\n\nAUTHORS: (ordered alphabetically)\n        Alan Egerton <eggyal@gmail.com>\n        Alex James <theracermaster@gmail.com>\n        Ayush Singh <ayushsingh1325@gmail.com>\n        Boris-Chengbiao Zhou <bobo1239@web.de>\n        Bret Barkelew <bret@corthon.com>\n        Christopher Zurcher <christopher.zurcher@microsoft.com>\n        David Rheinsberg <david@readahead.eu>\n        Dmitry Mostovenko <trueberserker@gmail.com>\n        Hiroki Tokunaga <tokusan441@gmail.com>\n        Joe Richey <joerichey@google.com>\n        John Schock <joschock@microsoft.com>\n        Michael Kubacki <michael.kubacki@microsoft.com>\n        Oliver Smith-Denny <osde@microsoft.com>\n        Richard Wiedenhöft <richard@wiedenhoeft.xyz>\n        Rob Bradford <robert.bradford@intel.com>, <rbradford@rivosinc.com>\n        Tom Gundersen <teg@jklm.no>\n        Trevor Gross <tmgross@umich.edu>",
+      "notice": "LICENSE:\n        This project is triple-licensed under the MIT License, the Apache\n        License, Version 2.0, and the GNU Lesser General Public License,\n        Version 2.1+.\n\nAUTHORS-MIT:\n        Permission is hereby granted, free of charge, to any person obtaining a\n        copy of this software and associated documentation files (the\n        \"Software\"), to deal in the Software without restriction, including\n        without limitation the rights to use, copy, modify, merge, publish,\n        distribute, sublicense, and/or sell copies of the Software, and to\n        permit persons to whom the Software is furnished to do so, subject to\n        the following conditions:\n\n        The above copyright notice and this permission notice shall be included\n        in all copies or substantial portions of the Software.\n\n        THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS\n        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\n        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.\n        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\n        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,\n        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE\n        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n\nAUTHORS-ASL:\n        Licensed under the Apache License, Version 2.0 (the \"License\");\n        you may not use this file except in compliance with the License.\n        You may obtain a copy of the License at\n\n                http://www.apache.org/licenses/LICENSE-2.0\n\n        Unless required by applicable law or agreed to in writing, software\n        distributed under the License is distributed on an \"AS IS\" BASIS,\n        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n        See the License for the specific language governing permissions and\n        limitations under the License.\n\nAUTHORS-LGPL:\n        This program is free software; you can redistribute it and/or modify it\n        under the terms of the GNU Lesser General Public License as published\n        by the Free Software Foundation; either version 2.1 of the License, or\n        (at your option) any later version.\n\n        This program is distributed in the hope that it will be useful, but\n        WITHOUT ANY WARRANTY; without even the implied warranty of\n        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU\n        Lesser General Public License for more details.\n\n        You should have received a copy of the GNU Lesser General Public License\n        along with this program; If not, see <http://www.gnu.org/licenses/>.\n\nCOPYRIGHT: (ordered alphabetically)\n        Copyright (C) 2017-2023 Red Hat, Inc.\n        Copyright (C) 2019-2023 Microsoft Corporation\n        Copyright (C) 2022-2023 David Rheinsberg\n\nAUTHORS: (ordered alphabetically)\n        Alan Egerton <eggyal@gmail.com>\n        Alex James <theracermaster@gmail.com>\n        Ayush Singh <ayushsingh1325@gmail.com>\n        Boris-Chengbiao Zhou <bobo1239@web.de>\n        Bret Barkelew <bret@corthon.com>\n        Christopher Zurcher <christopher.zurcher@microsoft.com>\n        David Rheinsberg <david@readahead.eu>\n        Dmitry Mostovenko <trueberserker@gmail.com>\n        Hiroki Tokunaga <tokusan441@gmail.com>\n        Joe Richey <joerichey@google.com>\n        John Schock <joschock@microsoft.com>\n        Michael Kubacki <michael.kubacki@microsoft.com>\n        Oliver Smith-Denny <osde@microsoft.com>\n        Richard Wiedenh\u00f6ft <richard@wiedenhoeft.xyz>\n        Rob Bradford <robert.bradford@intel.com>, <rbradford@rivosinc.com>\n        Tom Gundersen <teg@jklm.no>\n        Trevor Gross <tmgross@umich.edu>",
       "package": {
         "checksum": "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf",
         "ecosystem": "cargo",
@@ -897,6 +1017,30 @@
       ],
       "source_repository": "https://github.com/rusqlite/rusqlite",
       "source_revision": "6d3c282dc5531a57eb4e22ece3207f00c95d0fb0"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-rustc_version-0.4.1",
+      "kind": "dependency",
+      "name": "Cargo: rustc_version 0.4.1",
+      "notice": "Copyright (c) 2016 The Rust Project Developers\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92",
+        "ecosystem": "cargo",
+        "name": "rustc_version",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/djc/rustc-version-rs",
+      "source_revision": "eeca449cca83e24150e46739e797aa82e9142809"
     },
     {
       "adopted": true,
@@ -943,6 +1087,30 @@
       ],
       "source_repository": "https://github.com/kornelski/rust-security-framework",
       "source_revision": "5f6e65114b77d5bc161d2b099cad09f2a67609d2"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-semver-1.0.28",
+      "kind": "dependency",
+      "name": "Cargo: semver 1.0.28",
+      "notice": "Permission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd",
+        "ecosystem": "cargo",
+        "name": "semver",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.28"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/semver",
+      "source_revision": "7625c7aa3f0e8ba21e099d1765bcebcb72aa8816"
     },
     {
       "adopted": true,
@@ -1085,6 +1253,148 @@
       ],
       "source_repository": "https://github.com/mcgoo/vcpkg-rs",
       "source_revision": "e7d37e095ef2aa85c80242aa3850d442832b7b54"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-widestring-0.4.3",
+      "kind": "dependency",
+      "name": "Cargo: widestring 0.4.3",
+      "notice": "Copyright (c) 2016 Kathryn Long\n\nPermission is hereby granted, free of charge, to any\nperson obtaining a copy of this software and associated\ndocumentation files (the \"Software\"), to deal in the\nSoftware without restriction, including without\nlimitation the rights to use, copy, modify, merge,\npublish, distribute, sublicense, and/or sell copies of\nthe Software, and to permit persons to whom the Software\nis furnished to do so, subject to the following\nconditions:\n\nThe above copyright notice and this permission notice\nshall be included in all copies or substantial portions\nof the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF\nANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED\nTO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A\nPARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT\nSHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY\nCLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR\nIN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER\nDEALINGS IN THE SOFTWARE.",
+      "package": {
+        "checksum": "c168940144dd21fd8046987c16a46a33d5fc84eec29ef9dcddc2ac9e31526b7c",
+        "ecosystem": "cargo",
+        "name": "widestring",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/starkat99/widestring-rs.git",
+      "source_revision": "e7236b62b9ffe8bf159644dfbf9b624060c8a843"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-winapi-0.3.9",
+      "kind": "dependency",
+      "name": "Cargo: winapi 0.3.9",
+      "notice": "Copyright (c) 2015-2018 The winapi-rs Developers\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419",
+        "ecosystem": "cargo",
+        "name": "winapi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.9"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/retep998/winapi-rs",
+      "source_revision": "796a8e6c2971dc2ff1bcff166e6671284f9b5b6b"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-winapi-i686-pc-windows-gnu-0.4.0",
+      "kind": "dependency",
+      "name": "Cargo: winapi-i686-pc-windows-gnu 0.4.0",
+      "notice": "Copyright (c) 2015 The winapi-rs Developers\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6",
+        "ecosystem": "cargo",
+        "name": "winapi-i686-pc-windows-gnu",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "i686"
+      ],
+      "source_repository": "https://github.com/retep998/winapi-rs",
+      "source_revision": "9497609ef44cc9bcd16cd2411c0ee6ccaf5483aa"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-winapi-x86_64-pc-windows-gnu-0.4.0",
+      "kind": "dependency",
+      "name": "Cargo: winapi-x86_64-pc-windows-gnu 0.4.0",
+      "notice": "Copyright (c) 2015 The winapi-rs Developers\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f",
+        "ecosystem": "cargo",
+        "name": "winapi-x86_64-pc-windows-gnu",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "x86_64"
+      ],
+      "source_repository": "https://github.com/retep998/winapi-rs",
+      "source_revision": "9497609ef44cc9bcd16cd2411c0ee6ccaf5483aa"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-windows-acl-0.3.0",
+      "kind": "dependency",
+      "name": "Cargo: windows-acl 0.3.0",
+      "notice": "MIT License\n\nCopyright (c) 2017 Trail of Bits\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "177b1723986bcb4c606058e77f6e8614b51c7f9ad2face6f6fd63dd5c8b3cec3",
+        "ecosystem": "cargo",
+        "name": "windows-acl",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/trailofbits/windows-acl",
+      "source_revision": "09f87952649080c38b085e9759e84aa88ccbb2e2"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
+      "id": "cargo-windows-dpapi-0.2.0",
+      "kind": "dependency",
+      "name": "Cargo: windows-dpapi 0.2.0",
+      "notice": "MIT License\n\nCopyright (c) 2025 Sam Sheridan\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "2981752d6f11bdcab4db52be8ad5c0e6a6d4d6d566764b3058cc1ee473e6479e",
+        "ecosystem": "cargo",
+        "name": "windows-dpapi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/sheridans/windows-dpapi",
+      "source_revision": "4ac261cc789ab046dd8bac3e914f49b26b8b7d77"
     },
     {
       "adopted": true,
