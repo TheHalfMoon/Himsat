@@ -25,4 +25,5 @@ security-framework = { version = "=3.7.0", default-features = false, features = 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-acl = { version = "=0.3.0" }
 windows-dpapi = { version = "=0.2.0" }
+winsafe = { version = "=0.0.29", default-features = false, features = ["advapi"] }
 

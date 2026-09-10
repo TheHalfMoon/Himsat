@@ -1353,6 +1353,30 @@
       "adoption_mode": "depend",
       "artifacts": [],
       "destination_paths": [],
+      "id": "cargo-winsafe-0.0.29",
+      "kind": "dependency",
+      "name": "Cargo: winsafe 0.0.29",
+      "notice": "Copyright (c) 2019-present, Rodrigo Cesar de Freitas Dias\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+      "package": {
+        "checksum": "9ef0ffc427f045c0cc9ebffd6f4f91153dcd2a1547b5c3c29ee3f541e16e95c6",
+        "ecosystem": "cargo",
+        "name": "winsafe",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.0.29"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rodrigocfd/winsafe",
+      "source_revision": "71ed88c2a0d18b03ee452f6d4261f4c22f443483"
+    },
+    {
+      "adopted": true,
+      "adoption_mode": "depend",
+      "artifacts": [],
+      "destination_paths": [],
       "id": "cargo-windows-acl-0.3.0",
       "kind": "dependency",
       "name": "Cargo: windows-acl 0.3.0",
