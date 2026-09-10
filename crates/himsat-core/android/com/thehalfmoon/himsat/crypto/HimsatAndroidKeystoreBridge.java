@@ -80,6 +80,7 @@ public final class HimsatAndroidKeystoreBridge {
 
     public synchronized byte[] createKey(String alias) {
         if (!validAlias(alias)) return status(POLICY_MISMATCH);
+        if (Build.VERSION.SDK_INT < 31) return status(UNSUPPORTED);
         try {
             KeyStore store = loadStore();
             if (store.containsAlias(alias)) return inspectKey(store, alias);
@@ -108,6 +109,7 @@ public final class HimsatAndroidKeystoreBridge {
 
     public synchronized byte[] inspectKey(String alias) {
         if (!validAlias(alias)) return status(POLICY_MISMATCH);
+        if (Build.VERSION.SDK_INT < 31) return status(UNSUPPORTED);
         try {
             return inspectKey(loadStore(), alias);
         } catch (SecurityException e) {
@@ -158,7 +160,9 @@ public final class HimsatAndroidKeystoreBridge {
             byte[] body = cipher.doFinal(plaintext);
             byte[] iv = cipher.getIV();
             if (iv == null || iv.length == 0 || iv.length > 255) return status(CORRUPT);
-            byte[] result = new byte[2 + iv.length + body.length];
+            int serializedLength = 2 + iv.length + body.length;
+            if (serializedLength > MAX_RECORD_BYTES) return status(POLICY_MISMATCH);
+            byte[] result = new byte[serializedLength];
             result[0] = (byte) OK;
             result[1] = (byte) iv.length;
             System.arraycopy(iv, 0, result, 2, iv.length);
@@ -237,13 +241,25 @@ public final class HimsatAndroidKeystoreBridge {
             return status(POLICY_MISMATCH);
         }
         File target = recordFile(recordName);
-        File temp = recordFile(recordName + ".tmp");
+        File temp;
+        try {
+            temp = File.createTempFile(
+                    "himsat-vault-protector-write-",
+                    ".tmp",
+                    context.getNoBackupFilesDir());
+        } catch (SecurityException e) {
+            return status(DENIED);
+        } catch (IOException e) {
+            return status(UNAVAILABLE);
+        }
         try (FileOutputStream output = new FileOutputStream(temp, false)) {
             output.write(ciphertext);
             output.getFD().sync();
         } catch (SecurityException e) {
+            temp.delete();
             return status(DENIED);
         } catch (IOException e) {
+            temp.delete();
             return status(UNAVAILABLE);
         }
         try {

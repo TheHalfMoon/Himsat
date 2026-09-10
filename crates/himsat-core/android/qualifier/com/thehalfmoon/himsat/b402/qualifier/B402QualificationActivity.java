@@ -62,6 +62,10 @@ public final class B402QualificationActivity extends Activity {
             marker("B402_NATIVE_KEY_POLICY=PASS");
             marker("B402_NATIVE_PRESENCE=NOT_REQUIRED");
 
+            byte[] oversizedPlaintext = new byte[1024];
+            expectStatus(bridge.seal(ALIAS, oversizedPlaintext), POLICY_MISMATCH);
+            marker("B402_NATIVE_SIZE_BOUNDARY=PASS");
+
             byte[] plaintext = "HIMSAT-B402-NATIVE-QUALIFIER".getBytes(StandardCharsets.UTF_8);
             byte[] sealedResponse = bridge.seal(ALIAS, plaintext);
             expectStatus(sealedResponse, OK);
