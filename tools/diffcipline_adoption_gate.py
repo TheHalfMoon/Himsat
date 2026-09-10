@@ -383,7 +383,7 @@ def b403c_trusted_base(base: str) -> bool:
 def check_b403c_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
     """Accept only the pinned B403C safe token-identity dependency adoption."""
 
-    if args.exit_code != 2 or proof.get("verdict") != "FAIL":
+    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
         return fail(
             f"unexpected B403C non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
         )
