@@ -5,7 +5,7 @@ Repository Diffcipline policy remains conservative. The historical 004P
 P005/P006 adoption diff is exceptional because it intentionally introduces the
 reviewed dependency graph and generated provenance closure in one bounded leaf.
 This bridge accepts Diffcipline's otherwise-blocking REVIEW/size findings only
-for explicitly bounded historical/provider, B401, B403A, B403C, or B403D candidate transitions. The B401, B403A, B403C, and B403D exceptions are available only when this gate is executed
+for explicitly bounded historical/provider, B401, B403A, B403C, B403D, or B404 candidate transitions. The B401, B403A, B403C, B403D, and B404 exceptions are available only when this gate is executed
 from the corresponding trusted immutable PR base and every permitted candidate
 artifact matches its pinned Git blob. Every configured verification still has to pass.
 
@@ -94,6 +94,22 @@ B403D_EXPECTED_BLOBS = {
     "tools/004p_dependency_closure.py": "cc624a7913a73adee42b4af00852b478a7f0f544",
 }
 B403D_EXPECTED_FILES = set(B403D_EXPECTED_BLOBS)
+
+B404_PRECONDITION_BASE = "a0478b5dceeef6a596d2b90aaea22936b4751b33"
+B404_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B404_MAX_ADDED_LINES = 9600
+B404_EXPECTED_ADDED_LINES = 9541
+B404_EXPECTED_DELETED_LINES = 1442
+B404_EXPECTED_BLOBS = {
+    "Cargo.lock": "6d2741d847e8528eb792e232cb0c5f1f7b1dd3cb",
+    "THIRD_PARTY_NOTICES.md": "9978f9549e2d9572641cfaca97a015c8666b071d",
+    "crates/himsat-core/Cargo.toml": "a8a8f94e1977b87c5e1048ce03d3f87f8acfcdff",
+    "governance/generated/sbom.json": "6a1fcdc459924a764b7311494f534020fa76943d",
+    "governance/provenance/registry.json": "4370c836c9cb1ab3f717f20266def1d952feeeb0",
+    "specs/004-vault-key-crypto/b404-linux-secret-service-dependency-adoption-evidence.md": "61611a2920cae4b1aab9bb3f7efa645f330b494d",
+    "tools/004p_dependency_closure.py": "807f8238b401f922c2e330bb0f7652fb9ce771b5",
+}
+B404_EXPECTED_FILES = set(B404_EXPECTED_BLOBS)
 
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
@@ -369,6 +385,100 @@ def check_b403_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int
     return 0
 
 
+def b404_trusted_base(base: str) -> bool:
+    """Accept only the canonical B404 gate successor or its immediate merge parent.
+
+    Pull-request qualification requires current canonical main to be the trusted
+    gate-hardening merge. Push-triggered qualification after the guarded B404
+    dependency-adoption merge accepts that same trusted gate merge as the first
+    parent of current canonical main. The trusted gate merge itself must have the
+    exact B404 precondition as first parent and change only this gate path.
+    """
+
+    try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            canonical_parent_row = git("rev-list", "--parents", "-n", "1", canonical_main).split()
+            if len(canonical_parent_row) != 3 or canonical_parent_row[1] != base:
+                return False
+        base_parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(base_parent_row) != 3 or base_parent_row[1] != B404_PRECONDITION_BASE:
+            return False
+        raw = git("diff", "--no-renames", "--name-only", B404_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B404_TRUSTED_BASE_DELTA and len(paths) == len(B404_TRUSTED_BASE_DELTA)
+
+
+def check_b404_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the pinned B404 Linux Secret Service dependency adoption."""
+
+    if args.exit_code != 2 or proof.get("verdict") != "FAIL":
+        return fail(
+            f"unexpected B404 non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B404 Git diff: {exc}")
+
+    if set(actual_files) != B404_EXPECTED_FILES or len(actual_files) != len(B404_EXPECTED_FILES):
+        return fail("actual B404 Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B404 Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B404_EXPECTED_FILES or len(files) != len(B404_EXPECTED_FILES):
+        return fail("B404 exception changed-path set is not exact")
+
+    if proof.get("changed_files") != len(B404_EXPECTED_FILES):
+        return fail("B404 Diffcipline changed-file count is not exact")
+    if actual_added != B404_EXPECTED_ADDED_LINES or proof.get("added_lines") != actual_added:
+        return fail("B404 added-line count is not exact")
+    if actual_deleted != B404_EXPECTED_DELETED_LINES or proof.get("deleted_lines") != actual_deleted:
+        return fail("B404 deleted-line count is not exact")
+    if not (POLICY_MAX_ADDED_LINES < actual_added <= B404_MAX_ADDED_LINES):
+        return fail("B404 dependency leaf is outside the bounded adoption line window")
+
+    expected_reasons = {
+        f"added lines {actual_added} exceed maximum {POLICY_MAX_ADDED_LINES}",
+        "dependency manifest changed: crates/himsat-core/Cargo.toml",
+        "lockfile changed: Cargo.lock",
+    }
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != 3:
+        return fail(f"unexpected B404 Diffcipline reason set: {reasons!r}")
+    if proof.get("scope_violations") != []:
+        return fail("B404 scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B404 verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B404 verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B404_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"B404 candidate artifact blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B404 candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B404 DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
 def b403d_trusted_base(base: str) -> bool:
     """Accept only the canonical B403D gate successor or its immediate merge parent.
 
@@ -585,6 +695,12 @@ def main() -> int:
     if args.exit_code == 0 and verdict == "PASS":
         print("DIFFCIPLINE PASS")
         return 0
+
+    # B404 is the exact Linux Secret Service dependency-adoption leaf. It is
+    # enabled only by its separate canonical gate-hardening merge and pins all
+    # seven candidate artifacts, including generated provenance bytes.
+    if b404_trusted_base(args.base):
+        return check_b404_exception(args, proof)
 
     # B403D is the exact file-security dependency adoption required by the
     # substantive B403B successor review. The gate is trusted only from its
