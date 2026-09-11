@@ -20,7 +20,7 @@ LOCK_PATH = ROOT / "Cargo.lock"
 REGISTRY_SCHEMA = "himsat.provenance-registry/v2"
 REGISTRY_SOURCE = "registry+https://github.com/rust-lang/crates.io-index"
 EXPECTED_PROVIDER_EXTERNAL_COUNT = 41
-EXPECTED_TOTAL_EXTERNAL_COUNT = 59
+EXPECTED_TOTAL_EXTERNAL_COUNT = 78
 EVIDENCE_REFERENCE = "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md"
 
 EXPECTED_APPLE_TARGET = 'cfg(target_os = "macos")'
@@ -35,6 +35,8 @@ EXPECTED_APPLE_DIRECT: dict[str, dict[str, Any]] = {
 EXPECTED_WINDOWS_TARGET = 'cfg(target_os = "windows")'
 EXPECTED_WINDOWS_DIRECT: dict[str, dict[str, Any]] = {
     "windows-acl": {"version": "=0.3.0"},
+    "fs_at": {"version": "=0.2.1"},
+    "windows-permissions": {"version": "=0.2.4"},
     "windows-dpapi": {"version": "=0.2.0"},
     "winsafe": {"version": "=0.0.29", "default-features": False, "features": ["advapi"]},
 }
@@ -174,6 +176,177 @@ EXPECTED_PLATFORM_PACKAGES: dict[tuple[str, str], dict[str, str]] = {
         "license_expression": 'MIT/Apache-2.0',
         "selected_license": "MIT",
         "license_evidence": 'root LICENSE-MIT plus byte-identical published subcrate at immutable VCS revision',
+    },
+    ('aligned', '0.4.3'): {
+        "checksum": 'ee4508988c62edf04abd8d92897fca0c2995d907ce1dfeaf369dac3716a40685',
+        "repository": 'https://github.com/rust-embedded-community/aligned',
+        "revision": 'f13f8e56db5ab99257209758d14d3096a851ff04',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('as-slice', '0.2.1'): {
+        "checksum": '516b6b4f0e40d50dcda9365d53964ec74560ad4284da2e7fc97122cd83174516',
+        "repository": 'https://github.com/japaric/as-slice',
+        "revision": 'c3687342bc9f3c9c202676a5d2e17288ff979c90',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('bitflags', '1.3.2'): {
+        "checksum": 'bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a',
+        "repository": 'https://github.com/bitflags/bitflags',
+        "revision": 'ed185cfb1c447c1b4bd6ac021c9ec3bb02c9e2f2',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT/Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('cfg_aliases', '0.2.2'): {
+        "checksum": 'f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527',
+        "repository": 'https://github.com/katharostech/cfg_aliases',
+        "revision": 'e069ce61e00fee423ac1dbe6a897f228f1774716',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE at immutable VCS revision',
+    },
+    ('cvt', '0.1.2'): {
+        "checksum": 'd2ae9bf77fbf2d39ef573205d554d87e86c12f1994e9ea335b0651b9b278bcf1',
+        "repository": 'https://github.com/marmistrz/cvt',
+        "revision": 'ae6de53753f9e83aac06aa6638e2eac3786975bc',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'Apache-2.0',
+        "selected_license": 'Apache-2.0',
+        "license_evidence": 'published LICENSE at immutable VCS revision',
+    },
+    ('fs_at', '0.2.1'): {
+        "checksum": '14af6c9694ea25db25baa2a1788703b9e7c6648dcaeeebeb98f7561b5384c036',
+        "repository": 'https://github.com/rbtcollins/fs_at.git',
+        "revision": 'e8b58a0682496a0c6ddc9eae80942a2f29a5a7e4',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'Apache-2.0',
+        "selected_license": 'Apache-2.0',
+        "license_evidence": 'Cargo.toml Apache-2.0 declaration at immutable VCS revision',
+    },
+    ('nix', '0.29.0'): {
+        "checksum": '71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46',
+        "repository": 'https://github.com/nix-rust/nix',
+        "revision": '1dad4d8d04a2cd187fae87cb91c4f4e95ff0decd',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE at immutable VCS revision',
+    },
+    ('stable_deref_trait', '1.2.1'): {
+        "checksum": '6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596',
+        "repository": 'https://github.com/storyyeller/stable_deref_trait',
+        "revision": '30002b4228f7cdee309217b6bf6eee099dda0b00',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows-permissions', '0.2.4'): {
+        "checksum": '9e2ccdc3c6bf4d4a094e031b63fadd08d8e42abd259940eb8aa5fdc09d4bf9be',
+        "repository": 'https://github.com/danieldulaney/windows-permissions-rs',
+        "revision": '8740e4efbd88dd01046ad9c169894f3a52eb6e2c',
+        "source_path": 'Cargo.toml',
+        "license_expression": 'MIT',
+        "selected_license": 'MIT',
+        "license_evidence": 'Cargo.toml MIT declaration at immutable VCS revision',
+    },
+    ('windows-sys', '0.52.0'): {
+        "checksum": '282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": '3a605cba064b26f2a198ac58085f8c8836f47c38',
+        "source_path": 'crates/libs/sys',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows-targets', '0.52.6'): {
+        "checksum": '9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/libs/targets',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_aarch64_gnullvm', '0.52.6'): {
+        "checksum": '32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/aarch64_gnullvm',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_aarch64_msvc', '0.52.6'): {
+        "checksum": '09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/aarch64_msvc',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_i686_gnu', '0.52.6'): {
+        "checksum": '8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/i686_gnu',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_i686_gnullvm', '0.52.6'): {
+        "checksum": '0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/i686_gnullvm',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_i686_msvc', '0.52.6'): {
+        "checksum": '240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/i686_msvc',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_x86_64_gnu', '0.52.6'): {
+        "checksum": '147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/x86_64_gnu',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_x86_64_gnullvm', '0.52.6'): {
+        "checksum": '24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/x86_64_gnullvm',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
+    },
+    ('windows_x86_64_msvc', '0.52.6'): {
+        "checksum": '589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec',
+        "repository": 'https://github.com/microsoft/windows-rs',
+        "revision": 'db06b51c2ebb743efb544d40e3064efa49f28d38',
+        "source_path": 'crates/targets/x86_64_msvc',
+        "license_expression": 'MIT OR Apache-2.0',
+        "selected_license": 'MIT',
+        "license_evidence": 'published LICENSE-MIT at immutable VCS revision',
     },
     ('winsafe', '0.0.29'): {
         "checksum": '9ef0ffc427f045c0cc9ebffd6f4f91153dcd2a1547b5c3c29ee3f541e16e95c6',
@@ -472,7 +645,7 @@ def check_registry(
             raise ClosureError(f"registry: repository drift for {identity[0]} {identity[1]}")
         if entry.get("source_revision") != selected["revision"]:
             raise ClosureError(f"registry: revision drift for {identity[0]} {identity[1]}")
-        if entry.get("source_license") != "MIT":
+        if entry.get("source_license") != selected["selected_license"]:
             raise ClosureError(f"registry: Cargo selected-license drift for {identity[0]} {identity[1]}")
         if package.get("checksum") != external[identity].get("checksum"):
             raise ClosureError(f"registry: checksum does not match lock for {identity[0]} {identity[1]}")
