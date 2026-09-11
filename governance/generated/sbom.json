@@ -21,6 +21,25 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-aes-0.9.3",
+      "kind": "dependency",
+      "name": "Cargo: aes 0.9.3",
+      "package": {
+        "checksum": "35f0f96ce78e38c3dc6d8948aa8163d06385be74000f3c7a95bf1eef35d3ea32",
+        "ecosystem": "cargo",
+        "name": "aes",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.9.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "aes"
+      ],
+      "source_repository": "https://github.com/RustCrypto/block-ciphers",
+      "source_revision": "c1534361e7549e29a16c3505f45a04c92d26b62a"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-aligned-0.4.3",
       "kind": "dependency",
       "name": "Cargo: aligned 0.4.3",
@@ -97,6 +116,66 @@
       ],
       "source_repository": "https://github.com/japaric/as-slice",
       "source_revision": "c3687342bc9f3c9c202676a5d2e17288ff979c90"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-async-broadcast-0.7.2",
+      "kind": "dependency",
+      "name": "Cargo: async-broadcast 0.7.2",
+      "package": {
+        "checksum": "435a87a52755b8f27fcf321ac4f04b2802e337c8c4872923137471ec39c37532",
+        "ecosystem": "cargo",
+        "name": "async-broadcast",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.7.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/smol-rs/async-broadcast",
+      "source_revision": "f7a99132b7e12cb03945013df78b93a35ceafbc1"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-async-recursion-1.1.1",
+      "kind": "dependency",
+      "name": "Cargo: async-recursion 1.1.1",
+      "package": {
+        "checksum": "3b43422f69d8ff38f95f1b2bb76517c91589a924d1559a0e935d7c8ce0274c11",
+        "ecosystem": "cargo",
+        "name": "async-recursion",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.1.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dcchut/async-recursion",
+      "source_revision": "3254b12e384f7688f9a1b95c54cfa07fe82baee7"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-async-trait-0.1.92",
+      "kind": "dependency",
+      "name": "Cargo: async-trait 0.1.92",
+      "package": {
+        "checksum": "82f6aeea286b8eb4dd3431a1be1b59d290ace00f5bfd8e2a159bc2a05e2c1667",
+        "ecosystem": "cargo",
+        "name": "async-trait",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.92"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/async-trait",
+      "source_revision": "82e7e9edd60f622294373a23c0ce9c0077ad0263"
     },
     {
       "adoption_mode": "depend",
@@ -214,6 +293,84 @@
       ],
       "source_repository": "https://github.com/RustCrypto/utils",
       "source_revision": "cbd0963c685df025c42bed31f78c50d1bada3805"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-block-padding-0.4.2",
+      "kind": "dependency",
+      "name": "Cargo: block-padding 0.4.2",
+      "package": {
+        "checksum": "710f1dd022ef4e93f8a438b4ba958de7f64308434fa6a87104481645cc30068b",
+        "ecosystem": "cargo",
+        "name": "block-padding",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "block-padding"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "6c8370f218505d3a767ace760ddef2c9b9466214"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-bumpalo-3.20.3",
+      "kind": "dependency",
+      "name": "Cargo: bumpalo 3.20.3",
+      "package": {
+        "checksum": "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649",
+        "ecosystem": "cargo",
+        "name": "bumpalo",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "3.20.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/fitzgen/bumpalo",
+      "source_revision": "84654ace6be4444da3ff102a0a0af3b38c4df4fb"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-bytes-1.12.1",
+      "kind": "dependency",
+      "name": "Cargo: bytes 1.12.1",
+      "package": {
+        "checksum": "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04",
+        "ecosystem": "cargo",
+        "name": "bytes",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.12.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/tokio-rs/bytes",
+      "source_revision": "76c0fbb54ed4336caf9d2311658a2f4a5627c21d"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-cbc-0.2.1",
+      "kind": "dependency",
+      "name": "Cargo: cbc 0.2.1",
+      "package": {
+        "checksum": "ce2dc9ee5f88d11e0beb842c88b33c8a5cf0d1329c4b19494af42b07dbfe8896",
+        "ecosystem": "cargo",
+        "name": "cbc",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cbc"
+      ],
+      "source_repository": "https://github.com/RustCrypto/block-modes",
+      "source_revision": "2fce5053a789840aa401148b76e01f39fe37de6a"
     },
     {
       "adoption_mode": "depend",
@@ -353,6 +510,25 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-const-oid-0.10.2",
+      "kind": "dependency",
+      "name": "Cargo: const-oid 0.10.2",
+      "package": {
+        "checksum": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c",
+        "ecosystem": "cargo",
+        "name": "const-oid",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.10.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "const-oid"
+      ],
+      "source_repository": "https://github.com/RustCrypto/formats",
+      "source_revision": "385ef739bcec785472c7c971c57f26f87caca3b8"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-core-foundation-0.10.1",
       "kind": "dependency",
       "name": "Cargo: core-foundation 0.10.1",
@@ -388,6 +564,25 @@
       ],
       "source_repository": "https://github.com/servo/core-foundation-rs",
       "source_revision": "652bab0a62d87df8a974ffad2ad9f7be218a8b56"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-cpubits-0.1.1",
+      "kind": "dependency",
+      "name": "Cargo: cpubits 0.1.1",
+      "package": {
+        "checksum": "15b85f9c39137c3a891689859392b1bd49812121d0d61c9caf00d46ed5ce06ae",
+        "ecosystem": "cargo",
+        "name": "cpubits",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "cpubits"
+      ],
+      "source_repository": "https://github.com/RustCrypto/utils",
+      "source_revision": "bff92a8c33629ae8e9d1407f3b7fea604992dd0f"
     },
     {
       "adoption_mode": "depend",
@@ -487,6 +682,145 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-endi-1.1.1",
+      "kind": "dependency",
+      "name": "Cargo: endi 1.1.1",
+      "package": {
+        "checksum": "66b7e2430c6dff6a955451e2cfc438f09cea1965a9d6f87f7e3b90decc014099",
+        "ecosystem": "cargo",
+        "name": "endi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.1.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/zeenix/endi",
+      "source_revision": "226224559725a9ef0e0687b3a54eca9ad6a5a6c7"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-enumflags2-0.7.12",
+      "kind": "dependency",
+      "name": "Cargo: enumflags2 0.7.12",
+      "package": {
+        "checksum": "1027f7680c853e056ebcec683615fb6fbbc07dbaa13b4d5d9442b146ded4ecef",
+        "ecosystem": "cargo",
+        "name": "enumflags2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.7.12"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/meithecatte/enumflags2",
+      "source_revision": "332c37f47577e5f6b7104419da7e761963032086"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-enumflags2_derive-0.7.12",
+      "kind": "dependency",
+      "name": "Cargo: enumflags2_derive 0.7.12",
+      "package": {
+        "checksum": "67c78a4d8fdf9953a5c9d458f9efe940fd97a0cab0941c075a813ac594733827",
+        "ecosystem": "cargo",
+        "name": "enumflags2_derive",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.7.12"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "enumflags_derive"
+      ],
+      "source_repository": "https://github.com/meithecatte/enumflags2",
+      "source_revision": "332c37f47577e5f6b7104419da7e761963032086"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-equivalent-1.0.2",
+      "kind": "dependency",
+      "name": "Cargo: equivalent 1.0.2",
+      "package": {
+        "checksum": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f",
+        "ecosystem": "cargo",
+        "name": "equivalent",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/indexmap-rs/equivalent",
+      "source_revision": "44cdd44f8b8ebb5f9ae096c7550a5e74ffb7d6ae"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-errno-0.3.14",
+      "kind": "dependency",
+      "name": "Cargo: errno 0.3.14",
+      "package": {
+        "checksum": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb",
+        "ecosystem": "cargo",
+        "name": "errno",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.14"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/lambda-fairy/rust-errno",
+      "source_revision": "ffc03bfb9eb491013567115e6eea560948cd9e52"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-event-listener-5.4.2",
+      "kind": "dependency",
+      "name": "Cargo: event-listener 5.4.2",
+      "package": {
+        "checksum": "5a23add41df1562121a9393cb065eab5146a1242410f23a644851e90cfd669d2",
+        "ecosystem": "cargo",
+        "name": "event-listener",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "5.4.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/smol-rs/event-listener",
+      "source_revision": "77004ac77dcef7884bf71a99c276a50f83a7fa4e"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-event-listener-strategy-0.5.4",
+      "kind": "dependency",
+      "name": "Cargo: event-listener-strategy 0.5.4",
+      "package": {
+        "checksum": "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93",
+        "ecosystem": "cargo",
+        "name": "event-listener-strategy",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.5.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/smol-rs/event-listener-strategy",
+      "source_revision": "f533c437e8a6561e9b625c3ee036a8ea7d19375c"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-fallible-iterator-0.3.0",
       "kind": "dependency",
       "name": "Cargo: fallible-iterator 0.3.0",
@@ -524,6 +858,26 @@
       ],
       "source_repository": "https://github.com/sfackler/fallible-streaming-iterator",
       "source_revision": "9217bc5e381b54b4ef4c38959488a5dc993b7b81"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-fastrand-2.5.0",
+      "kind": "dependency",
+      "name": "Cargo: fastrand 2.5.0",
+      "package": {
+        "checksum": "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223",
+        "ecosystem": "cargo",
+        "name": "fastrand",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.5.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/smol-rs/fastrand",
+      "source_revision": "7a1cc2c69ebde6cb3442809213db3fe19a2cb0ba"
     },
     {
       "adoption_mode": "depend",
@@ -586,6 +940,121 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-futures-core-0.3.34",
+      "kind": "dependency",
+      "name": "Cargo: futures-core 0.3.34",
+      "package": {
+        "checksum": "92d699e522242e69e3003b94ecc1f960f3a5e015aa7c5d7486e65ad01dd94f5e",
+        "ecosystem": "cargo",
+        "name": "futures-core",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "futures-core"
+      ],
+      "source_repository": "https://github.com/rust-lang/futures-rs",
+      "source_revision": "705e6b5c0f06535b1aac1cb1989a172b3d45be8c"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-futures-io-0.3.34",
+      "kind": "dependency",
+      "name": "Cargo: futures-io 0.3.34",
+      "package": {
+        "checksum": "53c0fa8157de1303bfffdaa1cc2a673bfffb60102f76b0ef4441659124373fed",
+        "ecosystem": "cargo",
+        "name": "futures-io",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "futures-io"
+      ],
+      "source_repository": "https://github.com/rust-lang/futures-rs",
+      "source_revision": "705e6b5c0f06535b1aac1cb1989a172b3d45be8c"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-futures-lite-2.6.1",
+      "kind": "dependency",
+      "name": "Cargo: futures-lite 2.6.1",
+      "package": {
+        "checksum": "f78e10609fe0e0b3f4157ffab1876319b5b0db102a2c60dc4626306dc46b44ad",
+        "ecosystem": "cargo",
+        "name": "futures-lite",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.6.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/smol-rs/futures-lite",
+      "source_revision": "226ce18976d8714d6bd9700b61dcc81d7200bc9a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-futures-macro-0.3.34",
+      "kind": "dependency",
+      "name": "Cargo: futures-macro 0.3.34",
+      "package": {
+        "checksum": "9fb9654ba8355388abeb8dcb4fc62f511300867002afc858860463bdd9fe0c44",
+        "ecosystem": "cargo",
+        "name": "futures-macro",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "futures-macro"
+      ],
+      "source_repository": "https://github.com/rust-lang/futures-rs",
+      "source_revision": "705e6b5c0f06535b1aac1cb1989a172b3d45be8c"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-futures-task-0.3.34",
+      "kind": "dependency",
+      "name": "Cargo: futures-task 0.3.34",
+      "package": {
+        "checksum": "cd417de3d1d015fc3bfd2b1ea46dfc7bab72ef86f1cc7cc9c78e728b34a6d1fd",
+        "ecosystem": "cargo",
+        "name": "futures-task",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "futures-task"
+      ],
+      "source_repository": "https://github.com/rust-lang/futures-rs",
+      "source_revision": "705e6b5c0f06535b1aac1cb1989a172b3d45be8c"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-futures-util-0.3.34",
+      "kind": "dependency",
+      "name": "Cargo: futures-util 0.3.34",
+      "package": {
+        "checksum": "0d50a92467f8ba5dd6e3ee5d4bd04d73ab2e4e1c44474a0674821dfce14b79bc",
+        "ecosystem": "cargo",
+        "name": "futures-util",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.34"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "futures-util"
+      ],
+      "source_repository": "https://github.com/rust-lang/futures-rs",
+      "source_revision": "705e6b5c0f06535b1aac1cb1989a172b3d45be8c"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-getrandom-0.4.3",
       "kind": "dependency",
       "name": "Cargo: getrandom 0.4.3",
@@ -603,6 +1072,46 @@
       ],
       "source_repository": "https://github.com/rust-random/getrandom",
       "source_revision": "5e7cd5733536844a9856dc7259bd4696bbe5e3ae"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-hashbrown-0.17.1",
+      "kind": "dependency",
+      "name": "Cargo: hashbrown 0.17.1",
+      "package": {
+        "checksum": "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a",
+        "ecosystem": "cargo",
+        "name": "hashbrown",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.17.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/hashbrown",
+      "source_revision": "c62a63a61b7caf2de8f9ecb7b06a66b0ab6bdf3d"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-hex-0.4.3",
+      "kind": "dependency",
+      "name": "Cargo: hex 0.4.3",
+      "package": {
+        "checksum": "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70",
+        "ecosystem": "cargo",
+        "name": "hex",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/KokaKiwi/rust-hex",
+      "source_revision": "b2b4370b5bf021b98ee7adc92233e8de3f2de792"
     },
     {
       "adoption_mode": "depend",
@@ -664,6 +1173,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-indexmap-2.14.2",
+      "kind": "dependency",
+      "name": "Cargo: indexmap 2.14.2",
+      "package": {
+        "checksum": "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855",
+        "ecosystem": "cargo",
+        "name": "indexmap",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.14.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/indexmap-rs/indexmap",
+      "source_revision": "41a870887c4c77adf665886e63df08f406bfe37a"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-inout-0.2.2",
       "kind": "dependency",
       "name": "Cargo: inout 0.2.2",
@@ -680,6 +1209,25 @@
       ],
       "source_repository": "https://github.com/RustCrypto/utils",
       "source_revision": "2d5eac49c253b19a064b33fc1f9ca7839732cb30"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-js-sys-0.3.105",
+      "kind": "dependency",
+      "name": "Cargo: js-sys 0.3.105",
+      "package": {
+        "checksum": "ce57d20d1ea864ce2ac172ab472d409214f4fd359f0b2a2775abdf522e2af99e",
+        "ecosystem": "cargo",
+        "name": "js-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.3.105"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/js-sys"
+      ],
+      "source_repository": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys",
+      "source_revision": "246946fddd62163e778c3a1f6afe7264347adceb"
     },
     {
       "adoption_mode": "depend",
@@ -756,6 +1304,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-linux-raw-sys-0.12.1",
+      "kind": "dependency",
+      "name": "Cargo: linux-raw-sys 0.12.1",
+      "package": {
+        "checksum": "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53",
+        "ecosystem": "cargo",
+        "name": "linux-raw-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.12.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/sunfishcode/linux-raw-sys",
+      "source_revision": "0e2918cf3e366d9c923d4ca05f169b49d826db56"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-log-0.4.34",
       "kind": "dependency",
       "name": "Cargo: log 0.4.34",
@@ -773,6 +1341,26 @@
       ],
       "source_repository": "https://github.com/rust-lang/log",
       "source_revision": "8034743dd9d7f7583bd9a670271483d176130911"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-memchr-2.8.3",
+      "kind": "dependency",
+      "name": "Cargo: memchr 2.8.3",
+      "package": {
+        "checksum": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98",
+        "ecosystem": "cargo",
+        "name": "memchr",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.8.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/BurntSushi/memchr",
+      "source_revision": "5fdb40c054e1fff359a2f7bdf7f87a13b34b465d"
     },
     {
       "adoption_mode": "depend",
@@ -796,6 +1384,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-mio-1.2.3",
+      "kind": "dependency",
+      "name": "Cargo: mio 1.2.3",
+      "package": {
+        "checksum": "4b18443e9c262bfe8fa82f51666e2642c53393f7e5c27b3e1aeab922cff5b9d8",
+        "ecosystem": "cargo",
+        "name": "mio",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.2.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/tokio-rs/mio",
+      "source_revision": "da425f909dd6b86d887da9eaefcb158099b5b165"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-nix-0.29.0",
       "kind": "dependency",
       "name": "Cargo: nix 0.29.0",
@@ -813,6 +1421,166 @@
       ],
       "source_repository": "https://github.com/nix-rust/nix",
       "source_revision": "1dad4d8d04a2cd187fae87cb91c4f4e95ff0decd"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-num-0.4.3",
+      "kind": "dependency",
+      "name": "Cargo: num 0.4.3",
+      "package": {
+        "checksum": "35bd024e8b2ff75562e5f34e7f4905839deb4b22955ef5e73d2fea1b9813cb23",
+        "ecosystem": "cargo",
+        "name": "num",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.3"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-num/num",
+      "source_revision": "1fec8524c4eaa27cbdf4bb3eb46782d2ff40b2ed"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-num-bigint-0.4.8",
+      "kind": "dependency",
+      "name": "Cargo: num-bigint 0.4.8",
+      "package": {
+        "checksum": "c89e69e7e0f03bea5ef08013795c25018e101932225a656383bd384495ecc367",
+        "ecosystem": "cargo",
+        "name": "num-bigint",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.8"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-num/num-bigint",
+      "source_revision": "65330056d6c00def4c6cda78c87453f4c2a76913"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-num-complex-0.4.6",
+      "kind": "dependency",
+      "name": "Cargo: num-complex 0.4.6",
+      "package": {
+        "checksum": "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495",
+        "ecosystem": "cargo",
+        "name": "num-complex",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.6"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-num/num-complex",
+      "source_revision": "91fdc06356c0c868cb88b5a180859023c57e6e50"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-num-integer-0.1.47",
+      "kind": "dependency",
+      "name": "Cargo: num-integer 0.1.47",
+      "package": {
+        "checksum": "7ce2d95d4b3734dc35aa2f45e1aa22cd416814592a4f9d9205e11affd5b8e10b",
+        "ecosystem": "cargo",
+        "name": "num-integer",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.47"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-num/num-integer",
+      "source_revision": "765fd9b3eb9397471d41b9f613e530f6d9d6383f"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-num-iter-0.1.46",
+      "kind": "dependency",
+      "name": "Cargo: num-iter 0.1.46",
+      "package": {
+        "checksum": "c92800bd69a1eac91786bcfe9da64a897eb72911b8dc3095decbd07429e8048b",
+        "ecosystem": "cargo",
+        "name": "num-iter",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.46"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-num/num-iter",
+      "source_revision": "6bfec7678bae3f4a38d1eeeab20532ac0bae7c9c"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-num-rational-0.4.2",
+      "kind": "dependency",
+      "name": "Cargo: num-rational 0.4.2",
+      "package": {
+        "checksum": "f83d14da390562dca69fc84082e73e548e1ad308d24accdedd2720017cb37824",
+        "ecosystem": "cargo",
+        "name": "num-rational",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-num/num-rational",
+      "source_revision": "4d55ad22ac86ebbc4cb45d79a956e4a1f7af57d1"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-num-traits-0.2.19",
+      "kind": "dependency",
+      "name": "Cargo: num-traits 0.2.19",
+      "package": {
+        "checksum": "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841",
+        "ecosystem": "cargo",
+        "name": "num-traits",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.19"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-num/num-traits",
+      "source_revision": "7ec3d41d39b28190ec1d42db38021107b3951f3a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-once_cell-1.21.4",
+      "kind": "dependency",
+      "name": "Cargo: once_cell 1.21.4",
+      "package": {
+        "checksum": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50",
+        "ecosystem": "cargo",
+        "name": "once_cell",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.21.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/matklad/once_cell",
+      "source_revision": "80fe900b21f6d76c1a2ed74d3343e8a3a88c46d0"
     },
     {
       "adoption_mode": "depend",
@@ -876,6 +1644,46 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-ordered-stream-0.2.0",
+      "kind": "dependency",
+      "name": "Cargo: ordered-stream 0.2.0",
+      "package": {
+        "checksum": "9aa2b01e1d916879f73a53d01d1d6cee68adbb31d6d9177a8cfce093cced1d50",
+        "ecosystem": "cargo",
+        "name": "ordered-stream",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/danieldg/ordered-stream",
+      "source_revision": "5c58ca1a3d680c2406f0c6a1520c3476c27048aa"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-parking-2.2.1",
+      "kind": "dependency",
+      "name": "Cargo: parking 2.2.1",
+      "package": {
+        "checksum": "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba",
+        "ecosystem": "cargo",
+        "name": "parking",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.2.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/smol-rs/parking",
+      "source_revision": "0ece32dbfd6cd1bc1510ede6ed56acb772edf83f"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-password-hash-0.6.1",
       "kind": "dependency",
       "name": "Cargo: password-hash 0.6.1",
@@ -911,6 +1719,26 @@
       ],
       "source_repository": "https://github.com/RustCrypto/formats",
       "source_revision": "02a43929d75c8f7a515dcc240648c26d2fe4ee5f"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-pin-project-lite-0.2.17",
+      "kind": "dependency",
+      "name": "Cargo: pin-project-lite 0.2.17",
+      "package": {
+        "checksum": "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd",
+        "ecosystem": "cargo",
+        "name": "pin-project-lite",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.17"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/taiki-e/pin-project-lite",
+      "source_revision": "3bdf763446aa78f90e3bdac1ef583e014832ab4c"
     },
     {
       "adoption_mode": "depend",
@@ -950,6 +1778,66 @@
       ],
       "source_repository": "https://github.com/RustCrypto/universal-hashes",
       "source_revision": "4f5691919d96ec0089ecca4492be7f1848c78fdf"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-proc-macro-crate-3.5.0",
+      "kind": "dependency",
+      "name": "Cargo: proc-macro-crate 3.5.0",
+      "package": {
+        "checksum": "e67ba7e9b2b56446f1d419b1d807906278ffa1a658a8a5d8a39dcb1f5a78614f",
+        "ecosystem": "cargo",
+        "name": "proc-macro-crate",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "3.5.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/bkchr/proc-macro-crate",
+      "source_revision": "8f3d8b04539f732e09c07907f138a248c8d0eed9"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-proc-macro2-1.0.107",
+      "kind": "dependency",
+      "name": "Cargo: proc-macro2 1.0.107",
+      "package": {
+        "checksum": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9",
+        "ecosystem": "cargo",
+        "name": "proc-macro2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.107"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/proc-macro2",
+      "source_revision": "ed8a5497669cd63db33bf24646f261b012bbbc4a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-quote-1.0.47",
+      "kind": "dependency",
+      "name": "Cargo: quote 1.0.47",
+      "package": {
+        "checksum": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001",
+        "ecosystem": "cargo",
+        "name": "quote",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.47"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/quote",
+      "source_revision": "723dcb47d3f0ddc896e17287c8a8d3f2ea2317d5"
     },
     {
       "adoption_mode": "depend",
@@ -1013,6 +1901,66 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-rustix-1.1.4",
+      "kind": "dependency",
+      "name": "Cargo: rustix 1.1.4",
+      "package": {
+        "checksum": "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190",
+        "ecosystem": "cargo",
+        "name": "rustix",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.1.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/bytecodealliance/rustix",
+      "source_revision": "c4caf5caaa7e93828a2e4a4cdba1dd0171e45717"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-rustversion-1.0.23",
+      "kind": "dependency",
+      "name": "Cargo: rustversion 1.0.23",
+      "package": {
+        "checksum": "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f",
+        "ecosystem": "cargo",
+        "name": "rustversion",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.23"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/rustversion",
+      "source_revision": "3a7c76605450b9a7299c6502a421909de9126a59"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-secret-service-5.2.0",
+      "kind": "dependency",
+      "name": "Cargo: secret-service 5.2.0",
+      "package": {
+        "checksum": "5107b24b91445dd2aa449a258a1807b63240942157292354dc5bfdbeb8bc6db8",
+        "ecosystem": "cargo",
+        "name": "secret-service",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "5.2.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/hwchen/secret-service-rs.git",
+      "source_revision": "1fe4fbe405b152bc969deb5de417847e1e4e4c7b"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-security-framework-3.7.0",
       "kind": "dependency",
       "name": "Cargo: security-framework 3.7.0",
@@ -1071,6 +2019,83 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-serde-1.0.229",
+      "kind": "dependency",
+      "name": "Cargo: serde 1.0.229",
+      "package": {
+        "checksum": "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba",
+        "ecosystem": "cargo",
+        "name": "serde",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.229"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "serde"
+      ],
+      "source_repository": "https://github.com/serde-rs/serde",
+      "source_revision": "7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-serde_core-1.0.229",
+      "kind": "dependency",
+      "name": "Cargo: serde_core 1.0.229",
+      "package": {
+        "checksum": "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48",
+        "ecosystem": "cargo",
+        "name": "serde_core",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.229"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "serde_core"
+      ],
+      "source_repository": "https://github.com/serde-rs/serde",
+      "source_revision": "7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-serde_derive-1.0.229",
+      "kind": "dependency",
+      "name": "Cargo: serde_derive 1.0.229",
+      "package": {
+        "checksum": "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348",
+        "ecosystem": "cargo",
+        "name": "serde_derive",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.229"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "serde_derive"
+      ],
+      "source_repository": "https://github.com/serde-rs/serde",
+      "source_revision": "7fc3b4c30c94f73a96ebd1553f2b090d928fc3a8"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-serde_repr-0.1.21",
+      "kind": "dependency",
+      "name": "Cargo: serde_repr 0.1.21",
+      "package": {
+        "checksum": "8d3b1629de253c70a0508c3899572da79ca359fdab27c7920ff00406df418906",
+        "ecosystem": "cargo",
+        "name": "serde_repr",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.21"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/serde-repr",
+      "source_revision": "205ce23cf7c55981be8c1e02ac87695c57a13ee0"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-sha2-0.11.0",
       "kind": "dependency",
       "name": "Cargo: sha2 0.11.0",
@@ -1110,6 +2135,45 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-signal-hook-registry-1.4.8",
+      "kind": "dependency",
+      "name": "Cargo: signal-hook-registry 1.4.8",
+      "package": {
+        "checksum": "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b",
+        "ecosystem": "cargo",
+        "name": "signal-hook-registry",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.4.8"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "signal-hook-registry"
+      ],
+      "source_repository": "https://github.com/vorner/signal-hook",
+      "source_revision": "4d5fd6a6663be38e70774e4ac733d65916c70951"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-slab-0.4.12",
+      "kind": "dependency",
+      "name": "Cargo: slab 0.4.12",
+      "package": {
+        "checksum": "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5",
+        "ecosystem": "cargo",
+        "name": "slab",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.4.12"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/tokio-rs/slab",
+      "source_revision": "a1e4346070a48c936d808de75191dee5d01e433c"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-smallvec-1.16.0",
       "kind": "dependency",
       "name": "Cargo: smallvec 1.16.0",
@@ -1127,6 +2191,26 @@
       ],
       "source_repository": "https://github.com/servo/rust-smallvec",
       "source_revision": "aa22a8ff83108228b6d941b83fc91399267d72c9"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-socket2-0.6.5",
+      "kind": "dependency",
+      "name": "Cargo: socket2 0.6.5",
+      "package": {
+        "checksum": "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4",
+        "ecosystem": "cargo",
+        "name": "socket2",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.6.5"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/rust-lang/socket2",
+      "source_revision": "239dd83a4ced08e514d2c38942aab99791119f0d"
     },
     {
       "adoption_mode": "depend",
@@ -1150,6 +2234,199 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-syn-2.0.119",
+      "kind": "dependency",
+      "name": "Cargo: syn 2.0.119",
+      "package": {
+        "checksum": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297",
+        "ecosystem": "cargo",
+        "name": "syn",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "2.0.119"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/syn",
+      "source_revision": "3295f9e9841785ac88a5e558c884854d5fb7d67f"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-syn-3.0.5",
+      "kind": "dependency",
+      "name": "Cargo: syn 3.0.5",
+      "package": {
+        "checksum": "12df2e0110f65b775f769bb17ef989067a1d931b2eb822bd4346631eeada89f9",
+        "ecosystem": "cargo",
+        "name": "syn",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "3.0.5"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/syn",
+      "source_revision": "e0ad92d68b588c964e82bb74c3bd3e1e99f97ceb"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-tempfile-3.27.0",
+      "kind": "dependency",
+      "name": "Cargo: tempfile 3.27.0",
+      "package": {
+        "checksum": "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd",
+        "ecosystem": "cargo",
+        "name": "tempfile",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "3.27.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/Stebalien/tempfile",
+      "source_revision": "5c8fa12eb584931b4f1bccfde87eb72fbfa7dc61"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-tokio-1.53.1",
+      "kind": "dependency",
+      "name": "Cargo: tokio 1.53.1",
+      "package": {
+        "checksum": "202caea871b69668250d242070849eb495be178ed697a3e98aebce5bc81a0bed",
+        "ecosystem": "cargo",
+        "name": "tokio",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.53.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "tokio"
+      ],
+      "source_repository": "https://github.com/tokio-rs/tokio",
+      "source_revision": "75fef53d0a8590c2d1dbb63672aa7b7d1ef51155"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-toml_datetime-1.1.1-spec-1.1.0",
+      "kind": "dependency",
+      "name": "Cargo: toml_datetime 1.1.1+spec-1.1.0",
+      "package": {
+        "checksum": "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7",
+        "ecosystem": "cargo",
+        "name": "toml_datetime",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.1.1+spec-1.1.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/toml_datetime"
+      ],
+      "source_repository": "https://github.com/toml-rs/toml",
+      "source_revision": "9db8aad6eafbc62f6b9d1950117649cc41eaf695"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-toml_edit-0.25.15-spec-1.1.0",
+      "kind": "dependency",
+      "name": "Cargo: toml_edit 0.25.15+spec-1.1.0",
+      "package": {
+        "checksum": "1340ea94a5856333492c9064b02c778b191dd2c853778d9609debdcdfea3a614",
+        "ecosystem": "cargo",
+        "name": "toml_edit",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.25.15+spec-1.1.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/toml_edit"
+      ],
+      "source_repository": "https://github.com/toml-rs/toml",
+      "source_revision": "8e1d5a85c361ac012957441bb4788ae82f5dc9c8"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-toml_parser-1.1.3-spec-1.1.0",
+      "kind": "dependency",
+      "name": "Cargo: toml_parser 1.1.3+spec-1.1.0",
+      "package": {
+        "checksum": "1d38ac1cf9b95face32296c0a3ede1fdc270627c9d9c02a7274dd6d960dc4d56",
+        "ecosystem": "cargo",
+        "name": "toml_parser",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.1.3+spec-1.1.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/toml_parser"
+      ],
+      "source_repository": "https://github.com/toml-rs/toml",
+      "source_revision": "4ec099fed591a172f82007cb2f9d605985bbecee"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-tracing-0.1.44",
+      "kind": "dependency",
+      "name": "Cargo: tracing 0.1.44",
+      "package": {
+        "checksum": "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100",
+        "ecosystem": "cargo",
+        "name": "tracing",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.44"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "tracing"
+      ],
+      "source_repository": "https://github.com/tokio-rs/tracing",
+      "source_revision": "2d55f6faf9be83e7e4634129fb96813241aac2b8"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-tracing-attributes-0.1.31",
+      "kind": "dependency",
+      "name": "Cargo: tracing-attributes 0.1.31",
+      "package": {
+        "checksum": "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da",
+        "ecosystem": "cargo",
+        "name": "tracing-attributes",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.31"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "tracing-attributes"
+      ],
+      "source_repository": "https://github.com/tokio-rs/tracing",
+      "source_revision": "55086231ec4aaeffcaab9932e696f40278f06bd1"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-tracing-core-0.1.36",
+      "kind": "dependency",
+      "name": "Cargo: tracing-core 0.1.36",
+      "package": {
+        "checksum": "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a",
+        "ecosystem": "cargo",
+        "name": "tracing-core",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.1.36"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "tracing-core"
+      ],
+      "source_repository": "https://github.com/tokio-rs/tracing",
+      "source_revision": "10a9e838a35e6ded79d66af246be2ee05417136d"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-typenum-1.20.1",
       "kind": "dependency",
       "name": "Cargo: typenum 1.20.1",
@@ -1167,6 +2444,46 @@
       ],
       "source_repository": "https://github.com/paholg/typenum",
       "source_revision": "0db9a0f731981f29266b63586c29fa07e4477b1a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-uds_windows-1.2.1",
+      "kind": "dependency",
+      "name": "Cargo: uds_windows 1.2.1",
+      "package": {
+        "checksum": "f2f6fb2847f6742cd76af783a2a2c49e9375d0a111c7bef6f71cd9e738c72d6e",
+        "ecosystem": "cargo",
+        "name": "uds_windows",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.2.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/haraldh/rust_uds_windows",
+      "source_revision": "0b3a6ff289a0426f96bbc0310505b8531469c896"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-unicode-ident-1.0.24",
+      "kind": "dependency",
+      "name": "Cargo: unicode-ident 1.0.24",
+      "package": {
+        "checksum": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75",
+        "ecosystem": "cargo",
+        "name": "unicode-ident",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.24"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/dtolnay/unicode-ident",
+      "source_revision": "5b54a632702b5744a1c40ea01c127c0ac0498172"
     },
     {
       "adoption_mode": "depend",
@@ -1189,6 +2506,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-uuid-1.26.1",
+      "kind": "dependency",
+      "name": "Cargo: uuid 1.26.1",
+      "package": {
+        "checksum": "2ef6dac1e96601b4fb3acccccff2139741fcb757cb9a36089bf5be91cfb285ce",
+        "ecosystem": "cargo",
+        "name": "uuid",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.26.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/uuid-rs/uuid",
+      "source_revision": "9f927126c89892ddfed6cd2f92df16852f3f9aa6"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-vcpkg-0.2.15",
       "kind": "dependency",
       "name": "Cargo: vcpkg 0.2.15",
@@ -1206,6 +2543,103 @@
       ],
       "source_repository": "https://github.com/mcgoo/vcpkg-rs",
       "source_revision": "e7d37e095ef2aa85c80242aa3850d442832b7b54"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-wasi-0.11.1-wasi-snapshot-preview1",
+      "kind": "dependency",
+      "name": "Cargo: wasi 0.11.1+wasi-snapshot-preview1",
+      "package": {
+        "checksum": "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b",
+        "ecosystem": "cargo",
+        "name": "wasi",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.11.1+wasi-snapshot-preview1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/bytecodealliance/wasi",
+      "source_revision": "f136a81add9706ed0b36ac3c4b0da943de8e690d"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-wasm-bindgen-0.2.128",
+      "kind": "dependency",
+      "name": "Cargo: wasm-bindgen 0.2.128",
+      "package": {
+        "checksum": "aecb87a33d3b0c5e3b7aa46336eaf486cffafbd281b195e4c8b80d50df2351bf",
+        "ecosystem": "cargo",
+        "name": "wasm-bindgen",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.128"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/wasm-bindgen/wasm-bindgen",
+      "source_revision": "246946fddd62163e778c3a1f6afe7264347adceb"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-wasm-bindgen-macro-0.2.128",
+      "kind": "dependency",
+      "name": "Cargo: wasm-bindgen-macro 0.2.128",
+      "package": {
+        "checksum": "a690d511e3c1a8b3a55e33511e3c2c00c78415cd23650f32b808627f5696b9ed",
+        "ecosystem": "cargo",
+        "name": "wasm-bindgen-macro",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.128"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/macro"
+      ],
+      "source_repository": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro",
+      "source_revision": "246946fddd62163e778c3a1f6afe7264347adceb"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-wasm-bindgen-macro-support-0.2.128",
+      "kind": "dependency",
+      "name": "Cargo: wasm-bindgen-macro-support 0.2.128",
+      "package": {
+        "checksum": "411e4887f0071ef2d2164a9d5fdf2d20efbef78fccd3a78b0c10a1dc5295e48a",
+        "ecosystem": "cargo",
+        "name": "wasm-bindgen-macro-support",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.128"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/macro-support"
+      ],
+      "source_repository": "https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support",
+      "source_revision": "246946fddd62163e778c3a1f6afe7264347adceb"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-wasm-bindgen-shared-0.2.128",
+      "kind": "dependency",
+      "name": "Cargo: wasm-bindgen-shared 0.2.128",
+      "package": {
+        "checksum": "81941cd78d0c92026c33e5e01312845a4cb1e9af3407f9134b100dd03144103e",
+        "ecosystem": "cargo",
+        "name": "wasm-bindgen-shared",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.128"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/shared"
+      ],
+      "source_repository": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared",
+      "source_revision": "246946fddd62163e778c3a1f6afe7264347adceb"
     },
     {
       "adoption_mode": "depend",
@@ -1327,6 +2761,25 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-windows-link-0.2.1",
+      "kind": "dependency",
+      "name": "Cargo: windows-link 0.2.1",
+      "package": {
+        "checksum": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5",
+        "ecosystem": "cargo",
+        "name": "windows-link",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.2.1"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/libs/link"
+      ],
+      "source_repository": "https://github.com/microsoft/windows-rs",
+      "source_revision": "d468916ac27a36fb8a12bafc1bf5c0ec2fe92238"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-windows-permissions-0.2.4",
       "kind": "dependency",
       "name": "Cargo: windows-permissions 0.2.4",
@@ -1363,6 +2816,25 @@
       ],
       "source_repository": "https://github.com/microsoft/windows-rs",
       "source_revision": "3a605cba064b26f2a198ac58085f8c8836f47c38"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-windows-sys-0.61.2",
+      "kind": "dependency",
+      "name": "Cargo: windows-sys 0.61.2",
+      "package": {
+        "checksum": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc",
+        "ecosystem": "cargo",
+        "name": "windows-sys",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "0.61.2"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "crates/libs/sys"
+      ],
+      "source_repository": "https://github.com/microsoft/windows-rs",
+      "source_revision": "32c3144490c016fe496a0aed769bce60987a2e9d"
     },
     {
       "adoption_mode": "depend",
@@ -1537,6 +3009,26 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-winnow-1.0.4",
+      "kind": "dependency",
+      "name": "Cargo: winnow 1.0.4",
+      "package": {
+        "checksum": "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81",
+        "ecosystem": "cargo",
+        "name": "winnow",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.0.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/winnow-rs/winnow",
+      "source_revision": "7539ec0fc27144bfdcf9a68b0dbbec48bd0d5bae"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-winsafe-0.0.29",
       "kind": "dependency",
       "name": "Cargo: winsafe 0.0.29",
@@ -1557,6 +3049,83 @@
     },
     {
       "adoption_mode": "depend",
+      "id": "cargo-zbus-5.19.0",
+      "kind": "dependency",
+      "name": "Cargo: zbus 5.19.0",
+      "package": {
+        "checksum": "5db4be7c075cb421e4b7ee645541604239bd243ba7c357511f4ff3a74b555907",
+        "ecosystem": "cargo",
+        "name": "zbus",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "5.19.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zbus"
+      ],
+      "source_repository": "https://github.com/z-galaxy/zbus/",
+      "source_revision": "7518d73db4dbf830ec1c9c43865bf8aeae9a8ffd"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-zbus_macros-5.19.0",
+      "kind": "dependency",
+      "name": "Cargo: zbus_macros 5.19.0",
+      "package": {
+        "checksum": "2990635d09ade6df1868f72f8cac69a876a90981e8bd3c40b1be413f8dc88f40",
+        "ecosystem": "cargo",
+        "name": "zbus_macros",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "5.19.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zbus_macros"
+      ],
+      "source_repository": "https://github.com/z-galaxy/zbus/",
+      "source_revision": "7518d73db4dbf830ec1c9c43865bf8aeae9a8ffd"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-zbus_names-4.3.4",
+      "kind": "dependency",
+      "name": "Cargo: zbus_names 4.3.4",
+      "package": {
+        "checksum": "d8bf88b4a3ff53e883001e0e0115b297a9d53c31b9c1edd2bfdd853e3428624e",
+        "ecosystem": "cargo",
+        "name": "zbus_names",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "4.3.4"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zbus_names"
+      ],
+      "source_repository": "https://github.com/z-galaxy/zbus/",
+      "source_revision": "39483146d1e625a0a6da297b3aa1749ddf4bfe2a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-zcheapstr-1.1.0",
+      "kind": "dependency",
+      "name": "Cargo: zcheapstr 1.1.0",
+      "package": {
+        "checksum": "d1afec51604565183aeb5c54c20aeab286120d4e4460f7f76e3e8bb8c0d99473",
+        "ecosystem": "cargo",
+        "name": "zcheapstr",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "1.1.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "Cargo.toml",
+        "src"
+      ],
+      "source_repository": "https://github.com/z-galaxy/zcheapstr/",
+      "source_revision": "a9e7595419e5e826c14e35d0a77ebc84b973ca58"
+    },
+    {
+      "adoption_mode": "depend",
       "id": "cargo-zeroize-1.9.0",
       "kind": "dependency",
       "name": "Cargo: zeroize 1.9.0",
@@ -1573,6 +3142,63 @@
       ],
       "source_repository": "https://github.com/RustCrypto/utils",
       "source_revision": "0b715735a660a8566ccd240bf42489fe2ed98efb"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-zvariant-5.15.0",
+      "kind": "dependency",
+      "name": "Cargo: zvariant 5.15.0",
+      "package": {
+        "checksum": "c1d34c27cc6cdd1f458427519dd6b8612f7b7e3f7b9a0b2355d041dda9869147",
+        "ecosystem": "cargo",
+        "name": "zvariant",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "5.15.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zvariant"
+      ],
+      "source_repository": "https://github.com/z-galaxy/zbus/",
+      "source_revision": "0f4db6980bc1566278618a46c9ffa7f5f025c18a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-zvariant_derive-5.15.0",
+      "kind": "dependency",
+      "name": "Cargo: zvariant_derive 5.15.0",
+      "package": {
+        "checksum": "864155e69b4352db0c7f374917bf45d1e0c8d17659c8b3dbf9795f3673f8c497",
+        "ecosystem": "cargo",
+        "name": "zvariant_derive",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "5.15.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zvariant_derive"
+      ],
+      "source_repository": "https://github.com/z-galaxy/zbus/",
+      "source_revision": "0f4db6980bc1566278618a46c9ffa7f5f025c18a"
+    },
+    {
+      "adoption_mode": "depend",
+      "id": "cargo-zvariant_utils-4.2.0",
+      "kind": "dependency",
+      "name": "Cargo: zvariant_utils 4.2.0",
+      "package": {
+        "checksum": "bad0294361a320b694a328460dc73add56c306150f5cb6bfafc44446120008a3",
+        "ecosystem": "cargo",
+        "name": "zvariant_utils",
+        "source": "registry+https://github.com/rust-lang/crates.io-index",
+        "version": "4.2.0"
+      },
+      "source_license": "MIT",
+      "source_paths": [
+        "zvariant_utils"
+      ],
+      "source_repository": "https://github.com/z-galaxy/zbus/",
+      "source_revision": "0f4db6980bc1566278618a46c9ffa7f5f025c18a"
     }
   ],
   "generated_from": "governance/provenance/registry.json",
