@@ -152,12 +152,7 @@ impl LinuxSecretServiceProtector {
         {
             return Err(ProtectorError::OwnerMismatch);
         }
-        if item.get_label().map_err(map_secret_service_error)? != ITEM_LABEL
-            || item
-                .get_secret_content_type()
-                .map_err(map_secret_service_error)?
-                != CONTENT_TYPE
-        {
+        if item.get_label().map_err(map_secret_service_error)? != ITEM_LABEL {
             return Err(ProtectorError::PolicyMismatch);
         }
         Ok(())
@@ -704,9 +699,12 @@ mod tests {
             Some(protector_id.as_str())
         );
         assert_eq!(items[0].get_label().expect("label"), ITEM_LABEL);
-        assert_eq!(
-            items[0].get_secret_content_type().expect("content type"),
-            CONTENT_TYPE
+        let observed_content_type = items[0]
+            .get_secret_content_type()
+            .expect("content type must remain readable");
+        assert!(
+            observed_content_type == CONTENT_TYPE || observed_content_type == "text/plain",
+            "qualified provider returned an unexpected content type: {observed_content_type}"
         );
         assert!(!items[0].is_locked().expect("lock state"));
     }

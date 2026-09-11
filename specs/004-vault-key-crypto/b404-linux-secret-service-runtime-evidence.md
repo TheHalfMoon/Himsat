@@ -15,7 +15,7 @@ This leaf implements only the B404 Linux Secret Service VRK protector and its ex
 
 ## Provider-visible metadata
 
-Lookup attributes are exactly the fixed application identifier `com.thehalfmoon.himsat`, the fixed Himsat `xdg:schema` identifier `com.thehalfmoon.himsat`, and one opaque random 16-byte protector identifier encoded as lowercase hex. The fixed item label and content type contain no vault-specific data. `VaultId`, key generation, portable policy, and VRK bytes are encoded only inside the protected secret value.
+Lookup attributes are exactly the fixed application identifier `com.thehalfmoon.himsat`, the fixed Himsat `xdg:schema` identifier `com.thehalfmoon.himsat`, and one opaque random 16-byte protector identifier encoded as lowercase hex. The fixed item label contains no vault-specific data. Himsat requests `application/octet-stream` for the protected value, but content type is not treated as a security binding because Secret Service providers may normalize that property; the exact GNOME qualifier accepts only the requested value or GNOME's fixed `text/plain` normalization. `VaultId`, key generation, portable policy, and VRK bytes are encoded only inside the protected secret value.
 
 ## Fail-closed behavior
 
@@ -30,3 +30,5 @@ Canonical qualification requires exact-head CI/R3 success, review reconciliation
 ## Preserved predecessor evidence
 
 PR #97 head `b612db14dbfb76443303aca9e98c4dc2a16603b6` native job `103431436852` in CI run `34650550723` failed on attempt 1 with `OwnerMismatch` immediately after the first GNOME Keyring store. The provider path itself started and compiled successfully; the failure exposed that an exact two-attribute assumption did not account for Secret Service schema metadata. That head remains NOT PASS and is not rerun. This successor sends and verifies an explicit fixed Himsat `xdg:schema` attribute instead of accepting arbitrary provider-added metadata.
+
+PR #97 successor head `9f9db21f5c14cde40d89f2a563fe8b5b45076659` native job `103433347406` in CI run `34651128186` also failed on attempt 1, now with `PolicyMismatch` after schema binding succeeded. This isolated the remaining mismatch to provider item properties. Secret Service permits a service to change item properties, so this successor removes content type from the security-binding decision while retaining exact label and lookup-attribute verification; that failed head remains NOT PASS and is not rerun.
