@@ -399,7 +399,7 @@ def b403d_trusted_base(base: str) -> bool:
 def check_b403d_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
     """Accept only the pinned B403D Windows file-security dependency adoption."""
 
-    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
+    if args.exit_code != 2 or proof.get("verdict") != "FAIL":
         return fail(
             f"unexpected B403D non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
         )
