@@ -36,3 +36,28 @@ Platforms do not fabricate an `Invalidated` claim where the native provider has 
 The exact B405 head must pass original-attempt CI/R3 on the supported matrix. Existing platform-native evidence is reused only because B405 changes no platform implementation byte; any semantic platform change would require renewed native qualification.
 
 B405 does not close restart/revocation/unsupported-policy aggregation; B406 owns that leaf. B501-B506, Specification 005, release/FIPS/compliance claims, and Q009 remain outside this scope. Q009 remains UNSATISFIED and requires genuinely independent substantive crypto/security review of the exact final Specification 004 implementation revision.
+
+
+## Accepted implementation and guarded merge
+
+```text
+IMPLEMENTATION_PR = 99
+BASE = 7cee4be399e3874c1cb2466d3181c932144f50b2
+PREDECESSOR_HEAD = 42667888556287831335ff6f79a27ebb6efc67bd / NOT_ACCEPTED_AFTER_SUBSTANTIVE_REVIEW_FINDING
+ACCEPTED_HEAD = c82f3579af1d4cf5f0dcb103a54f3b87d0fc0c38
+ACCEPTED_TREE = f44d1aedff5920f4a59b287b939b7f10d5947c0c
+PREMERGE_CI = 34657287738 / SUCCESS / attempt 1 / pull_request
+PREMERGE_R3 = 34657287803 / SUCCESS / attempt 1 / pull_request
+SUBSTANTIVE_REVIEW = CodeRabbit review 5184150736 / finding repaired forward-only
+OWNER_RECONCILIATION_REVIEW = 5184206631 / NOT_Q009
+CANONICAL_MERGE = b01d4e1164a58ee2e640a0bd8c518317c4b00523
+PARENT_1 = 7cee4be399e3874c1cb2466d3181c932144f50b2
+PARENT_2 = c82f3579af1d4cf5f0dcb103a54f3b87d0fc0c38
+MERGE_TREE = f44d1aedff5920f4a59b287b939b7f10d5947c0c
+POSTMERGE_R3 = 34658080128 / SUCCESS / attempt 1 / push
+POSTMERGE_CI = 34658080107 / SUCCESS / attempt 1 / push
+POSTMERGE_WINDOWS_JOB = 103454672824 / SUCCESS
+Q009 = UNSATISFIED
+```
+
+The accepted head changes only regression/evidence bytes and does not alter a platform adapter. The independent review finding is preserved rather than erased: it correctly identified that helper-level evidence must not be described as a universal production orchestration boundary. Exact post-merge qualification is complete; canonical B405 task-ledger closure remains conditional only on the separate B405/B406 reconciliation becoming exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge CI/R3 qualified.
