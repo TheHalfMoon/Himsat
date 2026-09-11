@@ -19,11 +19,11 @@ The B404/B405 reconciliation is canonical-qualified; B405 is the only authorized
 
 ## Aggregate regression
 
-`crates/himsat-core/tests/b405_protector_fail_closed.rs` freezes two invariants. Owner/application, vault, generation, stored-policy, and unsupported-capability mismatches are rejected by the portable pre-unlock boundary before a key-returning operation is invoked. Provider `Unavailable`, `Locked`, and `Invalidated` results are propagated as typed errors and never converted into VRK material.
+`crates/himsat-core/tests/b405_protector_fail_closed.rs` freezes two helper-level invariants. `validate_unlock_request` rejects owner/application, vault, generation, stored-policy, and unsupported-capability mismatches before the regression test invokes any provider `unlock_vrk` operation. The regression does not claim that every future production caller is automatically forced through that helper. Separately, when the test reaches a provider boundary after successful helper validation, provider `Unavailable`, `Locked`, and `Invalidated` results remain typed errors and are not converted into VRK material.
 
 ## Platform evidence matrix
 
-- Portable: `record_binding_fails_closed_on_owner_vault_generation_or_policy_mismatch` and the B405 integration regression prove mismatch rejection before unlock.
+- Portable: `record_binding_fails_closed_on_owner_vault_generation_or_policy_mismatch` and the B405 integration regression prove `validate_unlock_request` rejects mismatch state before that regression explicitly calls `unlock_vrk`; this is helper-level evidence, not a claim that a separate production orchestration API enforces the helper universally.
 - Apple: protected-record binding/corruption tests and native error mapping cover owner/policy mismatch, locked, unavailable, invalidated, and missing-item classes without plaintext fallback.
 - Android: package/UID mismatch, wrong vault/generation, orphaned native key, injected invalidation, and partial-delete failure tests remain fail closed.
 - Windows: wrong vault/generation, owner/policy/ciphertext tamper, ACL/I/O errors, restart/removal, and path-substitution tests remain fail closed.
