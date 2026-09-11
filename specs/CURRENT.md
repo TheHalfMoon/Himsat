@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B403_CANONICAL_RECONCILING_B404_BOUND
+PROGRAM_STATE = SPEC_004_B404_CANONICAL_RECONCILING_B405_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -69,12 +69,20 @@ B403C_TOKEN_IDENTITY_DEPENDENCY_STATE = CANONICAL_QUALIFIED
 B403C_TOKEN_IDENTITY_DEPENDENCY_CANONICAL_MERGE = 27459079f8925cbcf513aaab0e456ed091573bb5
 B403D_FILE_SECURITY_DEPENDENCY_STATE = CANONICAL_QUALIFIED
 B403D_FILE_SECURITY_DEPENDENCY_CANONICAL_MERGE = c1d2dfd2b6151e9ee7e71b7693c98ace2e3cdb50
-B403_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B403_DISPOSITION = CANONICAL_CLOSED
 B403_CANONICAL_MERGE = caa815bdcc33262487a7e7587771d9e7c2e9a2cd
-B403_B404_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B404_LINUX_SECRET_SERVICE_ADAPTER_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B404_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B404_LINUX_SECRET_SERVICE_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
+B403_B404_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B403_B404_RECONCILIATION_CANONICAL_MERGE = a0478b5dceeef6a596d2b90aaea22936b4751b33
+B404_TRUSTED_ADOPTION_GATE_STATE = CANONICAL_QUALIFIED
+B404_TRUSTED_ADOPTION_GATE_CANONICAL_MERGE = 264cb13f529fa21bfb5e04123568c6b30c4e7888
+B404_DEPENDENCY_ADOPTION_STATE = CANONICAL_QUALIFIED
+B404_DEPENDENCY_ADOPTION_CANONICAL_MERGE = 38c44f5732e716c28ca802ad4ab215c4b99b4a89
+B404_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B404_CANONICAL_MERGE = e713487a70a8cbbd53c601b8acc8a2f6379b9e0a
+B404_B405_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B405_PROTECTOR_FAIL_CLOSED_NEGATIVE_PATHS_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B405_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B405_PROTECTOR_FAIL_CLOSED_NEGATIVE_PATHS_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -581,6 +589,20 @@ B404 may begin only after this reconciliation exact head passes original-attempt
 
 After those conditions become true, conditional authority resolves to `B404_ONLY` without another state mutation. B404 is bounded to the Linux Secret Service adapter reporting `SAME_USER_SESSION` unless the exact provider proves stronger semantics, using only fixed Himsat service/application identity and an opaque protector ID as non-secret lookup attributes, rejecting stronger unproven policy, and providing no plaintext fallback. Any new native dependency requires exact provenance/license/notices/SBOM/closure evidence before canonical adoption. B405-B406 and B501-B506 remain separate later leaves.
 
+## Canonical B403/B404 reconciliation and B404 implementation disposition
+
+PR #94 canonical merge `a0478b5dceeef6a596d2b90aaea22936b4751b33` resolved the prior conditional authority to B404 after pull-request CI/R3, expected-head guarded merge, exact parentage/tree verification, and push-triggered CI `34630209865` plus R3 `34630209923` succeeded on attempt 1. Windows job `103364890449` succeeded. Durable qualification evidence is recorded on PR #94; Q009 was explicitly not satisfied.
+
+B404 preserved a separate dependency boundary. Trusted adoption-gate PR #95 merged as `264cb13f529fa21bfb5e04123568c6b30c4e7888` and qualified post-merge. Dependency-adoption PR #96 pinned `secret-service 5.2.0` with the reviewed pure-Rust zbus/Tokio/DH feature closure and merged as `38c44f5732e716c28ca802ad4ab215c4b99b4a89`; its post-merge CI/R3 qualified on attempt 1. Vendored native libdbus was not adopted.
+
+B404 implementation PR #97 preserved two failed exact heads without rerun-to-green: `b612db14dbfb76443303aca9e98c4dc2a16603b6` failed the genuine GNOME Keyring native qualifier with `OwnerMismatch`, and successor `9f9db21f5c14cde40d89f2a563fe8b5b45076659` failed with `PolicyMismatch`. Both were repaired forward-only. Accepted head `e635972965026037ff86e8b3e209d8dd85bbcfb6` and tree `1ebbab123415d910db487408fe8dee903e2e5011` passed pull-request CI `34651506177` and R3 `34651506187` on attempt 1, including genuine Ubuntu 24.04 GNOME Keyring job `103434529613` and Windows Rust job `103434529709`. Repository-owner review `5183836476` is governance evidence only and explicitly `NOT_Q009`; binding comment `5641229167` records the expected-head transport intent.
+
+The observed merge used `expected_head_sha = e635972965026037ff86e8b3e209d8dd85bbcfb6` and `merge_method = merge`; GitHub returned canonical merge `e713487a70a8cbbd53c601b8acc8a2f6379b9e0a` with parents `38c44f5732e716c28ca802ad4ab215c4b99b4a89` + `e635972965026037ff86e8b3e209d8dd85bbcfb6` and merge tree `1ebbab123415d910db487408fe8dee903e2e5011`, exactly matching the accepted head tree.
+
+Push-triggered post-merge CI `34653058456` and R3 `34653058406` both succeeded on attempt 1 on exact canonical merge `e713487a70a8cbbd53c601b8acc8a2f6379b9e0a`. Genuine Ubuntu 24.04 GNOME Keyring Secret Service job `103439372276` and Windows Rust job `103439372326` succeeded. Durable B404 post-merge qualification is recorded on PR #97.
+
+This reconciliation may therefore close B404 only for the bounded Linux Secret Service adapter reporting `SAME_USER_SESSION`, `NOT_REQUIRED` presence, and hardware backing `Unknown`, with encrypted DH transport, fixed Himsat lookup metadata plus opaque protector ID, and no plaintext fallback, if this reconciliation itself later becomes expected-head merged and post-merge qualified. B405 then becomes the only authorized implementation leaf. B406, B501-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
+
 ## Specification 004 delivery chain
 
 ```text
@@ -613,9 +635,13 @@ After those conditions become true, conditional authority resolves to `B404_ONLY
   -> B402 Android Keystore adapter            CANONICAL_QUALIFIED
   -> B402/B403 state reconciliation           CANONICAL_QUALIFIED
   -> B403 Windows DPAPI/CNG adapter           CANONICAL_QUALIFIED
-  -> B403/B404 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B404 Linux Secret Service adapter        BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B405-B406 remaining protector checks     BLOCKED_PENDING_PRIOR_LEAVES
+  -> B403/B404 state reconciliation           CANONICAL_QUALIFIED
+  -> B404 trusted adoption-gate hardening     CANONICAL_QUALIFIED
+  -> B404 Linux dependency adoption           CANONICAL_QUALIFIED
+  -> B404 Linux Secret Service adapter        CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
+  -> B404/B405 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B405 protector fail-closed negatives     BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B406 remaining protector qualification  BLOCKED_PENDING_B405
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION

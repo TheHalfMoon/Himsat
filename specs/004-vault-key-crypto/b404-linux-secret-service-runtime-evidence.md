@@ -32,3 +32,33 @@ Canonical qualification requires exact-head CI/R3 success, review reconciliation
 PR #97 head `b612db14dbfb76443303aca9e98c4dc2a16603b6` native job `103431436852` in CI run `34650550723` failed on attempt 1 with `OwnerMismatch` immediately after the first GNOME Keyring store. The provider path itself started and compiled successfully; the failure exposed that an exact two-attribute assumption did not account for Secret Service schema metadata. That head remains NOT PASS and is not rerun. This successor sends and verifies an explicit fixed Himsat `xdg:schema` attribute instead of accepting arbitrary provider-added metadata.
 
 PR #97 successor head `9f9db21f5c14cde40d89f2a563fe8b5b45076659` native job `103433347406` in CI run `34651128186` also failed on attempt 1, now with `PolicyMismatch` after schema binding succeeded. This isolated the remaining mismatch to provider item properties. Secret Service permits a service to change item properties, so this successor removes content type from the security-binding decision while retaining exact label and lookup-attribute verification; that failed head remains NOT PASS and is not rerun.
+
+## Accepted implementation and guarded merge
+
+```text
+IMPLEMENTATION_PR = 97
+BASE = 38c44f5732e716c28ca802ad4ab215c4b99b4a89
+ACCEPTED_HEAD = e635972965026037ff86e8b3e209d8dd85bbcfb6
+ACCEPTED_TREE = 1ebbab123415d910db487408fe8dee903e2e5011
+CHANGED_FILES = 4
+ADDITIONS = 865
+DELETIONS = 0
+PREMERGE_CI = 34651506177 / SUCCESS / attempt 1 / pull_request
+PREMERGE_R3 = 34651506187 / SUCCESS / attempt 1 / pull_request
+PREMERGE_NATIVE_PROVIDER_JOB = 103434529613 / SUCCESS / Ubuntu 24.04 GNOME Keyring
+PREMERGE_WINDOWS_JOB = 103434529709 / SUCCESS
+OWNER_RECONCILIATION_REVIEW = 5183836476 / NOT_Q009
+EXPECTED_HEAD_BINDING = 5641229167
+CANONICAL_MERGE = e713487a70a8cbbd53c601b8acc8a2f6379b9e0a
+PARENT_1 = 38c44f5732e716c28ca802ad4ab215c4b99b4a89
+PARENT_2 = e635972965026037ff86e8b3e209d8dd85bbcfb6
+MERGE_TREE = 1ebbab123415d910db487408fe8dee903e2e5011
+POSTMERGE_QUALIFICATION = SUCCESS / CANONICAL_QUALIFIED_IMPLEMENTATION
+POSTMERGE_CI = 34653058456 / SUCCESS / attempt 1 / push
+POSTMERGE_R3 = 34653058406 / SUCCESS / attempt 1 / push
+POSTMERGE_NATIVE_PROVIDER_JOB = 103439372276 / SUCCESS
+POSTMERGE_WINDOWS_JOB = 103439372326 / SUCCESS
+Q009 = UNSATISFIED
+```
+
+The exact implementation merge is therefore post-merge qualified on original attempt evidence. Canonical B404 task-ledger closure remains conditional on the separate B404/B405 reconciliation itself becoming exact-head reviewed, expected-head merged, parent/tree verified, and post-merge CI/R3 qualified. No failed predecessor head is promoted, and Q009 remains unsatisfied.
