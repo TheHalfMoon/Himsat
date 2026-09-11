@@ -25,6 +25,10 @@ pub mod vault_apple_keychain;
 /// B402 Android Keystore policy adapter over an injected native backend.
 pub mod vault_android_keystore;
 
+/// B403 Windows current-user DPAPI adapter with ACL-restricted ciphertext storage.
+#[cfg(target_os = "windows")]
+pub mod vault_windows_dpapi;
+
 /// B202 versioned bounded-blob XChaCha20-Poly1305 envelope execution/parsing.
 pub mod vault_blob;
 
