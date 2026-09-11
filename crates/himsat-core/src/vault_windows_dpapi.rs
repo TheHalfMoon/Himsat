@@ -1,8 +1,3 @@
-//! Windows current-user DPAPI adapter for Specification 004B4 B403.
-//!
-//! Protects one VRK with `Scope::User` in an ACL-restricted Himsat directory.
-//! Provider-visible names are opaque; binding metadata and VRK stay inside DPAPI.
-//! Reports `SAME_USER_ACCOUNT`, no per-unlock presence, and unknown hardware.
 use crate::vault::{
     AccessScope, FreshnessAnchor, HardwareBacking, KeyGeneration, ProtectedFreshnessState,
     ProtectorCapabilities, ProtectorError, SecretProtector, UserPresencePolicy, VaultId,
@@ -40,26 +35,20 @@ const FILE_SHARE_DELETE: u32 = 0x0000_0004;
 const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
 const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
 const MAX_CIPHERTEXT_BYTES: u64 = 16 * 1024;
-/// Opaque provider-visible identifier used only for the ciphertext filename and
-/// DPAPI additional-entropy domain binding.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct WindowsProtectorId([u8; PROTECTOR_ID_BYTES]);
 impl WindowsProtectorId {
-    /// Generates one opaque identifier from the approved OS CSPRNG path.
     pub fn generate() -> Result<Self, ProtectorError> {
         let mut bytes = [0_u8; PROTECTOR_ID_BYTES];
         fill(&mut bytes).map_err(|_| ProtectorError::Unavailable)?;
         Ok(Self(bytes))
     }
-    #[must_use]
     pub const fn from_bytes(bytes: [u8; PROTECTOR_ID_BYTES]) -> Self {
         Self(bytes)
     }
-    #[must_use]
     pub const fn as_bytes(&self) -> &[u8; PROTECTOR_ID_BYTES] {
         &self.0
     }
-    #[must_use]
     pub fn file_name(&self) -> String {
         const HEX: &[u8; 16] = b"0123456789abcdef";
         let mut output = String::with_capacity(PROTECTOR_ID_BYTES * 2 + 6);
@@ -76,7 +65,6 @@ impl core::fmt::Debug for WindowsProtectorId {
         formatter.write_str("WindowsProtectorId([OPAQUE; 16 bytes])")
     }
 }
-/// Immutable Windows DPAPI storage configuration.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WindowsDpapiConfig {
     storage_root: PathBuf,
@@ -109,7 +97,6 @@ impl WindowsDpapiConfig {
         self.storage_root.join(self.protector_id.file_name())
     }
 }
-/// Windows current-user DPAPI implementation of the portable `SecretProtector` contract.
 pub struct WindowsDpapiProtector {
     config: WindowsDpapiConfig,
     policy: Option<ProtectorPolicy>,
@@ -291,23 +278,23 @@ impl SecretProtector for WindowsDpapiProtector {
     }
     fn read_freshness_anchor(
         &self,
-        _vault_id: VaultId,
+        _v: VaultId,
     ) -> Result<ProtectedFreshnessState, ProtectorError> {
         Err(ProtectorError::UnsupportedPolicy)
     }
     fn install_genesis_freshness_anchor(
         &mut self,
-        _vault_id: VaultId,
-        _expected_state: ProtectedFreshnessState,
-        _new_anchor: FreshnessAnchor,
+        _v: VaultId,
+        _s: ProtectedFreshnessState,
+        _a: FreshnessAnchor,
     ) -> Result<(), ProtectorError> {
         Err(ProtectorError::UnsupportedPolicy)
     }
     fn advance_freshness_anchor(
         &mut self,
-        _vault_id: VaultId,
-        _expected_old: FreshnessAnchor,
-        _new_anchor: FreshnessAnchor,
+        _v: VaultId,
+        _old: FreshnessAnchor,
+        _new: FreshnessAnchor,
     ) -> Result<(), ProtectorError> {
         Err(ProtectorError::UnsupportedPolicy)
     }
@@ -537,12 +524,6 @@ fn open_absolute_object(path: &Path, directory: bool) -> Result<File, ProtectorE
     }
     Ok(file)
 }
-#[cfg(test)]
-fn open_verified_object(path: &Path, directory: bool) -> Result<File, ProtectorError> {
-    let file = open_absolute_object(path, directory)?;
-    verify_restricted_handle(&file, directory)?;
-    Ok(file)
-}
 fn open_verified_child(root: &File, name: &str) -> Result<File, ProtectorError> {
     let mut options = AtOpenOptions::default();
     options.follow(false).desired_access(FILE_ALL_ACCESS);
@@ -590,19 +571,6 @@ fn verify_restricted_handle(file: &File, inheritable: bool) -> Result<(), Protec
     }
     Ok(())
 }
-#[cfg(test)]
-fn restrict_acl_to_current_user(path: &Path, inheritable: bool) -> Result<(), ProtectorError> {
-    let file = open_absolute_object(path, inheritable)?;
-    restrict_acl_to_current_user_handle(&file, inheritable)
-}
-#[cfg(test)]
-fn verify_restricted_acl(path: &Path, inheritable: bool) -> Result<(), ProtectorError> {
-    open_verified_object(path, inheritable).map(drop)
-}
-#[cfg(test)]
-fn verify_current_user_file_acl(path: &Path) -> Result<(), ProtectorError> {
-    verify_restricted_acl(path, false)
-}
 fn map_acl_error(code: u32) -> ProtectorError {
     match code {
         2 | 3 => ProtectorError::ItemMissing,
@@ -614,8 +582,11 @@ fn map_acl_error(code: u32) -> ProtectorError {
 mod tests {
     use super::{
         FILE_ALL_ACCESS, OWNER_TAG, RECORD_BYTES, RECORD_MAGIC, WindowsDpapiConfig,
-        WindowsDpapiProtector, WindowsProtectorId, encode_record, restrict_acl_to_current_user,
-        verify_current_user_file_acl, verify_restricted_acl,
+        WindowsDpapiProtector, WindowsProtectorId, encode_record, open_absolute_object,
+        restrict_acl_to_current_user_handle, verify_restricted_handle,
+    };
+    use crate::vault::ProtectorError::{
+        CorruptOrTampered, ItemMissing, OwnerMismatch, PolicyMismatch, UnsupportedPolicy,
     };
     use crate::vault::{
         AccessScope, HardwareBacking, KeyGeneration, ProtectorError, SecretProtector,
@@ -657,8 +628,58 @@ mod tests {
     fn key(byte: u8) -> OwnedKeyMaterial {
         OwnedKeyMaterial::from_bytes([byte; KEY_MATERIAL_BYTES])
     }
+    fn configure(protector: &mut WindowsDpapiProtector) {
+        protector
+            .create_protector(
+                AccessScope::SameUserAccount,
+                UserPresencePolicy::NotRequired,
+            )
+            .expect("supported Windows policy must configure");
+    }
+    fn configured(store: &TestStore) -> WindowsDpapiProtector {
+        let mut protector = WindowsDpapiProtector::new(store.config.clone());
+        configure(&mut protector);
+        protector
+    }
+    fn assert_error<T>(result: Result<T, ProtectorError>, expected: ProtectorError) {
+        assert_eq!(result.err(), Some(expected));
+    }
     fn assert_key_eq(actual: &OwnedKeyMaterial, expected: u8) {
         actual.with_bytes(|bytes| assert_eq!(bytes, &[expected; KEY_MATERIAL_BYTES]));
+    }
+    fn protect(
+        protector: &mut WindowsDpapiProtector,
+        vault_id: VaultId,
+        key_generation: KeyGeneration,
+        byte: u8,
+    ) {
+        protector
+            .protect_or_store_vrk(vault_id, key_generation, &key(byte))
+            .expect("DPAPI protection must succeed");
+    }
+    fn unlock_eq(
+        protector: &mut WindowsDpapiProtector,
+        vault_id: VaultId,
+        key_generation: KeyGeneration,
+        expected: u8,
+    ) {
+        let unlocked = protector
+            .unlock_vrk(vault_id, key_generation)
+            .expect("DPAPI unlock must succeed");
+        assert_key_eq(&unlocked, expected);
+    }
+    fn write_record(path: &Path, record: &[u8], entropy: &[u8]) {
+        let ciphertext = encrypt_data(record, Scope::User, Some(entropy))
+            .expect("test re-protection must succeed");
+        fs::write(path, ciphertext).expect("test rewrite");
+    }
+    fn verify_acl(path: &Path, directory: bool) {
+        let file = open_absolute_object(path, directory).expect("test path must open");
+        verify_restricted_handle(&file, directory).expect("ACL must be restricted");
+    }
+    fn restrict_acl(path: &Path) {
+        let file = open_absolute_object(path, false).expect("test record must open");
+        restrict_acl_to_current_user_handle(&file, false).expect("record ACL restriction");
     }
     fn access_rules_are_protected(path: &Path) -> bool {
         let output = Command::new("powershell.exe")
@@ -676,78 +697,49 @@ mod tests {
     #[test]
     fn verified_root_handle_prevents_path_substitution_from_redirecting_record_io() {
         let store = TestStore::new();
-        let mut protector = WindowsDpapiProtector::new(store.config.clone());
-        protector
-            .create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            )
-            .expect("supported policy");
-
+        let mut protector = configured(&store);
         let moved_id = WindowsProtectorId::generate().expect("OS CSPRNG must be available");
         let moved_root =
             std::env::temp_dir().join(format!("himsat-b403b-moved-{}", moved_id.file_name()));
         fs::rename(&store.root, &moved_root)
             .expect("qualified Windows filesystem must permit root rename with delete sharing");
-        fs::create_dir(&store.root)
-            .expect("replacement path must be creatable for the adversarial test");
-
+        fs::create_dir(&store.root).expect("replacement path must be creatable");
         let vault_id = vault(0x31);
         let key_generation = generation(31);
-        protector
-            .protect_or_store_vrk(vault_id, key_generation, &key(0x91))
-            .expect("record I/O must remain bound to the verified root handle");
-
+        protect(&mut protector, vault_id, key_generation, 0x91);
         let record_name = store.config.protector_id().file_name();
         assert!(moved_root.join(&record_name).is_file());
         assert!(!store.root.join(&record_name).exists());
-        let unlocked = protector
-            .unlock_vrk(vault_id, key_generation)
-            .expect("handle-relative restart-free unlock must succeed");
-        assert_key_eq(&unlocked, 0x91);
-
-        drop(unlocked);
+        unlock_eq(&mut protector, vault_id, key_generation, 0x91);
         drop(protector);
         fs::remove_dir_all(&moved_root).expect("moved qualified root cleanup");
     }
-
     #[test]
     fn stronger_policy_is_rejected_before_storage_creation() {
         let store = TestStore::new();
         let mut protector = WindowsDpapiProtector::new(store.config.clone());
-        assert_eq!(
-            protector.create_protector(AccessScope::AppExclusive, UserPresencePolicy::NotRequired,),
-            Err(ProtectorError::UnsupportedPolicy)
+        assert_error(
+            protector.create_protector(AccessScope::AppExclusive, UserPresencePolicy::NotRequired),
+            UnsupportedPolicy,
         );
-        assert_eq!(
+        assert_error(
             protector.create_protector(
                 AccessScope::SameUserAccount,
                 UserPresencePolicy::RequiredEachHimsatUnlock,
             ),
-            Err(ProtectorError::UnsupportedPolicy)
+            UnsupportedPolicy,
         );
-        assert_eq!(
+        assert_error(
             protector.create_protector(
                 AccessScope::SameUserSession,
                 UserPresencePolicy::NotRequired,
             ),
-            Err(ProtectorError::UnsupportedPolicy)
+            UnsupportedPolicy,
         );
         assert!(!store.root.exists());
-        protector
-            .create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            )
-            .expect("supported policy");
-        assert!(matches!(
-            protector.read_freshness_anchor(vault(1)),
-            Err(ProtectorError::UnsupportedPolicy)
-        ));
-        assert_eq!(
-            protector.replace_protector(vault(1)),
-            Err(ProtectorError::UnsupportedPolicy)
-        );
+        configure(&mut protector);
+        assert_error(protector.read_freshness_anchor(vault(1)), UnsupportedPolicy);
+        assert_error(protector.replace_protector(vault(1)), UnsupportedPolicy);
         assert_eq!(
             protector.actual_access_scope(),
             AccessScope::SameUserAccount
@@ -759,21 +751,12 @@ mod tests {
     fn native_round_trip_restart_acl_and_removal_are_fail_closed() {
         let store = TestStore::new();
         let vault_id = vault(0x31);
-        let generation = generation(7);
-        let vrk = key(0xA7);
+        let key_generation = generation(7);
         let record_path = store.config.record_path();
-        let mut protector = WindowsDpapiProtector::new(store.config.clone());
-        protector
-            .create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            )
-            .expect("supported Windows policy must configure");
-        protector
-            .protect_or_store_vrk(vault_id, generation, &vrk)
-            .expect("current-user DPAPI protection must succeed");
-        verify_restricted_acl(&store.root, true).expect("storage root ACL must be restricted");
-        verify_current_user_file_acl(&record_path).expect("ciphertext ACL must be restricted");
+        let mut protector = configured(&store);
+        protect(&mut protector, vault_id, key_generation, 0xA7);
+        verify_acl(&store.root, true);
+        verify_acl(&record_path, false);
         assert!(access_rules_are_protected(&store.root));
         assert!(access_rules_are_protected(&record_path));
         let ciphertext = fs::read(&record_path).expect("ciphertext file must be readable");
@@ -782,87 +765,56 @@ mod tests {
         assert!(
             !ciphertext
                 .windows(KEY_MATERIAL_BYTES)
-                .any(|window| window == [0xA7; KEY_MATERIAL_BYTES])
+                .any(|w| w == [0xA7; KEY_MATERIAL_BYTES])
         );
-        let unlocked = protector
-            .unlock_vrk(vault_id, generation)
-            .expect("same process unlock must succeed");
-        assert_key_eq(&unlocked, 0xA7);
+        unlock_eq(&mut protector, vault_id, key_generation, 0xA7);
         drop(protector);
         let mut restarted = WindowsDpapiProtector::new(store.config.clone());
-        assert!(matches!(
-            restarted.unlock_vrk(vault_id, generation),
-            Err(ProtectorError::UnsupportedPolicy)
-        ));
-        restarted
-            .create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            )
-            .expect("restart must reconfigure the policy explicitly");
-        let unlocked = restarted
-            .unlock_vrk(vault_id, generation)
-            .expect("current-user DPAPI must survive process-adapter restart");
-        assert_key_eq(&unlocked, 0xA7);
+        assert_error(
+            restarted.unlock_vrk(vault_id, key_generation),
+            UnsupportedPolicy,
+        );
+        configure(&mut restarted);
+        unlock_eq(&mut restarted, vault_id, key_generation, 0xA7);
         restarted
             .remove_protector(vault_id)
-            .expect("bound protector removal must succeed");
+            .expect("bound removal must succeed");
         assert!(!record_path.exists());
-        restarted
-            .create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            )
-            .expect("policy may be configured again after removal");
-        assert!(matches!(
-            restarted.unlock_vrk(vault_id, generation),
-            Err(ProtectorError::ItemMissing)
-        ));
+        configure(&mut restarted);
+        assert_error(restarted.unlock_vrk(vault_id, key_generation), ItemMissing);
         restarted
             .remove_protector(vault_id)
-            .expect("removal of an already-missing protector must be idempotent");
+            .expect("missing removal must be idempotent");
     }
     #[test]
     fn wrong_vault_generation_and_same_generation_replacement_never_return_or_overwrite_vrk() {
         let store = TestStore::new();
-        let mut protector = WindowsDpapiProtector::new(store.config.clone());
-        protector
-            .create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            )
-            .expect("supported policy");
+        let mut protector = configured(&store);
         let vault_id = vault(0x42);
         let key_generation = generation(11);
-        let original = key(0x11);
-        protector
-            .protect_or_store_vrk(vault_id, key_generation, &original)
-            .expect("initial protection");
-        assert!(matches!(
+        protect(&mut protector, vault_id, key_generation, 0x11);
+        assert_error(
             protector.unlock_vrk(vault(0x43), key_generation),
-            Err(ProtectorError::OwnerMismatch)
-        ));
-        assert!(matches!(
-            protector.unlock_vrk(vault_id, generation(12)),
-            Err(ProtectorError::OwnerMismatch)
-        ));
-        assert_eq!(
-            protector.protect_or_store_vrk(vault_id, key_generation, &key(0x22)),
-            Err(ProtectorError::CorruptOrTampered)
+            OwnerMismatch,
         );
-        let unlocked = protector
-            .unlock_vrk(vault_id, key_generation)
-            .expect("rejected overwrite must preserve original VRK");
-        assert_key_eq(&unlocked, 0x11);
+        assert_error(
+            protector.unlock_vrk(vault_id, generation(12)),
+            OwnerMismatch,
+        );
+        assert_error(
+            protector.protect_or_store_vrk(vault_id, key_generation, &key(0x22)),
+            CorruptOrTampered,
+        );
+        unlock_eq(&mut protector, vault_id, key_generation, 0x11);
         let everyone = string_to_sid("S-1-1-0").expect("well-known Everyone SID");
         let mut acl = ACL::from_file_path(store.root.to_str().expect("Unicode temp path"), false)
             .expect("root ACL");
         acl.allow(everyone.as_ptr() as *mut _, false, FILE_ALL_ACCESS)
             .expect("test ACL tamper");
-        assert!(matches!(
+        assert_error(
             protector.unlock_vrk(vault_id, key_generation),
-            Err(ProtectorError::PolicyMismatch)
-        ));
+            PolicyMismatch,
+        );
     }
     #[test]
     fn protector_entropy_transplant_is_rejected() {
@@ -870,46 +822,28 @@ mod tests {
         let target = TestStore::new();
         let vault_id = vault(0x67);
         let key_generation = generation(23);
-        let mut source_protector = WindowsDpapiProtector::new(source.config.clone());
-        let mut target_protector = WindowsDpapiProtector::new(target.config.clone());
-        for protector in [&mut source_protector, &mut target_protector] {
-            protector
-                .create_protector(
-                    AccessScope::SameUserAccount,
-                    UserPresencePolicy::NotRequired,
-                )
-                .expect("supported policy");
-        }
-        source_protector
-            .protect_or_store_vrk(vault_id, key_generation, &key(0x67))
-            .expect("source protection");
+        let mut source_protector = configured(&source);
+        let mut target_protector = configured(&target);
+        protect(&mut source_protector, vault_id, key_generation, 0x67);
         fs::copy(source.config.record_path(), target.config.record_path())
             .expect("test transplant");
-        restrict_acl_to_current_user(&target.config.record_path(), false).expect("target file ACL");
-        assert!(matches!(
+        restrict_acl(&target.config.record_path());
+        assert_error(
             target_protector.unlock_vrk(vault_id, key_generation),
-            Err(ProtectorError::CorruptOrTampered)
-        ));
+            CorruptOrTampered,
+        );
     }
     #[test]
     fn owner_policy_and_ciphertext_tamper_fail_closed() {
         let store = TestStore::new();
         let vault_id = vault(0x55);
-        let generation = generation(19);
+        let key_generation = generation(19);
         let policy = ProtectorPolicy::new(
             AccessScope::SameUserAccount,
             UserPresencePolicy::NotRequired,
         );
-        let mut protector = WindowsDpapiProtector::new(store.config.clone());
-        protector
-            .create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            )
-            .expect("supported policy");
-        protector
-            .protect_or_store_vrk(vault_id, generation, &key(0x5A))
-            .expect("initial protection");
+        let mut protector = configured(&store);
+        protect(&mut protector, vault_id, key_generation, 0x5A);
         let record_path = store.config.record_path();
         let entropy = protector.entropy();
         let original_ciphertext = fs::read(&record_path).expect("ciphertext");
@@ -917,44 +851,39 @@ mod tests {
             .expect("test may inspect its own DPAPI record");
         let mut owner_mismatch = original_record.clone();
         owner_mismatch[RECORD_MAGIC.len()] ^= 0x01;
-        let ciphertext = encrypt_data(&owner_mismatch, Scope::User, Some(&entropy))
-            .expect("test re-protection must succeed");
-        fs::write(&record_path, ciphertext).expect("test rewrite");
-        assert!(matches!(
-            protector.unlock_vrk(vault_id, generation),
-            Err(ProtectorError::OwnerMismatch)
-        ));
-        let mut policy_mismatch = encode_record(vault_id, generation, policy, &key(0x5A));
-        let policy_offset = RECORD_MAGIC.len() + OWNER_TAG.len() + 16 + 8;
-        policy_mismatch[policy_offset] = 1;
-        let ciphertext = encrypt_data(&policy_mismatch, Scope::User, Some(&entropy))
-            .expect("test re-protection must succeed");
-        fs::write(&record_path, ciphertext).expect("test rewrite");
-        assert!(matches!(
-            protector.unlock_vrk(vault_id, generation),
-            Err(ProtectorError::PolicyMismatch)
-        ));
+        write_record(&record_path, &owner_mismatch, &entropy);
+        assert_error(
+            protector.unlock_vrk(vault_id, key_generation),
+            OwnerMismatch,
+        );
+        let mut policy_mismatch = encode_record(vault_id, key_generation, policy, &key(0x5A));
+        policy_mismatch[RECORD_MAGIC.len() + OWNER_TAG.len() + 24] = 1;
+        write_record(&record_path, &policy_mismatch, &entropy);
+        assert_error(
+            protector.unlock_vrk(vault_id, key_generation),
+            PolicyMismatch,
+        );
         fs::write(&record_path, &original_ciphertext).expect("restore original ciphertext");
         let mut tampered = original_ciphertext;
         let last = tampered.len() - 1;
         tampered[last] ^= 0x80;
         fs::write(&record_path, tampered).expect("write tampered ciphertext");
-        assert!(matches!(
-            protector.unlock_vrk(vault_id, generation),
-            Err(ProtectorError::CorruptOrTampered)
-        ));
+        assert_error(
+            protector.unlock_vrk(vault_id, key_generation),
+            CorruptOrTampered,
+        );
     }
     #[test]
     fn opaque_filename_and_record_encoding_do_not_expose_binding_metadata_in_path() {
         let protector_id = WindowsProtectorId::from_bytes([0xA5; 16]);
         let file_name = protector_id.file_name();
         let vault_id = vault(0x11);
-        let generation = generation(0x0102_0304_0506_0708);
+        let key_generation = generation(0x0102_0304_0506_0708);
         let policy = ProtectorPolicy::new(
             AccessScope::SameUserAccount,
             UserPresencePolicy::NotRequired,
         );
-        let record = encode_record(vault_id, generation, policy, &key(0x77));
+        let record = encode_record(vault_id, key_generation, policy, &key(0x77));
         assert_eq!(file_name, "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5.dpapi");
         assert!(!file_name.contains("11111111"));
         assert!(!file_name.contains("0102030405060708"));
