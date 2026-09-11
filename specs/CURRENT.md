@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B404_CANONICAL_RECONCILING_B405_BOUND
+PROGRAM_STATE = SPEC_004_B405_CANONICAL_RECONCILING_B406_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -77,12 +77,16 @@ B404_TRUSTED_ADOPTION_GATE_STATE = CANONICAL_QUALIFIED
 B404_TRUSTED_ADOPTION_GATE_CANONICAL_MERGE = 264cb13f529fa21bfb5e04123568c6b30c4e7888
 B404_DEPENDENCY_ADOPTION_STATE = CANONICAL_QUALIFIED
 B404_DEPENDENCY_ADOPTION_CANONICAL_MERGE = 38c44f5732e716c28ca802ad4ab215c4b99b4a89
-B404_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B404_DISPOSITION = CANONICAL_CLOSED
 B404_CANONICAL_MERGE = e713487a70a8cbbd53c601b8acc8a2f6379b9e0a
-B404_B405_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B405_PROTECTOR_FAIL_CLOSED_NEGATIVE_PATHS_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B405_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B405_PROTECTOR_FAIL_CLOSED_NEGATIVE_PATHS_ONLY_IF_RECONCILIATION_QUALIFIED
+B404_B405_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B404_B405_RECONCILIATION_CANONICAL_MERGE = 7cee4be399e3874c1cb2466d3181c932144f50b2
+B405_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B405_CANONICAL_MERGE = b01d4e1164a58ee2e640a0bd8c518317c4b00523
+B405_B406_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B406_PROTECTOR_LIFECYCLE_PLATFORM_NEGATIVE_QUALIFICATION_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B406_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B406_PROTECTOR_LIFECYCLE_PLATFORM_NEGATIVE_QUALIFICATION_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -603,6 +607,19 @@ Push-triggered post-merge CI `34653058456` and R3 `34653058406` both succeeded o
 
 This reconciliation may therefore close B404 only for the bounded Linux Secret Service adapter reporting `SAME_USER_SESSION`, `NOT_REQUIRED` presence, and hardware backing `Unknown`, with encrypted DH transport, fixed Himsat lookup metadata plus opaque protector ID, and no plaintext fallback, if this reconciliation itself later becomes expected-head merged and post-merge qualified. B405 then becomes the only authorized implementation leaf. B406, B501-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
 
+
+## Canonical B404/B405 reconciliation and B405 disposition
+
+PR #98 canonical merge `7cee4be399e3874c1cb2466d3181c932144f50b2` resolved the prior conditional authority to B405 after exact-head pull-request CI/R3, expected-head guarded merge, exact parentage/tree verification, and push-triggered CI `34655970804` plus R3 `34655970812` succeeded on attempt 1. Windows Rust job `103448336945` succeeded. Durable post-merge qualification is recorded on PR #98. Q009 remained unsatisfied.
+
+B405 qualification PR #99 preserved predecessor head `42667888556287831335ff6f79a27ebb6efc67bd` as NOT ACCEPTED after an independent CodeRabbit review identified an overbroad qualification claim. The finding was repaired forward-only by narrowing the evidence to the tested `validate_unlock_request` helper boundary. Successor accepted head `c82f3579af1d4cf5f0dcb103a54f3b87d0fc0c38` and tree `f44d1aedff5920f4a59b287b939b7f10d5947c0c` passed pull-request CI `34657287738` and R3 `34657287803` on attempt 1. The substantive review thread was resolved only after the claim matched the exercised behavior. Repository-owner reconciliation review `5184206631` is governance evidence only and explicitly `NOT_Q009`.
+
+The observed guarded merge used `expected_head_sha = c82f3579af1d4cf5f0dcb103a54f3b87d0fc0c38` with `merge_method = merge`; GitHub returned canonical merge `b01d4e1164a58ee2e640a0bd8c518317c4b00523`, parents `7cee4be399e3874c1cb2466d3181c932144f50b2` + `c82f3579af1d4cf5f0dcb103a54f3b87d0fc0c38`, and merge tree `f44d1aedff5920f4a59b287b939b7f10d5947c0c`, exactly matching the accepted head tree.
+
+Push-triggered post-merge CI `34658080107` and R3 `34658080128` both succeeded on attempt 1. Windows Rust job `103454672824`, genuine Ubuntu 24.04 GNOME Keyring job `103454672810`, and negative controls job `103454672902` all succeeded on the original push-triggered attempt.
+
+This reconciliation may close B405 only for the bounded fail-closed qualification actually proven by the portable helper regression plus unchanged canonical platform adapters. It does not claim a universal production orchestration boundary that does not exist. If this reconciliation itself later becomes exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge CI/R3 qualified, B406 becomes the only authorized implementation/qualification leaf. B501-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
+
 ## Specification 004 delivery chain
 
 ```text
@@ -639,9 +656,10 @@ This reconciliation may therefore close B404 only for the bounded Linux Secret S
   -> B404 trusted adoption-gate hardening     CANONICAL_QUALIFIED
   -> B404 Linux dependency adoption           CANONICAL_QUALIFIED
   -> B404 Linux Secret Service adapter        CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
-  -> B404/B405 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B405 protector fail-closed negatives     BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B406 remaining protector qualification  BLOCKED_PENDING_B405
+  -> B404/B405 state reconciliation           CANONICAL_QUALIFIED
+  -> B405 protector fail-closed negatives     CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
+  -> B405/B406 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B406 remaining protector qualification  BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
