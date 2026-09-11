@@ -9,11 +9,13 @@ use crate::vault::{
 };
 use crate::vault_keys::{KEY_MATERIAL_BYTES, OwnedKeyMaterial};
 use crate::vault_protector::{ProtectorPolicy, validate_requested_policy};
-use fs_at::os::windows::FileExt;
+use fs_at::os::windows::{FileExt, OpenOptionsExt as AtOpenOptionsExt};
+use fs_at::{OpenOptions as AtOpenOptions, OpenOptionsWriteMode};
 use getrandom::fill;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
-use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+use std::os::windows::fs::{MetadataExt, OpenOptionsExt as StdOpenOptionsExt};
+use std::os::windows::io::AsRawHandle;
 use std::path::{Path, PathBuf};
 use windows_acl::acl::ACL;
 use windows_acl::helper::string_to_sid;
@@ -34,6 +36,7 @@ const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
 const FILE_ALL_ACCESS: u32 = 0x001f_01ff;
 const FILE_SHARE_READ: u32 = 0x0000_0001;
 const FILE_SHARE_WRITE: u32 = 0x0000_0002;
+const FILE_SHARE_DELETE: u32 = 0x0000_0004;
 const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
 const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
 const MAX_CIPHERTEXT_BYTES: u64 = 16 * 1024;
@@ -101,6 +104,7 @@ impl WindowsDpapiConfig {
     pub const fn protector_id(&self) -> WindowsProtectorId {
         self.protector_id
     }
+    #[cfg(test)]
     fn record_path(&self) -> PathBuf {
         self.storage_root.join(self.protector_id.file_name())
     }
@@ -109,6 +113,7 @@ impl WindowsDpapiConfig {
 pub struct WindowsDpapiProtector {
     config: WindowsDpapiConfig,
     policy: Option<ProtectorPolicy>,
+    storage_root: Option<File>,
 }
 impl WindowsDpapiProtector {
     #[must_use]
@@ -116,6 +121,7 @@ impl WindowsDpapiProtector {
         Self {
             config,
             policy: None,
+            storage_root: None,
         }
     }
     #[must_use]
@@ -131,23 +137,40 @@ impl WindowsDpapiProtector {
         entropy.extend_from_slice(self.config.protector_id().as_bytes());
         entropy
     }
-    fn ensure_storage_root(&self) -> Result<(), ProtectorError> {
-        match metadata_no_reparse(self.config.storage_root())? {
+    fn ensure_storage_root(&self) -> Result<File, ProtectorError> {
+        let existed = match metadata_no_reparse(self.config.storage_root())? {
             Some(metadata) => {
                 if !metadata.is_dir() {
                     return Err(ProtectorError::CorruptOrTampered);
                 }
-                verify_restricted_acl(self.config.storage_root(), true)
+                true
             }
             None => {
                 fs::create_dir_all(self.config.storage_root()).map_err(map_io_error)?;
-                reject_reparse_point(self.config.storage_root())?;
-                restrict_acl_to_current_user(self.config.storage_root(), true)
+                false
             }
+        };
+        let root = open_absolute_object(self.config.storage_root(), true)?;
+        if existed {
+            verify_restricted_handle(&root, true)?;
+        } else {
+            restrict_acl_to_current_user_handle(&root, true)?;
         }
+        Ok(root)
     }
-    fn verify_storage_root(&self) -> Result<(), ProtectorError> {
-        verify_restricted_acl(self.config.storage_root(), true)
+    fn storage_root_handle(&self) -> Result<&File, ProtectorError> {
+        let root = self
+            .storage_root
+            .as_ref()
+            .ok_or(ProtectorError::UnsupportedPolicy)?;
+        verify_restricted_handle(root, true)?;
+        Ok(root)
+    }
+    fn open_record(&self) -> Result<File, ProtectorError> {
+        open_verified_child(
+            self.storage_root_handle()?,
+            &self.config.protector_id().file_name(),
+        )
     }
     fn read_ciphertext_from(file: &mut File) -> Result<Vec<u8>, ProtectorError> {
         let metadata = file.metadata().map_err(map_io_error)?;
@@ -165,53 +188,33 @@ impl WindowsDpapiProtector {
         if ciphertext.is_empty() || ciphertext.len() as u64 > MAX_CIPHERTEXT_BYTES {
             return Err(ProtectorError::CorruptOrTampered);
         }
-        self.verify_storage_root()?;
-        let target = self.config.record_path();
-        if metadata_no_reparse(&target)?.is_some() {
-            return Err(ProtectorError::CorruptOrTampered);
-        }
-        let mut temporary = None;
-        let mut file = None;
-        for _ in 0..8 {
-            let candidate_id = WindowsProtectorId::generate()?;
-            let candidate = self
-                .config
-                .storage_root()
-                .join(format!("{}.tmp", candidate_id.file_name()));
-            match OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&candidate)
-            {
-                Ok(opened) => {
-                    temporary = Some(candidate);
-                    file = Some(opened);
-                    break;
-                }
-                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-                Err(error) => return Err(map_io_error(error)),
-            }
-        }
-        let temporary = temporary.ok_or(ProtectorError::Unavailable)?;
-        let mut file = file.ok_or(ProtectorError::Unavailable)?;
+        let mut options = AtOpenOptions::default();
+        options
+            .write(OpenOptionsWriteMode::Write)
+            .create_new(true)
+            .follow(false)
+            .desired_access(FILE_ALL_ACCESS);
+        let mut file = options
+            .open_at(
+                self.storage_root_handle()?,
+                self.config.protector_id().file_name(),
+            )
+            .map_err(map_io_error)?;
         let staged = (|| {
-            reject_reparse_point(&temporary)?;
-            restrict_acl_to_current_user(&temporary, false)?;
+            verify_expected_object_type(&file, false)?;
+            restrict_acl_to_current_user_handle(&file, false)?;
             file.write_all(ciphertext).map_err(map_io_error)?;
             file.sync_all().map_err(map_io_error)?;
+            verify_restricted_handle(&file, false)?;
             Ok::<(), ProtectorError>(())
         })();
-        drop(file);
         if let Err(error) = staged {
-            let _ = fs::remove_file(&temporary);
-            return Err(error);
+            return match file.delete_by_handle() {
+                Ok(()) => Err(error),
+                Err((_file, cleanup_error)) => Err(map_io_error(cleanup_error)),
+            };
         }
-        if let Err(error) = fs::rename(&temporary, &target) {
-            let _ = fs::remove_file(&temporary);
-            return Err(map_io_error(error));
-        }
-        reject_reparse_point(&target)?;
-        verify_current_user_file_acl(&target)
+        Ok(())
     }
     fn decrypt_record_from(&self, file: &mut File) -> Result<Zeroizing<Vec<u8>>, ProtectorError> {
         let ciphertext = Self::read_ciphertext_from(file)?;
@@ -226,8 +229,7 @@ impl WindowsDpapiProtector {
         Ok(plaintext)
     }
     fn decrypt_record(&self) -> Result<Zeroizing<Vec<u8>>, ProtectorError> {
-        self.verify_storage_root()?;
-        let mut file = open_verified_object(&self.config.record_path(), false)?;
+        let mut file = self.open_record()?;
         self.decrypt_record_from(&mut file)
     }
 }
@@ -247,7 +249,8 @@ impl SecretProtector for WindowsDpapiProtector {
             ),
             policy,
         )?;
-        self.ensure_storage_root()?;
+        let storage_root = self.ensure_storage_root()?;
+        self.storage_root = Some(storage_root);
         self.policy = Some(policy);
         Ok(())
     }
@@ -258,15 +261,18 @@ impl SecretProtector for WindowsDpapiProtector {
         vrk: &Self::VaultRootKey,
     ) -> Result<(), ProtectorError> {
         let policy = self.policy()?;
-        self.verify_storage_root()?;
-        if metadata_no_reparse(&self.config.record_path())?.is_some() {
-            let record = self.decrypt_record()?;
-            validate_record_binding(&record, vault_id, Some(key_generation), policy)?;
-            return if record_matches_vrk(&record, vrk)? {
-                Ok(())
-            } else {
-                Err(ProtectorError::CorruptOrTampered)
-            };
+        match self.open_record() {
+            Ok(mut file) => {
+                let record = self.decrypt_record_from(&mut file)?;
+                validate_record_binding(&record, vault_id, Some(key_generation), policy)?;
+                return if record_matches_vrk(&record, vrk)? {
+                    Ok(())
+                } else {
+                    Err(ProtectorError::CorruptOrTampered)
+                };
+            }
+            Err(ProtectorError::ItemMissing) => {}
+            Err(error) => return Err(error),
         }
         let record = Zeroizing::new(encode_record(vault_id, key_generation, policy, vrk));
         let entropy = self.entropy();
@@ -310,18 +316,21 @@ impl SecretProtector for WindowsDpapiProtector {
     }
     fn remove_protector(&mut self, vault_id: VaultId) -> Result<(), ProtectorError> {
         let policy = self.policy()?;
-        let path = self.config.record_path();
-        if metadata_no_reparse(&path)?.is_none() {
-            self.policy = None;
-            return Ok(());
-        }
-        self.verify_storage_root()?;
-        let mut file = open_verified_object(&path, false)?;
+        let mut file = match self.open_record() {
+            Ok(file) => file,
+            Err(ProtectorError::ItemMissing) => {
+                self.policy = None;
+                self.storage_root = None;
+                return Ok(());
+            }
+            Err(error) => return Err(error),
+        };
         let record = self.decrypt_record_from(&mut file)?;
         validate_record_binding(&record, vault_id, None, policy)?;
         file.delete_by_handle()
             .map_err(|(_, error)| map_io_error(error))?;
         self.policy = None;
+        self.storage_root = None;
         Ok(())
     }
     fn actual_access_scope(&self) -> AccessScope {
@@ -465,11 +474,6 @@ fn metadata_no_reparse(path: &Path) -> Result<Option<fs::Metadata>, ProtectorErr
         Err(error) => Err(map_io_error(error)),
     }
 }
-fn reject_reparse_point(path: &Path) -> Result<(), ProtectorError> {
-    metadata_no_reparse(path)?
-        .map(|_| ())
-        .ok_or(ProtectorError::ItemMissing)
-}
 fn map_io_error(error: std::io::Error) -> ProtectorError {
     match error.kind() {
         std::io::ErrorKind::NotFound => ProtectorError::ItemMissing,
@@ -494,10 +498,12 @@ fn current_user_sid() -> Result<(Vec<u8>, String), ProtectorError> {
     let sid = string_to_sid(&sid_string).map_err(map_acl_error)?;
     Ok((sid, sid_string))
 }
-fn restrict_acl_to_current_user(path: &Path, inheritable: bool) -> Result<(), ProtectorError> {
-    let path = path.to_str().ok_or(ProtectorError::UnsupportedPolicy)?;
+fn restrict_acl_to_current_user_handle(
+    file: &File,
+    inheritable: bool,
+) -> Result<(), ProtectorError> {
     let (current_sid, _) = current_user_sid()?;
-    let mut acl = ACL::from_file_path(path, false).map_err(map_acl_error)?;
+    let mut acl = ACL::from_file_handle(file.as_raw_handle(), false).map_err(map_acl_error)?;
     let entries = acl.all().map_err(map_acl_error)?;
     for entry in entries {
         let Some(entry_sid) = entry.sid else {
@@ -508,9 +514,9 @@ fn restrict_acl_to_current_user(path: &Path, inheritable: bool) -> Result<(), Pr
     }
     acl.allow(current_sid.as_ptr() as *mut _, inheritable, FILE_ALL_ACCESS)
         .map_err(map_acl_error)?;
-    verify_restricted_acl(Path::new(path), inheritable)
+    verify_restricted_handle(file, inheritable)
 }
-fn open_verified_object(path: &Path, directory: bool) -> Result<File, ProtectorError> {
+fn open_absolute_object(path: &Path, directory: bool) -> Result<File, ProtectorError> {
     let flags = FILE_FLAG_OPEN_REPARSE_POINT
         | if directory {
             FILE_FLAG_BACKUP_SEMANTICS
@@ -519,7 +525,7 @@ fn open_verified_object(path: &Path, directory: bool) -> Result<File, ProtectorE
         };
     let file = OpenOptions::new()
         .access_mode(FILE_ALL_ACCESS)
-        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
         .custom_flags(flags)
         .open(path)
         .map_err(map_io_error)?;
@@ -529,8 +535,30 @@ fn open_verified_object(path: &Path, directory: bool) -> Result<File, ProtectorE
     {
         return Err(ProtectorError::CorruptOrTampered);
     }
+    Ok(file)
+}
+#[cfg(test)]
+fn open_verified_object(path: &Path, directory: bool) -> Result<File, ProtectorError> {
+    let file = open_absolute_object(path, directory)?;
     verify_restricted_handle(&file, directory)?;
     Ok(file)
+}
+fn open_verified_child(root: &File, name: &str) -> Result<File, ProtectorError> {
+    let mut options = AtOpenOptions::default();
+    options.follow(false).desired_access(FILE_ALL_ACCESS);
+    let file = options.open_at(root, name).map_err(map_io_error)?;
+    verify_expected_object_type(&file, false)?;
+    verify_restricted_handle(&file, false)?;
+    Ok(file)
+}
+fn verify_expected_object_type(file: &File, directory: bool) -> Result<(), ProtectorError> {
+    let metadata = file.metadata().map_err(map_io_error)?;
+    if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+        || metadata.is_dir() != directory
+    {
+        return Err(ProtectorError::CorruptOrTampered);
+    }
+    Ok(())
 }
 fn verify_restricted_handle(file: &File, inheritable: bool) -> Result<(), ProtectorError> {
     let (_, current_sid) = current_user_sid()?;
@@ -562,9 +590,16 @@ fn verify_restricted_handle(file: &File, inheritable: bool) -> Result<(), Protec
     }
     Ok(())
 }
+#[cfg(test)]
+fn restrict_acl_to_current_user(path: &Path, inheritable: bool) -> Result<(), ProtectorError> {
+    let file = open_absolute_object(path, inheritable)?;
+    restrict_acl_to_current_user_handle(&file, inheritable)
+}
+#[cfg(test)]
 fn verify_restricted_acl(path: &Path, inheritable: bool) -> Result<(), ProtectorError> {
     open_verified_object(path, inheritable).map(drop)
 }
+#[cfg(test)]
 fn verify_current_user_file_acl(path: &Path) -> Result<(), ProtectorError> {
     verify_restricted_acl(path, false)
 }
@@ -638,6 +673,44 @@ mod tests {
             .expect("PowerShell must be available on qualified Windows targets");
         output.status.success() && String::from_utf8_lossy(&output.stdout).trim() == "True"
     }
+    #[test]
+    fn verified_root_handle_prevents_path_substitution_from_redirecting_record_io() {
+        let store = TestStore::new();
+        let mut protector = WindowsDpapiProtector::new(store.config.clone());
+        protector
+            .create_protector(
+                AccessScope::SameUserAccount,
+                UserPresencePolicy::NotRequired,
+            )
+            .expect("supported policy");
+
+        let moved_id = WindowsProtectorId::generate().expect("OS CSPRNG must be available");
+        let moved_root =
+            std::env::temp_dir().join(format!("himsat-b403b-moved-{}", moved_id.file_name()));
+        fs::rename(&store.root, &moved_root)
+            .expect("qualified Windows filesystem must permit root rename with delete sharing");
+        fs::create_dir(&store.root)
+            .expect("replacement path must be creatable for the adversarial test");
+
+        let vault_id = vault(0x31);
+        let key_generation = generation(31);
+        protector
+            .protect_or_store_vrk(vault_id, key_generation, &key(0x91))
+            .expect("record I/O must remain bound to the verified root handle");
+
+        let record_name = store.config.protector_id().file_name();
+        assert!(moved_root.join(&record_name).is_file());
+        assert!(!store.root.join(&record_name).exists());
+        let unlocked = protector
+            .unlock_vrk(vault_id, key_generation)
+            .expect("handle-relative restart-free unlock must succeed");
+        assert_key_eq(&unlocked, 0x91);
+
+        drop(unlocked);
+        drop(protector);
+        fs::remove_dir_all(&moved_root).expect("moved qualified root cleanup");
+    }
+
     #[test]
     fn stronger_policy_is_rejected_before_storage_creation() {
         let store = TestStore::new();
