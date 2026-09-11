@@ -26,6 +26,8 @@ use zeroize::Zeroizing;
 const APPLICATION_ATTRIBUTE: &str = "application";
 const APPLICATION_ID: &str = "com.thehalfmoon.himsat";
 const PROTECTOR_ATTRIBUTE: &str = "protector-id";
+const SCHEMA_ATTRIBUTE: &str = "xdg:schema";
+const SCHEMA_ID: &str = "com.thehalfmoon.himsat";
 const ITEM_LABEL: &str = "Himsat Vault Protector";
 const CONTENT_TYPE: &str = "application/octet-stream";
 const RECORD_MAGIC: &[u8] = b"HIMSAT/LINUX/SECRET-SERVICE/VRK/v1\0";
@@ -142,8 +144,9 @@ impl LinuxSecretServiceProtector {
         }
         let protector_id = self.config.protector_id().attribute_value();
         let attributes = item.get_attributes().map_err(map_secret_service_error)?;
-        if attributes.len() != 2
+        if attributes.len() != 3
             || attributes.get(APPLICATION_ATTRIBUTE).map(String::as_str) != Some(APPLICATION_ID)
+            || attributes.get(SCHEMA_ATTRIBUTE).map(String::as_str) != Some(SCHEMA_ID)
             || attributes.get(PROTECTOR_ATTRIBUTE).map(String::as_str)
                 != Some(protector_id.as_str())
         {
@@ -352,8 +355,9 @@ fn validate_linux_policy(
 }
 
 fn query_attributes(protector_id: &str) -> HashMap<&'static str, &str> {
-    let mut attributes = HashMap::with_capacity(2);
+    let mut attributes = HashMap::with_capacity(3);
     attributes.insert(APPLICATION_ATTRIBUTE, APPLICATION_ID);
+    attributes.insert(SCHEMA_ATTRIBUTE, SCHEMA_ID);
     attributes.insert(PROTECTOR_ATTRIBUTE, protector_id);
     attributes
 }
@@ -513,9 +517,10 @@ fn map_secret_service_error(error: SecretServiceError) -> ProtectorError {
 mod tests {
     use super::{
         APPLICATION_ATTRIBUTE, APPLICATION_ID, CONTENT_TYPE, ITEM_LABEL, LinuxProtectorId,
-        LinuxSecretServiceConfig, PROTECTOR_ATTRIBUTE, RECORD_MAGIC, decode_record, encode_record,
-        map_collection_error, map_secret_service_error, query_attributes, record_matches_vrk,
-        session_encryption, validate_linux_policy, validate_record_binding,
+        LinuxSecretServiceConfig, PROTECTOR_ATTRIBUTE, RECORD_MAGIC, SCHEMA_ATTRIBUTE, SCHEMA_ID,
+        decode_record, encode_record, map_collection_error, map_secret_service_error,
+        query_attributes, record_matches_vrk, session_encryption, validate_linux_policy,
+        validate_record_binding,
     };
     use crate::vault::{
         AccessScope, HardwareBacking, KeyGeneration, ProtectorError, SecretProtector,
@@ -538,8 +543,9 @@ mod tests {
         let id = LinuxProtectorId::from_bytes([0xa5; 16]);
         let value = id.attribute_value();
         let attributes = query_attributes(&value);
-        assert_eq!(attributes.len(), 2);
+        assert_eq!(attributes.len(), 3);
         assert_eq!(attributes.get(APPLICATION_ATTRIBUTE), Some(&APPLICATION_ID));
+        assert_eq!(attributes.get(SCHEMA_ATTRIBUTE), Some(&SCHEMA_ID));
         assert_eq!(attributes.get(PROTECTOR_ATTRIBUTE), Some(&value.as_str()));
         assert_eq!(ITEM_LABEL, "Himsat Vault Protector");
         assert_eq!(CONTENT_TYPE, "application/octet-stream");
@@ -684,10 +690,14 @@ mod tests {
         let attributes = items[0]
             .get_attributes()
             .expect("provider attributes must be readable");
-        assert_eq!(attributes.len(), 2);
+        assert_eq!(attributes.len(), 3);
         assert_eq!(
             attributes.get(APPLICATION_ATTRIBUTE).map(String::as_str),
             Some(APPLICATION_ID)
+        );
+        assert_eq!(
+            attributes.get(SCHEMA_ATTRIBUTE).map(String::as_str),
+            Some(SCHEMA_ID)
         );
         assert_eq!(
             attributes.get(PROTECTOR_ATTRIBUTE).map(String::as_str),
