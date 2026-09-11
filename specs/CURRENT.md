@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B402_B403_RECONCILIATION_ACTIVE_NOT_YET_CANONICAL
+PROGRAM_STATE = SPEC_004_B403_CANONICAL_RECONCILING_B404_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -59,11 +59,22 @@ B402A_NATIVE_BRIDGE_STATE = CANONICAL_QUALIFIED
 B402A_NATIVE_BRIDGE_CANONICAL_MERGE = d8d73df728d24994e9dfe9677d61e3c158c5db3e
 B402B_RUST_ADAPTER_STATE = CANONICAL_QUALIFIED
 B402B_RUST_ADAPTER_CANONICAL_MERGE = e8aeb1e09591358850b109fdf423a6bfd0b60003
-B402_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
-B402_B403_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B403_WINDOWS_DPAPI_CNG_ADAPTER_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B403_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B403_WINDOWS_DPAPI_CNG_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
+B402_DISPOSITION = CANONICAL_CLOSED
+B402_B403_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B402_B403_RECONCILIATION_CANONICAL_MERGE = b2d62613b192c54cc501513ee6bb40059c90817c
+B403A_DEPENDENCY_ADOPTION_STATE = CANONICAL_QUALIFIED_BY_FORWARD_RECOVERY
+B403A_DEPENDENCY_ADOPTION_CANONICAL_MERGE = 37e0ef305ef379aed7b588efd6878608569766ec
+B403A_POSTMERGE_RECOVERY_CANONICAL_MERGE = c642029ff8c338b46bb1585ebff58e168e5a8653
+B403C_TOKEN_IDENTITY_DEPENDENCY_STATE = CANONICAL_QUALIFIED
+B403C_TOKEN_IDENTITY_DEPENDENCY_CANONICAL_MERGE = 27459079f8925cbcf513aaab0e456ed091573bb5
+B403D_FILE_SECURITY_DEPENDENCY_STATE = CANONICAL_QUALIFIED
+B403D_FILE_SECURITY_DEPENDENCY_CANONICAL_MERGE = c1d2dfd2b6151e9ee7e71b7693c98ace2e3cdb50
+B403_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B403_CANONICAL_MERGE = caa815bdcc33262487a7e7587771d9e7c2e9a2cd
+B403_B404_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B404_LINUX_SECRET_SERVICE_ADAPTER_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B404_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B404_LINUX_SECRET_SERVICE_ADAPTER_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -540,13 +551,35 @@ B402B PR #82 accepted head `b88c3aee7e674f7981457b2891b356ef23e8b1bb` added the 
 
 Complete B402 scope, runtime markers, review lineage, transport evidence, and residual limits are recorded in `b402-android-keystore-final-evidence.md`. Q009 remains unsatisfied; B402's local/native/CI evidence and repository-owner reconciliation do not substitute for the required final independent implementation review.
 
-## B402/B403 reconciliation bound
+## Canonical B402/B403 reconciliation disposition
 
-This reconciliation changes only Specification 004 evidence/state surfaces. It adopts no runtime/security code, Cargo/native dependency, provider/provenance byte, generated artifact, workflow, donor material, B403 implementation byte, freshness/backup/rotation/deletion behavior, Specification 005 behavior, or release/FIPS/compliance claim.
+PR #83 final head `cb34c69c430fc268991c2a0bd203e11c8d862348` passed pull-request CI `34499410847` and R3 `34499410854` on attempt 1 including Windows job `102946085980`. Repository-owner reconciliation review `5169541104` is governance evidence only and explicitly `NOT_Q009`; durable expected-head binding comment `5621799767` bound the exact final head.
 
-B403 may begin only after this reconciliation exact head passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+The observed merge invocation used `expected_head_sha = cb34c69c430fc268991c2a0bd203e11c8d862348` and `merge_method = merge`; GitHub returned canonical merge `b2d62613b192c54cc501513ee6bb40059c90817c` with exact parents `e8aeb1e09591358850b109fdf423a6bfd0b60003` + `cb34c69c430fc268991c2a0bd203e11c8d862348` and exact accepted tree. Push-triggered CI `34500686685` and R3 `34500686751` both succeeded on attempt 1, including Windows job `102950412516`. Durable qualification comment: `5622030550`.
 
-After those conditions become true, conditional authority resolves to `B403_ONLY` without another state mutation. B403 is bounded to the Windows current-user DPAPI/CNG-class adapter reporting `SAME_USER_ACCOUNT`; stronger `APP_EXCLUSIVE` or `REQUIRED_EACH_HIMSAT_UNLOCK` policy fails closed unless a separately reviewed Windows mechanism proves it. B404-B406 and B501-B506 remain separate later leaves. Any new native dependency requires exact provenance/license/closure evidence before canonical adoption.
+The B402/B403 reconciliation is therefore canonical-qualified, B402 is canonically closed, and its conditional authority resolved to B403 only before the B403 dependency/runtime sequence proceeded.
+
+## Canonical B403 dependency and implementation disposition
+
+B403 dependency adoption remained forward-only and review-bounded. PR #85's post-merge CI/R3 attempt-1 failures remain NOT PASS; PR #86 recovered B403A without rewriting that evidence and qualified canonical recovery merge `c642029ff8c338b46bb1585ebff58e168e5a8653`. B403C token-identity adoption qualified canonical merge `27459079f8925cbcf513aaab0e456ed091573bb5`. B403D file-security adoption qualified canonical merge `c1d2dfd2b6151e9ee7e71b7693c98ace2e3cdb50`. Complete dependency and recovery evidence remains in the B403A/B403C/B403D evidence documents.
+
+Rejected implementation PRs #87 and #90 remain closed/unmerged evidence. PR #93 preserved its rejected predecessors forward-only: head `597577a3b8d6cc8ad6b3b011de7b3fd0bccb9a29` was not accepted after a path-substitution/TOCTOU review finding, and head `67a9770002688b5e66916d6af1dee8dd97109160` remains `FAILURE_NOT_PASS` because R2/R3 rejected 971 added lines against the canonical 900-line Diffcipline limit.
+
+Final B403 head `43c9e702102ec35ca3bfbd64bc3ec70cb87e6e13` and tree `7b74367463b3d8bc52163ff985db2d6189605f72` changed exactly two files with 900 additions. It passed pull-request CI `34624044015` and R3 `34624043503` on attempt 1, including Windows job `103344703932`. Repository-owner reconciliation review `5181372120` is governance evidence only and explicitly `NOT_Q009`; no inline review thread remained unresolved. CodeRabbit's final-head automatic substantive review was unavailable/skipped and is not represented as independent review PASS.
+
+Durable transport binding comment `5637855910` bound the exact accepted head. The actual observed merge invocation used `expected_head_sha = 43c9e702102ec35ca3bfbd64bc3ec70cb87e6e13` with `merge_method = merge`; GitHub returned canonical merge `caa815bdcc33262487a7e7587771d9e7c2e9a2cd`. Exact parentage is `c1d2dfd2b6151e9ee7e71b7693c98ace2e3cdb50` + `43c9e702102ec35ca3bfbd64bc3ec70cb87e6e13`; merge tree `7b74367463b3d8bc52163ff985db2d6189605f72` exactly matches the accepted head tree.
+
+Push-triggered post-merge CI `34625185689` and R3 `34625185699` both succeeded on attempt 1 on exact canonical merge `caa815bdcc33262487a7e7587771d9e7c2e9a2cd`; Windows Rust job `103348466854` and R3 job `103348466889` succeeded. Durable qualification comment: `5637993261`. Complete B403 scope, negative evidence, transport proof, and residual limits are recorded in `b403-windows-dpapi-final-evidence.md`.
+
+B403 is therefore canonical-qualified only for the Windows current-user DPAPI adapter reporting `SAME_USER_ACCOUNT`, `NOT_REQUIRED` presence, and hardware backing `Unknown`. Stronger scope/presence, CNG/TPM hardware backing, freshness, backup/rotation/deletion, Q009, and release/FIPS/compliance claims remain unmade.
+
+## B403/B404 reconciliation bound
+
+This reconciliation changes only Specification 004 evidence/state surfaces. It adopts no Linux runtime/security code, Cargo/native dependency, provider/provenance byte, generated artifact, workflow, donor material, B404 implementation byte, freshness/backup/rotation/deletion behavior, Specification 005 behavior, or release/FIPS/compliance claim.
+
+B404 may begin only after this reconciliation exact head passes original-attempt pull-request CI and R3, is reconciled against live `main`/base/head/diff/reviews/threads/comments/mergeability, is actually merged with explicit `expected_head_sha` and `merge_method = merge`, has exact canonical parentage/tree proven, and then passes original-attempt push-triggered post-merge CI and R3.
+
+After those conditions become true, conditional authority resolves to `B404_ONLY` without another state mutation. B404 is bounded to the Linux Secret Service adapter reporting `SAME_USER_SESSION` unless the exact provider proves stronger semantics, using only fixed Himsat service/application identity and an opaque protector ID as non-secret lookup attributes, rejecting stronger unproven policy, and providing no plaintext fallback. Any new native dependency requires exact provenance/license/notices/SBOM/closure evidence before canonical adoption. B405-B406 and B501-B506 remain separate later leaves.
 
 ## Specification 004 delivery chain
 
@@ -577,10 +610,12 @@ After those conditions become true, conditional authority resolves to `B403_ONLY
   -> B401/B402 state reconciliation           CANONICAL_QUALIFIED
   -> B402A Android native bridge              CANONICAL_QUALIFIED
   -> B402B Android Rust adapter               CANONICAL_QUALIFIED
-  -> B402 Android Keystore adapter            CANONICAL_CLOSED_IF_RECONCILIATION_QUALIFIED
-  -> B402/B403 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B403 Windows DPAPI/CNG adapter           BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B404-B406 remaining platform protectors  BLOCKED_PENDING_PRIOR_LEAVES
+  -> B402 Android Keystore adapter            CANONICAL_QUALIFIED
+  -> B402/B403 state reconciliation           CANONICAL_QUALIFIED
+  -> B403 Windows DPAPI/CNG adapter           CANONICAL_QUALIFIED
+  -> B403/B404 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B404 Linux Secret Service adapter        BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B405-B406 remaining protector checks     BLOCKED_PENDING_PRIOR_LEAVES
   -> B501-B506 freshness/backup/rotation      BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
