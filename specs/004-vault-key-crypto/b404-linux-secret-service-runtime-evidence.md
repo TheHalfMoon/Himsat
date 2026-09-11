@@ -1,0 +1,28 @@
+# B404 Linux Secret Service Runtime Evidence
+
+## Scope
+
+This leaf implements only the B404 Linux Secret Service VRK protector and its exact Ubuntu native qualification path. It does not implement freshness anchors, protector replacement/rotation, B405-B406, B501-B506, release/compliance claims, or Q009.
+
+## Conservative provider contract
+
+- Reported access scope is `SAME_USER_SESSION` only.
+- Per-Himsat-unlock user presence is not claimed and `REQUIRED_EACH_HIMSAT_UNLOCK` is rejected.
+- `APP_EXCLUSIVE` and `SAME_USER_ACCOUNT` are rejected because the exact provider path does not prove them.
+- Hardware backing remains `UNKNOWN`.
+- Secret Service transport is always `EncryptionType::Dh`; plaintext Secret Service sessions are not used.
+- The adapter uses only the provider default collection and never auto-unlocks a locked collection or item.
+
+## Provider-visible metadata
+
+Lookup attributes are exactly the fixed application identifier `com.thehalfmoon.himsat` and one opaque random 16-byte protector identifier encoded as lowercase hex. The fixed item label and content type contain no vault-specific data. `VaultId`, key generation, portable policy, and VRK bytes are encoded only inside the protected secret value.
+
+## Fail-closed behavior
+
+Duplicate matches, malformed records, metadata drift, cross-vault/generation reuse, policy mismatch, locked state, missing items, provider errors, and secret-session cryptographic errors never return a VRK. Existing records are never silently overwritten with a different VRK. Freshness and protector replacement return `UnsupportedPolicy` in this leaf.
+
+## Native qualification
+
+The CI job `B404 Secret Service / ubuntu-24.04` installs the Ubuntu GNOME Keyring Secret Service provider, starts it inside a private D-Bus session, and runs two ignored exact tests in separate Himsat test processes. Phase 1 stores and reopens a VRK and verifies exact provider-visible metadata. Phase 2 reconnects after process restart, unlocks the same VRK, deletes it, locks the collection, and proves the adapter returns `Locked` instead of auto-unlocking.
+
+Canonical qualification requires exact-head CI/R3 success, review reconciliation, expected-head guarded merge, exact parentage/tree verification, and original-attempt push-triggered post-merge CI/R3 success. Q009 remains independently unsatisfied.

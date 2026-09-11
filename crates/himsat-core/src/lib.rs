@@ -29,6 +29,10 @@ pub mod vault_android_keystore;
 #[cfg(target_os = "windows")]
 pub mod vault_windows_dpapi;
 
+/// B404 Linux Secret Service adapter using an encrypted session and opaque lookup metadata.
+#[cfg(target_os = "linux")]
+pub mod vault_linux_secret_service;
+
 /// B202 versioned bounded-blob XChaCha20-Poly1305 envelope execution/parsing.
 pub mod vault_blob;
 

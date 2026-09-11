@@ -91,6 +91,49 @@ jobs:
           python tools/provenance_gate.py check-generated
           python tools/004p_dependency_closure.py
 
+  b404-secret-service:
+    name: B404 Secret Service / ubuntu-24.04
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Install GNOME Keyring Secret Service provider
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gnome-keyring
+          gnome-keyring-daemon --version
+          dbus-daemon --version | head -n 1
+          dpkg-query -W -f='${Package}=${Version}\n' gnome-keyring dbus
+      - name: Qualify encrypted Secret Service round trip and restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="$RUNNER_TEMP/b404-home"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/b404-runtime"
+          mkdir -p "$HOME/.local/share/keyrings" "$XDG_RUNTIME_DIR"
+          chmod 700 "$HOME" "$XDG_RUNTIME_DIR"
+          dbus-run-session -- bash -c '
+            set -euo pipefail
+            keyring_password="$(od -An -N32 -tx1 /dev/urandom | tr -d "[:space:]")"
+            eval "$(printf "%s" "$keyring_password" | gnome-keyring-daemon --unlock --components=secrets)"
+            unset keyring_password
+            cargo +1.98.1 test -p himsat-core --lib --locked \
+              vault_linux_secret_service::tests::native_gnome_keyring_phase_1_store_and_inspect \
+              -- --ignored --exact --nocapture
+            cargo +1.98.1 test -p himsat-core --lib --locked \
+              vault_linux_secret_service::tests::native_gnome_keyring_phase_2_restart_unlock_delete_and_lock \
+              -- --ignored --exact --nocapture
+          '
+
   provenance:
     name: Provenance / ${{ matrix.os }}
     strategy:
