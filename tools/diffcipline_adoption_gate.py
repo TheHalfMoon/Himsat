@@ -5,7 +5,7 @@ Repository Diffcipline policy remains conservative. The historical 004P
 P005/P006 adoption diff is exceptional because it intentionally introduces the
 reviewed dependency graph and generated provenance closure in one bounded leaf.
 This bridge accepts Diffcipline's otherwise-blocking REVIEW/size findings only
-for explicitly bounded historical/provider, B401, B403A, or B403C candidate transitions. The B401, B403A, and B403C exceptions are available only when this gate is executed
+for explicitly bounded historical/provider, B401, B403A, B403C, or B403D candidate transitions. The B401, B403A, B403C, and B403D exceptions are available only when this gate is executed
 from the corresponding trusted immutable PR base and every permitted candidate
 artifact matches its pinned Git blob. Every configured verification still has to pass.
 
@@ -78,6 +78,22 @@ B403C_EXPECTED_BLOBS = {
     "tools/004p_dependency_closure.py": "5ef3432b2e97d5e01bcaf15936a32d4f183d4592",
 }
 B403C_EXPECTED_FILES = set(B403C_EXPECTED_BLOBS)
+
+B403D_PRECONDITION_BASE = "27459079f8925cbcf513aaab0e456ed091573bb5"
+B403D_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B403D_MAX_ADDED_LINES = 2100
+B403D_EXPECTED_ADDED_LINES = 2028
+B403D_EXPECTED_DELETED_LINES = 34
+B403D_EXPECTED_BLOBS = {
+    "Cargo.lock": "8774e77c1a3ba36c23e739f365fc3a01cf337e88",
+    "THIRD_PARTY_NOTICES.md": "91ff3141802ccccd01b17e65d0e6b0a7e9c827fa",
+    "crates/himsat-core/Cargo.toml": "4ac5e91e76c0d323a2ef8ef19faf1097b4ac0059",
+    "governance/generated/sbom.json": "0c848d903272dc244fd125fccc3299a854773e92",
+    "governance/provenance/registry.json": "034e5d3ee20396c6d74c30382ef39b98e45de195",
+    "specs/004-vault-key-crypto/b403d-windows-file-security-dependency-adoption-evidence.md": "e9551d89f479c274289411f979c683b19529e343",
+    "tools/004p_dependency_closure.py": "cc624a7913a73adee42b4af00852b478a7f0f544",
+}
+B403D_EXPECTED_FILES = set(B403D_EXPECTED_BLOBS)
 
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
@@ -353,6 +369,102 @@ def check_b403_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int
     return 0
 
 
+def b403d_trusted_base(base: str) -> bool:
+    """Accept only the canonical B403D gate successor or its immediate merge parent.
+
+    Pull-request qualification requires the comparison base to be current
+    canonical main. Push-triggered qualification after the guarded adoption
+    merge requires that same trusted base to be the first parent of current
+    canonical main. The trusted base itself must be a two-parent merge whose
+    first parent is the exact B403D precondition and whose only tree delta is
+    this adoption-gate path.
+    """
+
+    try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            canonical_parent_row = git("rev-list", "--parents", "-n", "1", canonical_main).split()
+            if len(canonical_parent_row) != 3 or canonical_parent_row[1] != base:
+                return False
+        base_parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(base_parent_row) != 3 or base_parent_row[1] != B403D_PRECONDITION_BASE:
+            return False
+        raw = git("diff", "--no-renames", "--name-only", B403D_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B403D_TRUSTED_BASE_DELTA and len(paths) == len(B403D_TRUSTED_BASE_DELTA)
+
+
+def check_b403d_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the pinned B403D Windows file-security dependency adoption."""
+
+    if args.exit_code != 2 or proof.get("verdict") != "FAIL":
+        return fail(
+            f"unexpected B403D non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B403D Git diff: {exc}")
+
+    if set(actual_files) != B403D_EXPECTED_FILES or len(actual_files) != len(B403D_EXPECTED_FILES):
+        return fail("actual B403D Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B403D Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B403D_EXPECTED_FILES or len(files) != len(B403D_EXPECTED_FILES):
+        return fail("B403D exception changed-path set is not exact")
+
+    if proof.get("changed_files") != len(B403D_EXPECTED_FILES):
+        return fail("B403D Diffcipline changed-file count is not exact")
+    if actual_added != B403D_EXPECTED_ADDED_LINES or proof.get("added_lines") != actual_added:
+        return fail("B403D added-line count is not exact")
+    if actual_deleted != B403D_EXPECTED_DELETED_LINES or proof.get("deleted_lines") != actual_deleted:
+        return fail("B403D deleted-line count is not exact")
+    if not (POLICY_MAX_ADDED_LINES < actual_added <= B403D_MAX_ADDED_LINES):
+        return fail("B403D dependency leaf is outside the bounded adoption line window")
+
+    expected_reasons = {
+        f"added lines {actual_added} exceed maximum {POLICY_MAX_ADDED_LINES}",
+        "dependency manifest changed: crates/himsat-core/Cargo.toml",
+        "lockfile changed: Cargo.lock",
+    }
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != 3:
+        return fail(f"unexpected B403D Diffcipline reason set: {reasons!r}")
+    if proof.get("scope_violations") != []:
+        return fail("B403D scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B403D verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B403D verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B403D_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"B403D candidate artifact blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B403D candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B403D DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
+
 def b403c_trusted_base(base: str) -> bool:
     """Accept only the canonical B403C gate successor or its immediate merge parent.
 
@@ -473,6 +585,12 @@ def main() -> int:
     if args.exit_code == 0 and verdict == "PASS":
         print("DIFFCIPLINE PASS")
         return 0
+
+    # B403D is the exact file-security dependency adoption required by the
+    # substantive B403B successor review. The gate is trusted only from its
+    # separate canonical hardening merge and pins every candidate artifact.
+    if b403d_trusted_base(args.base):
+        return check_b403d_exception(args, proof)
 
     # B403C is a bounded follow-up dependency adoption required by substantive
     # review of the first B403B implementation candidate. Its trusted base is
