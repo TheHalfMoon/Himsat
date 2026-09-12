@@ -5,7 +5,7 @@ Repository Diffcipline policy remains conservative. The historical 004P
 P005/P006 adoption diff is exceptional because it intentionally introduces the
 reviewed dependency graph and generated provenance closure in one bounded leaf.
 This bridge accepts Diffcipline's otherwise-blocking REVIEW/size findings only
-for explicitly bounded historical/provider, B401, B403A, B403C, B403D, or B404 candidate transitions. The B401, B403A, B403C, B403D, and B404 exceptions are available only when this gate is executed
+for explicitly bounded historical/provider, B401, B403A, B403C, B403D, B404, or B501C candidate transitions. The B401, B403A, B403C, B403D, B404, and B501C exceptions are available only when this gate is executed
 from the corresponding trusted immutable PR base and every permitted candidate
 artifact matches its pinned Git blob. Every configured verification still has to pass.
 
@@ -110,6 +110,18 @@ B404_EXPECTED_BLOBS = {
     "tools/004p_dependency_closure.py": "807f8238b401f922c2e330bb0f7652fb9ce771b5",
 }
 B404_EXPECTED_FILES = set(B404_EXPECTED_BLOBS)
+
+B501C_PRECONDITION_BASE = "c9493b3705f2cc69493b1b301d04074197b182cf"
+B501C_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B501C_EXPECTED_ADDED_LINES = 21
+B501C_EXPECTED_DELETED_LINES = 0
+B501C_EXPECTED_BLOBS = {
+    "Cargo.lock": "007428e2cd75486b905f93f12446c727b34144a8",
+    "crates/himsat-core/Cargo.toml": "d1abb5b26f6c52db970896f5b83dc4938b74ca59",
+    "specs/004-vault-key-crypto/b501c-apple-keychain-update-dependency-evidence.md": "98b1058fac226e5b82054b0c2e957b478fe6ac4f",
+    "tools/004p_dependency_closure.py": "bdf2ec06a2e2b7cff2af5976e9d8c1f61b222b92",
+}
+B501C_EXPECTED_FILES = set(B501C_EXPECTED_BLOBS)
 
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
@@ -669,6 +681,93 @@ def check_b403c_exception(args: argparse.Namespace, proof: dict[str, Any]) -> in
     return 0
 
 
+
+def b501c_trusted_base(base: str) -> bool:
+    """Accept only the canonical B501C gate successor or its immediate merge parent."""
+
+    try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            canonical_parent_row = git("rev-list", "--parents", "-n", "1", canonical_main).split()
+            if len(canonical_parent_row) != 3 or canonical_parent_row[1] != base:
+                return False
+        base_parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(base_parent_row) != 3 or base_parent_row[1] != B501C_PRECONDITION_BASE:
+            return False
+        raw = git("diff", "--no-renames", "--name-only", B501C_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B501C_TRUSTED_BASE_DELTA and len(paths) == len(B501C_TRUSTED_BASE_DELTA)
+
+
+def check_b501c_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the pinned B501C direct exposure of the existing Apple dependency."""
+
+    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
+        return fail(
+            f"unexpected B501C non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B501C Git diff: {exc}")
+
+    if set(actual_files) != B501C_EXPECTED_FILES or len(actual_files) != len(B501C_EXPECTED_FILES):
+        return fail("actual B501C Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B501C Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B501C_EXPECTED_FILES or len(files) != len(B501C_EXPECTED_FILES):
+        return fail("B501C exception changed-path set is not exact")
+
+    if proof.get("changed_files") != len(B501C_EXPECTED_FILES):
+        return fail("B501C Diffcipline changed-file count is not exact")
+    if actual_added != B501C_EXPECTED_ADDED_LINES or proof.get("added_lines") != actual_added:
+        return fail("B501C added-line count is not exact")
+    if actual_deleted != B501C_EXPECTED_DELETED_LINES or proof.get("deleted_lines") != actual_deleted:
+        return fail("B501C deleted-line count is not exact")
+    if actual_added > POLICY_MAX_ADDED_LINES:
+        return fail("B501C dependency leaf unexpectedly exceeds ordinary line bounds")
+
+    expected_reasons = {
+        "dependency manifest changed: crates/himsat-core/Cargo.toml",
+        "lockfile changed: Cargo.lock",
+    }
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != 2:
+        return fail(f"unexpected B501C Diffcipline reason set: {reasons!r}")
+    if proof.get("scope_violations") != []:
+        return fail("B501C scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B501C verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B501C verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B501C_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"B501C candidate artifact blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B501C candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B501C DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--proof", type=Path, required=True)
@@ -695,6 +794,12 @@ def main() -> int:
     if args.exit_code == 0 and verdict == "PASS":
         print("DIFFCIPLINE PASS")
         return 0
+
+    # B501C exposes an already-provenanced Apple transitive dependency directly
+    # so the safe Security Framework update-only API can receive CFData. The
+    # exception pins the complete four-file candidate and accepts REVIEW only.
+    if b501c_trusted_base(args.base):
+        return check_b501c_exception(args, proof)
 
     # B404 is the exact Linux Secret Service dependency-adoption leaf. It is
     # enabled only by its separate canonical gate-hardening merge and pins all
