@@ -232,11 +232,11 @@ impl ManifestPlaintext {
         self.previous_manifest_hash
     }
 
-    pub(crate) const fn vault_id(&self) -> VaultId {
+    pub const fn vault_id(&self) -> VaultId {
         self.vault_id
     }
 
-    pub(crate) const fn active_key_generation(&self) -> KeyGeneration {
+    pub const fn active_key_generation(&self) -> KeyGeneration {
         self.active_key_generation
     }
 

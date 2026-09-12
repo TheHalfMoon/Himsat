@@ -11,8 +11,9 @@
 //! provider behind the existing keyed-handle lease. B307 adds bounded
 //! copy-verify-publish migration sequencing without source-retirement behavior.
 //!
-//! Portable backup transport, cross-generation/full VRK rotation, deletion, and
-//! Specification 005 remain outside the currently authorized B502 boundary.
+//! B503A exposes the bounded full-VRK rotation contract and quiescence proof.
+//! Portable backup transport, B503 phase execution, deletion, and Specification
+//! 005 remain outside this sub-leaf.
 
 /// Provider-neutral vault identity, freshness, lease identity, capability, and
 /// secret-protector contract surface.
@@ -59,6 +60,9 @@ pub mod vault_freshness;
 
 /// B502 explicit older-backup and fresh-device restore state transitions.
 pub mod vault_restore;
+
+/// B503A full-VRK rotation identities, backend boundary, and quiescence proof.
+pub mod vault_rotation;
 
 /// B103 portable secret-protector policy, capability, and binding validation.
 pub mod vault_protector;
