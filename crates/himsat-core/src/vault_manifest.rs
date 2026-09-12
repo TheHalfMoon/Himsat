@@ -858,4 +858,108 @@ mod tests {
             base_manifest()
         );
     }
+    fn manifest_with_objects(
+        objects: Vec<ManifestObject>,
+    ) -> Result<ManifestPlaintext, ManifestError> {
+        ManifestPlaintext::new(
+            vault(),
+            epoch(1),
+            ManifestHash::from_bytes([0; 32]),
+            generation(1),
+            (RotationPhase::None, None),
+            vec![ManifestGeneration::new(
+                generation(1),
+                GenerationState::Active,
+            )],
+            objects,
+        )
+    }
+
+    #[test]
+    fn envelope_context_and_structure_fail_closed() {
+        let context = ManifestContext::new(vault(), generation(1), epoch(1));
+        let envelope = encrypt_manifest_with_nonce(&key(), context, [0x66; 24], &base_manifest())
+            .expect("encrypt");
+        assert_eq!(
+            decrypt_manifest(
+                &key(),
+                ManifestContext::new(vault(), generation(2), epoch(1)),
+                &envelope,
+            ),
+            Err(ManifestError::ContextMismatch),
+        );
+        assert_eq!(
+            decrypt_manifest(&key(), context, &envelope[..envelope.len() - 1]),
+            Err(ManifestError::TruncatedEnvelope),
+        );
+        let mut trailing = envelope;
+        trailing.push(0);
+        assert_eq!(
+            decrypt_manifest(&key(), context, &trailing),
+            Err(ManifestError::TrailingData),
+        );
+    }
+
+    #[test]
+    fn canonical_plaintext_rejects_bad_genesis_rotation_inventory_and_nonce_reuse() {
+        assert_eq!(
+            ManifestPlaintext::new(
+                vault(),
+                epoch(2),
+                ManifestHash::from_bytes([0; 32]),
+                generation(1),
+                (RotationPhase::None, None),
+                vec![ManifestGeneration::new(
+                    generation(1),
+                    GenerationState::Active,
+                )],
+                vec![],
+            ),
+            Err(ManifestError::CorruptOrTampered),
+        );
+        assert_eq!(
+            ManifestPlaintext::new(
+                vault(),
+                epoch(1),
+                ManifestHash::from_bytes([0; 32]),
+                generation(1),
+                (RotationPhase::Prepare, None),
+                vec![ManifestGeneration::new(
+                    generation(1),
+                    GenerationState::Active,
+                )],
+                vec![],
+            ),
+            Err(ManifestError::CorruptOrTampered),
+        );
+        let nonce = [0x77; 24];
+        let objects = vec![
+            ManifestObject::new(
+                [1; 16],
+                [2; 16],
+                generation(1),
+                (BOUNDED_BLOB_MIN_ENVELOPE_BYTES - 1) as u64,
+                [3; 32],
+                ManifestAuthMetadata::GenericArtifactBlob { nonce },
+            ),
+            ManifestObject::new(
+                [2; 16],
+                [4; 16],
+                generation(1),
+                BOUNDED_BLOB_MIN_ENVELOPE_BYTES as u64,
+                [5; 32],
+                ManifestAuthMetadata::GenericArtifactBlob { nonce },
+            ),
+        ];
+        assert_eq!(
+            manifest_with_objects(objects.clone()),
+            Err(ManifestError::CorruptOrTampered),
+        );
+        let mut canonical_length = objects;
+        canonical_length[0].ciphertext_length = BOUNDED_BLOB_MIN_ENVELOPE_BYTES as u64;
+        assert_eq!(
+            manifest_with_objects(canonical_length),
+            Err(ManifestError::CorruptOrTampered),
+        );
+    }
 }
