@@ -152,7 +152,7 @@ fn run_control_mode(mode: &str) -> Result<bool, Box<dyn std::error::Error>> {
             match state {
                 ProtectedFreshnessState::Uninitialized => println!("B501D_STATE=UNINITIALIZED"),
                 ProtectedFreshnessState::Present(anchor) => println!(
-                    "B501D_STATE=PRESENT:{}:{}",
+                    "B501D_STATE=PRESENT:{}:{:02x}",
                     anchor.highest_epoch().get(),
                     anchor.manifest_hash().as_bytes()[0]
                 ),
