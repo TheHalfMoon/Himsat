@@ -3,7 +3,9 @@ use crate::vault_blob::{
     BOUNDED_BLOB_MAX_ENVELOPE_BYTES, BOUNDED_BLOB_MIN_ENVELOPE_BYTES, BOUNDED_BLOB_NONCE_BYTES,
 };
 use crate::vault_keys::{KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
-use crate::vault_nonce::{NonceLifecycleError, NonceReservation, NonceReservationLedger};
+use crate::vault_nonce::{
+    NonceLifecycleError, NoncePurpose, NonceReservation, NonceReservationLedger,
+};
 use chacha20poly1305::{
     KeyInit, XChaCha20Poly1305, XNonce,
     aead::{Aead, Payload},
@@ -228,6 +230,30 @@ impl ManifestPlaintext {
     #[must_use]
     pub const fn previous_manifest_hash(&self) -> ManifestHash {
         self.previous_manifest_hash
+    }
+
+    pub(crate) const fn vault_id(&self) -> VaultId {
+        self.vault_id
+    }
+
+    pub(crate) const fn active_key_generation(&self) -> KeyGeneration {
+        self.active_key_generation
+    }
+
+    pub(crate) fn republish_for_restore(
+        &self,
+        freshness_epoch: FreshnessEpoch,
+        previous_manifest_hash: ManifestHash,
+    ) -> Result<Self, ManifestError> {
+        Self::new(
+            self.vault_id,
+            freshness_epoch,
+            previous_manifest_hash,
+            self.active_key_generation,
+            (self.rotation_phase, self.rotation_target_generation),
+            self.generations.clone(),
+            self.objects.clone(),
+        )
     }
 
     fn validate(&self) -> Result<(), ManifestError> {
@@ -762,6 +788,21 @@ pub fn encrypt_fresh_manifest(
     Ok((reservation, envelope))
 }
 
+pub(crate) fn encrypt_fresh_manifest_avoiding_reservation(
+    ledger: &mut NonceReservationLedger,
+    vrk: &OwnedKeyMaterial,
+    context: ManifestContext,
+    plaintext: &ManifestPlaintext,
+    forbidden: NonceReservation,
+) -> Result<(NonceReservation, Vec<u8>), FreshManifestError> {
+    let reservation = ledger
+        .reserve_fresh_manifest_nonce_avoiding(context.vault_id, context.key_generation, forbidden)
+        .map_err(FreshManifestError::Nonce)?;
+    let envelope = encrypt_manifest_with_nonce(vrk, context, reservation.nonce(), plaintext)
+        .map_err(FreshManifestError::Envelope)?;
+    Ok((reservation, envelope))
+}
+
 pub fn decrypt_manifest(
     vrk: &OwnedKeyMaterial,
     expected: ManifestContext,
@@ -816,6 +857,18 @@ pub fn manifest_hash(envelope: &[u8]) -> ManifestHash {
 
 pub fn manifest_context(envelope: &[u8]) -> Result<ManifestContext, ManifestError> {
     Ok(parse_envelope(envelope)?.context)
+}
+
+pub(crate) fn manifest_nonce_reservation(
+    envelope: &[u8],
+) -> Result<NonceReservation, ManifestError> {
+    let parsed = parse_envelope(envelope)?;
+    Ok(NonceReservation::new(
+        parsed.context.vault_id,
+        NoncePurpose::FreshnessManifest,
+        parsed.context.key_generation,
+        parsed.nonce,
+    ))
 }
 #[cfg(test)]
 mod tests {
