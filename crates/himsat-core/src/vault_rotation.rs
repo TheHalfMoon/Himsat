@@ -672,6 +672,238 @@ where
     })
 }
 
+fn validate_target_inventory<E>(
+    source: &[ManifestObject],
+    target: &[ManifestObject],
+    target_generation: KeyGeneration,
+) -> Result<(), FullRotationError<E>> {
+    if source.len() != target.len() {
+        return Err(FullRotationError::InventoryMismatch);
+    }
+    for (source, target) in source.iter().zip(target.iter()) {
+        if source.kind() != target.kind()
+            || source.logical_id() != target.logical_id()
+            || source.storage_id() == target.storage_id()
+            || target.key_generation() != target_generation
+        {
+            return Err(FullRotationError::InventoryMismatch);
+        }
+    }
+    Ok(())
+}
+
+fn load_prepublication_checkpoint<Source, B>(
+    identity: FullRotationIdentity,
+    source_protector: &mut Source,
+    backend_impl: &B,
+    nonce_ledger: &NonceReservationLedger,
+) -> Result<(ManifestPlaintext, OwnedKeyMaterial), FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    let envelope = backend_impl
+        .read_rotation_checkpoint()
+        .map_err(|error| backend(RotationPhase::Prepare, error))?
+        .ok_or(FullRotationError::InvalidState)?;
+    require_retained_manifest_reservation(nonce_ledger, &envelope)?;
+    let context = manifest_context(&envelope).map_err(FullRotationError::Manifest)?;
+    if context.vault_id() != identity.vault_id
+        || context.key_generation() != identity.source_generation
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    let source_vrk = unlock_verified(
+        source_protector,
+        identity.vault_id,
+        identity.source_generation,
+    )?;
+    let checkpoint =
+        decrypt_manifest(&source_vrk, context, &envelope).map_err(FullRotationError::Manifest)?;
+    if checkpoint.vault_id() != identity.vault_id
+        || checkpoint.rotation_target_generation() != Some(identity.target_generation)
+        || !matches!(
+            checkpoint.rotation_phase(),
+            RotationPhase::Prepare | RotationPhase::Stage | RotationPhase::Verify
+        )
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    Ok((checkpoint, source_vrk))
+}
+
+fn persist_phase_checkpoint<B: FullRotationBackend>(
+    backend_impl: &mut B,
+    ledger: &mut NonceReservationLedger,
+    source_vrk: &OwnedKeyMaterial,
+    identity: FullRotationIdentity,
+    basis: &ManifestPlaintext,
+    phase: RotationPhase,
+) -> Result<(), FullRotationError<B::Error>> {
+    let checkpoint = build_checkpoint(
+        basis,
+        identity,
+        phase,
+        basis.generations().to_vec(),
+        basis.objects().to_vec(),
+    )?;
+    persist_encrypted_checkpoint(backend_impl, ledger, source_vrk, identity, &checkpoint)?;
+    Ok(())
+}
+
+/// Advances one authorized pre-publication B503 transition from a live quiesced session.
+/// B503D intentionally stops at VERIFY; publication and source retirement remain later leaves.
+#[allow(clippy::too_many_arguments)]
+pub fn advance_full_rotation<Source, Target, B>(
+    quiesced: RotationQuiesced,
+    identity: FullRotationIdentity,
+    protector_binding: FullRotationProtectorBinding,
+    source_protector: &mut Source,
+    target_protector: &mut Target,
+    backend_impl: &mut B,
+    nonce_ledger: &mut NonceReservationLedger,
+) -> Result<FullRotationProgress, FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    if quiesced.identity().vault_id() != identity.vault_id
+        || quiesced.identity().key_generation() != identity.source_generation
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    advance_prepublication_inner(
+        identity,
+        protector_binding,
+        source_protector,
+        target_protector,
+        backend_impl,
+        nonce_ledger,
+    )
+}
+
+/// Resumes one PREPARE/STAGE transition after restart while ordinary writes remain excluded.
+/// A VERIFY checkpoint is durable output of this leaf; PUBLISH is intentionally not executed here.
+#[allow(clippy::too_many_arguments)]
+pub fn resume_full_rotation_after_restart<Source, Target, B>(
+    identity: FullRotationIdentity,
+    protector_binding: FullRotationProtectorBinding,
+    source_protector: &mut Source,
+    target_protector: &mut Target,
+    backend_impl: &mut B,
+    nonce_ledger: &mut NonceReservationLedger,
+) -> Result<FullRotationProgress, FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    advance_prepublication_inner(
+        identity,
+        protector_binding,
+        source_protector,
+        target_protector,
+        backend_impl,
+        nonce_ledger,
+    )
+}
+
+fn advance_prepublication_inner<Source, Target, B>(
+    identity: FullRotationIdentity,
+    protector_binding: FullRotationProtectorBinding,
+    source_protector: &mut Source,
+    target_protector: &mut Target,
+    backend_impl: &mut B,
+    nonce_ledger: &mut NonceReservationLedger,
+) -> Result<FullRotationProgress, FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    assert_backend_quiesced(backend_impl, RotationPhase::Prepare)?;
+    if nonce_ledger.vault_id() != identity.vault_id
+        || backend_impl
+            .read_rotation_protector_binding()
+            .map_err(|error| backend(RotationPhase::Prepare, error))?
+            != Some(protector_binding)
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+
+    let (checkpoint, source_vrk) =
+        load_prepublication_checkpoint(identity, source_protector, backend_impl, nonce_ledger)?;
+    let source_anchor = protector_anchor(source_protector, identity.vault_id)?;
+    let target_anchor = protector_anchor(target_protector, identity.vault_id)?;
+    if source_anchor != target_anchor
+        || source_anchor.highest_epoch() != checkpoint.freshness_epoch()
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+
+    let next_phase = match checkpoint.rotation_phase() {
+        RotationPhase::Prepare => {
+            let target_vrk = unlock_verified(
+                target_protector,
+                identity.vault_id,
+                identity.target_generation,
+            )?;
+            let staged = backend_impl
+                .stage_reencrypted_inventory(
+                    &source_vrk,
+                    &target_vrk,
+                    &checkpoint,
+                    identity.target_generation,
+                    nonce_ledger,
+                )
+                .map_err(|error| backend(RotationPhase::Stage, error))?;
+            validate_target_inventory(checkpoint.objects(), &staged, identity.target_generation)?;
+            let staged_checkpoint = build_checkpoint(
+                &checkpoint,
+                identity,
+                RotationPhase::Stage,
+                checkpoint.generations().to_vec(),
+                staged,
+            )?;
+            persist_encrypted_checkpoint(
+                backend_impl,
+                nonce_ledger,
+                &source_vrk,
+                identity,
+                &staged_checkpoint,
+            )?;
+            RotationPhase::Stage
+        }
+        RotationPhase::Stage => {
+            let target_vrk = unlock_verified(
+                target_protector,
+                identity.vault_id,
+                identity.target_generation,
+            )?;
+            backend_impl
+                .verify_staged_inventory(&target_vrk, checkpoint.objects())
+                .map_err(|error| backend(RotationPhase::Verify, error))?;
+            persist_phase_checkpoint(
+                backend_impl,
+                nonce_ledger,
+                &source_vrk,
+                identity,
+                &checkpoint,
+                RotationPhase::Verify,
+            )?;
+            RotationPhase::Verify
+        }
+        RotationPhase::Verify => return Err(FullRotationError::InvalidState),
+        _ => return Err(FullRotationError::InvalidState),
+    };
+
+    Ok(FullRotationProgress::InProgress {
+        identity,
+        phase: next_phase,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -854,6 +1086,9 @@ mod tests {
         checkpoint: Option<Vec<u8>>,
         recovery: Option<Vec<u8>>,
         fail_checkpoint_once: bool,
+        staged: Option<Vec<ManifestObject>>,
+        stage_calls: usize,
+        verify_calls: usize,
     }
 
     impl FullRotationBackend for PrepareBackend {
@@ -907,18 +1142,41 @@ mod tests {
             &mut self,
             _: &OwnedKeyMaterial,
             _: &OwnedKeyMaterial,
-            _: &ManifestPlaintext,
-            _: KeyGeneration,
+            source_manifest: &ManifestPlaintext,
+            target_generation: KeyGeneration,
             _: &mut NonceReservationLedger,
         ) -> Result<Vec<ManifestObject>, Self::Error> {
-            Err(BackendError("STAGE outside B503B"))
+            self.stage_calls += 1;
+            let staged: Vec<_> = source_manifest
+                .objects()
+                .iter()
+                .enumerate()
+                .map(|(index, object)| {
+                    let mut storage_id = object.storage_id();
+                    storage_id[15] = storage_id[15].wrapping_add((index as u8).wrapping_add(1));
+                    ManifestObject::new(
+                        object.logical_id(),
+                        storage_id,
+                        target_generation,
+                        object.ciphertext_length().saturating_add(17),
+                        [0x91; 32],
+                        object.auth_metadata(),
+                    )
+                })
+                .collect();
+            self.staged = Some(staged.clone());
+            Ok(staged)
         }
         fn verify_staged_inventory(
             &mut self,
             _: &OwnedKeyMaterial,
-            _: &[ManifestObject],
+            staged_objects: &[ManifestObject],
         ) -> Result<(), Self::Error> {
-            Err(BackendError("VERIFY outside B503B"))
+            if self.staged.as_deref() != Some(staged_objects) {
+                return Err(BackendError("staged inventory mismatch"));
+            }
+            self.verify_calls += 1;
+            Ok(())
         }
         fn quarantine_target_inventory(&mut self) -> Result<(), Self::Error> {
             Err(BackendError("abort outside B503B"))
@@ -1211,5 +1469,116 @@ mod tests {
         ));
         assert_eq!(target.key_bytes(), retained_target_key);
         assert!(backend.checkpoint.is_some());
+    }
+
+    #[test]
+    fn stage_and_verify_are_distinct_durable_transitions_and_restart_resumes() {
+        let PrepareFixture {
+            envelope,
+            mut source,
+            mut target,
+            mut backend,
+            mut ledger,
+            mut session,
+            ..
+        } = prepare_fixture();
+        let quiesced = quiesce_for_full_rotation(&mut session).expect("quiescence succeeds");
+        let prepared = begin_full_rotation(
+            quiesced,
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+            &envelope,
+            prepare_binding(),
+            prepare_policy(),
+            None,
+        )
+        .expect("PREPARE succeeds");
+        let identity = match prepared {
+            FullRotationProgress::InProgress { identity, phase } => {
+                assert_eq!(phase, RotationPhase::Prepare);
+                identity
+            }
+            FullRotationProgress::Complete { .. } => panic!("PREPARE cannot complete rotation"),
+        };
+
+        let staged = advance_full_rotation(
+            quiesced,
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("STAGE succeeds");
+        assert_eq!(
+            staged,
+            FullRotationProgress::InProgress {
+                identity,
+                phase: RotationPhase::Stage,
+            }
+        );
+        assert_eq!(backend.stage_calls, 1);
+        assert_eq!(backend.verify_calls, 0);
+        assert!(source.record.is_some());
+        let stage_envelope = backend.checkpoint.as_ref().expect("STAGE checkpoint");
+        let stage_context = manifest_context(stage_envelope).expect("STAGE context");
+        let stage_manifest = decrypt_manifest(
+            &OwnedKeyMaterial::from_bytes(SOURCE_KEY),
+            stage_context,
+            stage_envelope,
+        )
+        .expect("STAGE checkpoint authenticates");
+        assert_eq!(stage_manifest.rotation_phase(), RotationPhase::Stage);
+        assert!(
+            stage_manifest
+                .objects()
+                .iter()
+                .all(|object| object.key_generation() == identity.target_generation())
+        );
+
+        let verified = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("VERIFY resumes after restart");
+        assert_eq!(
+            verified,
+            FullRotationProgress::InProgress {
+                identity,
+                phase: RotationPhase::Verify,
+            }
+        );
+        assert_eq!(backend.stage_calls, 1);
+        assert_eq!(backend.verify_calls, 1);
+        assert!(source.record.is_some());
+        let verify_envelope = backend.checkpoint.as_ref().expect("VERIFY checkpoint");
+        let verify_context = manifest_context(verify_envelope).expect("VERIFY context");
+        let verify_manifest = decrypt_manifest(
+            &OwnedKeyMaterial::from_bytes(SOURCE_KEY),
+            verify_context,
+            verify_envelope,
+        )
+        .expect("VERIFY checkpoint authenticates");
+        assert_eq!(verify_manifest.rotation_phase(), RotationPhase::Verify);
+
+        assert!(matches!(
+            resume_full_rotation_after_restart(
+                identity,
+                prepare_binding(),
+                &mut source,
+                &mut target,
+                &mut backend,
+                &mut ledger,
+            ),
+            Err(FullRotationError::InvalidState)
+        ));
+        assert!(source.record.is_some());
     }
 }
