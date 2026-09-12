@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B406_CANONICAL_RECONCILING_B501_BOUND
+PROGRAM_STATE = SPEC_004_B501_CANONICAL_RECONCILING_B502_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -87,10 +87,14 @@ B405_B406_RECONCILIATION_STATE = CANONICAL_QUALIFIED
 B405_B406_RECONCILIATION_CANONICAL_MERGE = 63a406a363fdd7cf04d283594408c1e349478a18
 B406_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
 B406_CANONICAL_MERGE = f109e416264b43d45787b1532647f08e78f68e0b
-B406_B501_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B501_AUTHENTICATED_MANIFEST_FRESHNESS_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B501_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B501_AUTHENTICATED_MANIFEST_FRESHNESS_ONLY_IF_RECONCILIATION_QUALIFIED
+B406_B501_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B406_B501_RECONCILIATION_CANONICAL_MERGE = 115ab8c71efa29789e98cf58201e1c1b86d8e949
+B501_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B501_CANONICAL_MERGE = 65ef62a2d6317a4c69382a2ce3d29ddc608b7087
+B501_B502_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B502_OLDER_BACKUP_RESTORE_AND_FRESH_DEVICE_GENESIS_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B502_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B502_OLDER_BACKUP_RESTORE_AND_FRESH_DEVICE_GENESIS_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -636,6 +640,22 @@ Push-triggered post-merge CI `34661181395` and R3 `34661181490` both succeeded o
 
 This reconciliation may close B406 only for the bounded restart/removal/revocation/unsupported-policy/platform-negative qualification actually proven by the unchanged canonical adapters and portable lease/handle tests. It does not claim platform freshness-anchor atomicity. If this reconciliation itself later becomes exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge CI/R3 qualified, B501 becomes the only authorized implementation leaf. B501 remains bounded to authenticated manifest/freshness/genesis behavior and must keep platform freshness operations `UnsupportedPolicy` wherever exact protected old-or-new/CAS semantics are unproven. B502-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
 
+## Canonical B406/B501 reconciliation and B501 disposition
+
+PR #102 canonical merge `115ab8c71efa29789e98cf58201e1c1b86d8e949` resolved the prior conditional authority to B501 after expected-head guarded merge, exact parent/tree verification, and push-triggered CI `34662382909` plus R3 `34662382776` succeeded on attempt 1, including Windows Rust job `103467376947`. Durable transition qualification is recorded on PR #102. Q009 remained unsatisfied.
+
+The B501 implementation was deliberately split into bounded, independently qualified leaves. PR #103 B501A merged as `1827d5b35f5e75de8a4adedbb33f90424383701c`; PR #104 B501A2 merged as `ef36bb2e76ae54918be4ca9e1f1b96966854741c`; PR #105 B501B merged as `c9493b3705f2cc69493b1b301d04074197b182cf`; PR #106 hardened the exact B501C dependency-adoption gate and merged as `4a1d99af50bccf388840921d44a15c07cfb09957`; PR #108 exposed only the already-registered direct macOS `core-foundation 0.10.1` dependency and merged as `d5b19849e38bec338c7a830161418ea34384cb36`. Every accepted leaf passed original-attempt pull-request CI/R3, expected-head guarded merge, exact parent/tree verification, and original-attempt post-merge CI/R3 before its successor was accepted.
+
+B501D PR #109 accepted forward-only successor head `7b57ad031f389cda0e1049e1b0435ab4bbe44c40` with tree `b7dacb4974eeb65e09847c7af2e6323d64a907df`. Pre-merge CI `34672862145` and R3 `34672862065` succeeded on attempt 1; Windows Rust job `103497413995` succeeded. CodeRabbit's single predecessor qualification-marker finding was fixed forward-only and the thread was explicitly confirmed resolved on the successor. Owner reconciliation review `5185199112` is governance evidence only and explicitly `NOT_Q009`.
+
+The guarded merge used `expected_head_sha = 7b57ad031f389cda0e1049e1b0435ab4bbe44c40` with `merge_method = merge`; GitHub returned canonical merge `65ef62a2d6317a4c69382a2ce3d29ddc608b7087`, parents `d5b19849e38bec338c7a830161418ea34384cb36` + `7b57ad031f389cda0e1049e1b0435ab4bbe44c40`, and merge tree `b7dacb4974eeb65e09847c7af2e6323d64a907df`, exactly matching the accepted head tree.
+
+Push-triggered post-merge CI `34673377314` and R3 `34673377333` both succeeded on attempt 1 on exact canonical merge `65ef62a2d6317a4c69382a2ce3d29ddc608b7087`. Windows Rust job `103498804768` succeeded on the original push-triggered CI attempt. Durable B501D post-merge qualification is recorded on PR #109 comment `5643538198`.
+
+The accepted B501 scope is bounded: canonical authenticated manifest encoding and adversarial parser/inventory qualification; authentication-before-freshness decisions; explicit protected genesis state; rollback/replay/freshness-gap handling; and a macOS Data Protection Keychain freshness record using serialized Himsat writers, exact compare, one update-only `SecItemUpdate`, immediate protected reread, native crash old-or-new evidence, and concurrent CAS evidence. iOS/iPadOS, Android, Windows, and Linux freshness mutation remain `UnsupportedPolicy` unless separately qualified. No filesystem fallback or universal hardware rollback-resistance claim is made.
+
+If this reconciliation itself later becomes exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge CI/R3 qualified, B502 becomes the only authorized implementation leaf. B502 is bounded to explicit restore state transitions: an older authenticated backup on a device with an existing trusted anchor must be republished as a new epoch greater than the current anchor and never decrement it; a genuinely fresh device may establish its first local anchor only through reviewed explicit protected `UNINITIALIZED` genesis after user-visible acceptance that global newest-ness cannot be proven. B503-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
+
 ## Specification 004 delivery chain
 
 ```text
@@ -675,10 +695,12 @@ This reconciliation may close B406 only for the bounded restart/removal/revocati
   -> B404/B405 state reconciliation           CANONICAL_QUALIFIED
   -> B405 protector fail-closed negatives     CANONICAL_QUALIFIED
   -> B405/B406 state reconciliation           CANONICAL_QUALIFIED
-  -> B406 remaining protector qualification  CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
-  -> B406/B501 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B501 authenticated manifest/freshness    BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B502-B506 restore/rotation/backup/delete BLOCKED_PENDING_PRIOR_LEAVES
+  -> B406 remaining protector qualification  CANONICAL_QUALIFIED
+  -> B406/B501 state reconciliation           CANONICAL_QUALIFIED
+  -> B501 authenticated manifest/freshness    CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
+  -> B501/B502 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B502 older-backup/fresh-device restore   BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B503-B506 rotation/backup/delete         BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
   -> Specification 005                        BLOCKED_PENDING_SPEC_004_CLOSEOUT

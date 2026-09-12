@@ -99,3 +99,29 @@ B501D does not qualify iOS/iPadOS. Android, Windows, and Linux freshness methods
 Power-loss durability is not inferred from local unit tests. Final acceptance must preserve the strongest evidence actually obtained and must return `UnsupportedPolicy` rather than weaken the contract if the selected Apple path cannot be sufficiently qualified.
 
 Q009 remains `UNSATISFIED`; repository-owner review, ChatGPT work, native qualification, CI/R3, or automated review do not substitute for the required final independent substantive crypto/security review of the exact Specification 004 implementation revision.
+
+## Accepted successor and canonical merge
+
+```text
+IMPLEMENTATION_PR = 109
+BASE = d5b19849e38bec338c7a830161418ea34384cb36
+PREDECESSOR_HEAD = a55b2dd31d6a26dc38d4f2dff06ab52e702ff501 / NOT_ACCEPTED
+ACCEPTED_HEAD = 7b57ad031f389cda0e1049e1b0435ab4bbe44c40
+ACCEPTED_TREE = b7dacb4974eeb65e09847c7af2e6323d64a907df
+PREMERGE_CI = 34672862145 / SUCCESS / attempt 1 / pull_request
+PREMERGE_R3 = 34672862065 / SUCCESS / attempt 1 / pull_request
+PREMERGE_WINDOWS_JOB = 103497413995 / SUCCESS
+OWNER_RECONCILIATION_REVIEW = 5185199112 / NOT_Q009
+CANONICAL_MERGE = 65ef62a2d6317a4c69382a2ce3d29ddc608b7087
+PARENT_1 = d5b19849e38bec338c7a830161418ea34384cb36
+PARENT_2 = 7b57ad031f389cda0e1049e1b0435ab4bbe44c40
+MERGE_TREE = b7dacb4974eeb65e09847c7af2e6323d64a907df
+POSTMERGE_CI = 34673377314 / SUCCESS / attempt 1 / push
+POSTMERGE_R3 = 34673377333 / SUCCESS / attempt 1 / push
+POSTMERGE_WINDOWS_JOB = 103498804768 / SUCCESS
+Q009 = UNSATISFIED
+```
+
+The predecessor marker-format finding was repaired forward-only. CodeRabbit explicitly confirmed the successor's hexadecimal marker output addresses the finding and resolved the only inline review thread. The accepted head's signed native binary SHA-256 is `fb84aafb1177c2ff574a31f3617a3c88830290385cf6a51572840ffe978078cd`; normal qualification passed, crash stress observed 40/40 allowed old-or-new states with zero bad states, and concurrent CAS stress observed 20/20 exactly-one-winner outcomes with zero bad runs.
+
+Original-attempt push-triggered post-merge CI `34673377314` and R3 `34673377333` both completed `SUCCESS` on attempt 1 on exact canonical merge `65ef62a2d6317a4c69382a2ce3d29ddc608b7087`; Windows Rust job `103498804768` also completed `SUCCESS`. Durable post-merge qualification is recorded on PR #109 comment `5643538198`. B501D is therefore canonical-qualified for its bounded macOS freshness scope; canonical B501 task closure remains conditional only on the separate B501/B502 reconciliation becoming exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge qualified.
