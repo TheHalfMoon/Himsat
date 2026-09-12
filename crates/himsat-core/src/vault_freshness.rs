@@ -84,10 +84,10 @@ pub fn authenticate_for_open(
     envelope: &[u8],
 ) -> Result<AuthenticatedFreshnessManifest, FreshnessError> {
     let context = manifest_context(envelope)?;
+    let manifest = decrypt_manifest(vrk, context, envelope)?;
     if context.vault_id() != anchor.vault_id() {
         return Err(FreshnessError::CorruptOrTampered);
     }
-    let manifest = decrypt_manifest(vrk, context, envelope)?;
     let hash = manifest_hash(envelope);
     let epoch = manifest.freshness_epoch();
     let decision = match epoch.cmp(&anchor.highest_epoch()) {
@@ -129,14 +129,14 @@ pub fn authenticate_genesis_candidate(
     state: ProtectedFreshnessState,
     envelope: &[u8],
 ) -> Result<AuthenticatedFreshnessManifest, FreshnessError> {
-    if matches!(state, ProtectedFreshnessState::Present(_)) {
-        return Err(FreshnessError::AnchorAlreadyInitialized);
-    }
     let context = manifest_context(envelope)?;
+    let manifest = decrypt_manifest(vrk, context, envelope)?;
     if context.vault_id() != expected_vault_id || context.freshness_epoch().get() != 1 {
         return Err(FreshnessError::CorruptOrTampered);
     }
-    let manifest = decrypt_manifest(vrk, context, envelope)?;
+    if matches!(state, ProtectedFreshnessState::Present(_)) {
+        return Err(FreshnessError::AnchorAlreadyInitialized);
+    }
     let hash = manifest_hash(envelope);
     let anchor = FreshnessAnchor::new(context.vault_id(), context.freshness_epoch(), hash);
     Ok(AuthenticatedFreshnessManifest {
@@ -232,6 +232,42 @@ mod tests {
         assert_eq!(
             authenticate_for_open(&key(), anchor, &gap),
             Err(FreshnessError::FreshnessGap)
+        );
+    }
+
+    #[test]
+    fn authentication_precedes_open_and_genesis_decisions() {
+        let current = envelope(2, ManifestHash::from_bytes([0x77; 32]), 8);
+        let wrong_vault_anchor = FreshnessAnchor::new(
+            VaultId::from_bytes([0x99; 16]),
+            epoch(2),
+            manifest_hash(&current),
+        );
+        let mut tampered_open = current.clone();
+        let last = tampered_open.len() - 1;
+        tampered_open[last] ^= 1;
+        assert_eq!(
+            authenticate_for_open(&key(), wrong_vault_anchor, &tampered_open),
+            Err(FreshnessError::Manifest(
+                ManifestError::AuthenticationFailed
+            ))
+        );
+
+        let genesis = envelope(1, ManifestHash::from_bytes([0; 32]), 9);
+        let present = FreshnessAnchor::new(vault(), epoch(2), manifest_hash(&current));
+        let mut tampered_genesis = genesis;
+        let last = tampered_genesis.len() - 1;
+        tampered_genesis[last] ^= 1;
+        assert_eq!(
+            authenticate_genesis_candidate(
+                &key(),
+                vault(),
+                ProtectedFreshnessState::Present(present),
+                &tampered_genesis,
+            ),
+            Err(FreshnessError::Manifest(
+                ManifestError::AuthenticationFailed
+            ))
         );
     }
 

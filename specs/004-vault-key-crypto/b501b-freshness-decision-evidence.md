@@ -13,3 +13,7 @@ All platform freshness-anchor mutation methods remain `UnsupportedPolicy` until 
 ## Authority precondition
 
 Candidate base is exact B501A2 canonical merge `ef36bb2e76ae54918be4ca9e1f1b96966854741c`. This leaf must not be pushed or accepted until that merge's original-attempt post-merge CI and R3 are terminal SUCCESS.
+
+## Independent review remediation
+
+The initial exact head `5c65003b39aec09a731e16ffb5514e44b7487371` was not accepted after CodeRabbit identified two authenticated-before-decision ordering findings. The successor authenticates and canonically parses the manifest before comparing the anchor vault and before rejecting a protected `PRESENT` genesis state. A regression test tampers authenticated bytes while also supplying a wrong-vault anchor or already-present genesis state and requires `AuthenticationFailed` to win over the later freshness decision.
