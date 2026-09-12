@@ -281,6 +281,18 @@ fn parse_envelope(envelope: &[u8]) -> Result<ParsedEnvelope<'_>, BoundedBlobErro
     })
 }
 
+/// Parses the public nonce carried by one canonical bounded-blob envelope.
+///
+/// This function validates only the public envelope structure; it does **not**
+/// authenticate ciphertext or release plaintext. Callers may reuse the nonce as
+/// authenticated inventory metadata only after separately authenticating the exact
+/// envelope with `decrypt_bounded_blob` under the expected vault/artifact/generation.
+pub fn bounded_blob_nonce(
+    envelope: &[u8],
+) -> Result<[u8; BOUNDED_BLOB_NONCE_BYTES], BoundedBlobError> {
+    Ok(parse_envelope(envelope)?.nonce)
+}
+
 /// Encrypts one bounded generic artifact into the exact reviewed v1 envelope.
 ///
 /// `nonce` is supplied by the caller. This function deliberately does not
