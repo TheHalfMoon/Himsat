@@ -16,9 +16,9 @@ The returned publication binds the exact expected old anchor and exact new ancho
 
 ## Nonce and key-generation discipline
 
-Before fresh republication, B502 extracts the manifest nonce reservation from the exact envelope that has already authenticated successfully and records that reservation in the supplied B203 ledger. An exact duplicate reservation fails closed rather than being silently ignored. The caller must hydrate that ledger from retained authenticated canonical manifest history, excluding only the exact backup candidate being restored, so fresh generation scans the required retained nonce domain.
+Before fresh republication, B502 extracts the manifest nonce reservation from the exact envelope that has already authenticated successfully. The caller must hydrate the supplied B203 ledger from retained authenticated canonical manifest history, excluding only the exact backup candidate being restored. If the source reservation is already present, B502 treats that as a collision with retained history and fails closed. Otherwise the source reservation is passed as an extra forbidden reservation to fresh nonce generation without being inserted into the persistent in-process ledger. This preserves retry semantics while ensuring a new candidate cannot reuse the authenticated source nonce.
 
-The authenticated backup manifest must use the current active key generation supplied by the caller. A generation mismatch returns `KeyGenerationMismatch` before republication. This deliberately prevents B502 from pretending that an older recovery-wrapped VRK can be made current merely by advancing freshness. Cross-generation restore after a completed VRK rotation remains a B503 integration boundary and must preserve copy/verify/re-encryption semantics before this leaf can be treated as sufficient for that case.
+Both the authenticated envelope key generation and the authenticated manifest plaintext `active_key_generation` must equal the current active key generation supplied by the caller. Either mismatch returns `KeyGenerationMismatch` before republication. This prevents an envelope derived under the current generation from smuggling a different retained/staged manifest generation into restore publication, and prevents B502 from pretending that an older recovery-wrapped VRK can be made current merely by advancing freshness. Cross-generation restore after a completed VRK rotation remains a B503 integration boundary and must preserve copy/verify/re-encryption semantics before this leaf can be treated as sufficient for that case.
 
 The source manifest inventory and rotation fields remain authenticated canonical semantics. B502 does not weaken the existing manifest validator or invent a new rotation-state rule.
 
@@ -34,8 +34,8 @@ The B502 unit suite freezes these invariants:
 
 - authentication wins over wrong-vault, already-present, and later restore-state decisions;
 - older backup content is republished exactly one epoch above the trusted anchor with a fresh envelope hash and anchor linkage;
-- equal/future epochs, wrong vault identity, epoch overflow, and current-generation mismatch fail closed;
-- the authenticated source manifest nonce is reserved before fresh republication and duplicate reservation fails closed;
+- equal/future epochs, wrong vault identity, epoch overflow, envelope-generation mismatch, and manifest-active-generation mismatch fail closed;
+- the authenticated source manifest nonce is excluded from fresh generation without poisoning retry state, while collision with retained history fails closed;
 - fresh-device restore accepts authenticated non-zero epochs only from explicit `UNINITIALIZED` and records inability to prove global newestness;
 - protected `PRESENT` and wrong-vault fresh-device attempts fail closed.
 

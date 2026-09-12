@@ -10,9 +10,10 @@ use crate::vault::{FreshnessAnchor, FreshnessEpoch, ProtectedFreshnessState};
 use crate::vault_keys::OwnedKeyMaterial;
 use crate::vault_manifest::{
     FreshManifestError, ManifestContext, ManifestError, ManifestPlaintext, decrypt_manifest,
-    encrypt_fresh_manifest, manifest_context, manifest_hash, manifest_nonce_reservation,
+    encrypt_fresh_manifest_avoiding_reservation, manifest_context, manifest_hash,
+    manifest_nonce_reservation,
 };
-use crate::vault_nonce::NonceReservationLedger;
+use crate::vault_nonce::{NonceLifecycleError, NonceReservationLedger};
 use std::error::Error;
 use std::fmt;
 
@@ -192,7 +193,9 @@ pub fn prepare_older_backup_restore(
     if source_context.freshness_epoch() >= trusted_anchor.highest_epoch() {
         return Err(RestoreError::NotOlderBackup);
     }
-    if source_context.key_generation() != current_key_generation {
+    if source_context.key_generation() != current_key_generation
+        || source_manifest.active_key_generation() != current_key_generation
+    {
         return Err(RestoreError::KeyGenerationMismatch);
     }
     let next_epoch = trusted_anchor
@@ -202,9 +205,11 @@ pub fn prepare_older_backup_restore(
         .ok_or(RestoreError::EpochExhausted)
         .and_then(|value| FreshnessEpoch::new(value).map_err(|_| RestoreError::EpochExhausted))?;
     let source_reservation = manifest_nonce_reservation(backup_manifest_envelope)?;
-    ledger
-        .record_authenticated_canonical_reservation(source_reservation)
-        .map_err(|error| RestoreError::FreshManifest(FreshManifestError::Nonce(error)))?;
+    if ledger.contains(source_reservation) {
+        return Err(RestoreError::FreshManifest(FreshManifestError::Nonce(
+            NonceLifecycleError::CorruptOrTampered,
+        )));
+    }
     let target_manifest =
         source_manifest.republish_for_restore(next_epoch, trusted_anchor.manifest_hash())?;
     let target_context = ManifestContext::new(
@@ -212,8 +217,13 @@ pub fn prepare_older_backup_restore(
         target_manifest.active_key_generation(),
         next_epoch,
     );
-    let (_reservation, envelope) =
-        encrypt_fresh_manifest(ledger, vrk, target_context, &target_manifest)?;
+    let (_reservation, envelope) = encrypt_fresh_manifest_avoiding_reservation(
+        ledger,
+        vrk,
+        target_context,
+        &target_manifest,
+        source_reservation,
+    )?;
     let reread = decrypt_manifest(vrk, target_context, &envelope)?;
     if reread != target_manifest {
         return Err(RestoreError::CorruptOrTampered);
@@ -356,7 +366,87 @@ mod tests {
             manifest_hash(&backup)
         );
         assert_ne!(publication.envelope(), backup.as_slice());
+        assert_eq!(restore_ledger.reservation_count(), 1);
+    }
+
+    #[test]
+    fn envelope_and_manifest_generations_must_both_match_current_generation() {
+        let current_generation = KeyGeneration::new(2).expect("generation");
+        let plaintext = ManifestPlaintext::new(
+            vault(),
+            epoch(2),
+            ManifestHash::from_bytes([0x41; 32]),
+            generation(),
+            (RotationPhase::None, None),
+            vec![
+                ManifestGeneration::new(generation(), GenerationState::Active),
+                ManifestGeneration::new(current_generation, GenerationState::Retained),
+            ],
+            vec![ManifestObject::new(
+                [0; 16],
+                [0x54; 16],
+                generation(),
+                4096,
+                [0x55; 32],
+                ManifestAuthMetadata::StructuredStore,
+            )],
+        )
+        .expect("manifest");
+        let mut source_ledger = NonceReservationLedger::new(vault());
+        let context = ManifestContext::new(vault(), current_generation, epoch(2));
+        let backup = encrypt_fresh_manifest(&mut source_ledger, &key(), context, &plaintext)
+            .expect("encrypt")
+            .1;
+        let anchor = FreshnessAnchor::new(vault(), epoch(7), ManifestHash::from_bytes([0x61; 32]));
+        let mut restore_ledger = NonceReservationLedger::new(vault());
+
+        assert_eq!(
+            prepare_older_backup_restore(
+                &mut restore_ledger,
+                &key(),
+                anchor,
+                current_generation,
+                &backup,
+                OlderBackupRestoreConfirmed::CONFIRMED,
+            ),
+            Err(RestoreError::KeyGenerationMismatch)
+        );
+        assert_eq!(restore_ledger.reservation_count(), 0);
+    }
+
+    #[test]
+    fn retry_does_not_poison_the_ledger_with_the_authenticated_source_nonce() {
+        let mut source_ledger = NonceReservationLedger::new(vault());
+        let backup =
+            encrypted_manifest(&mut source_ledger, 2, ManifestHash::from_bytes([0x41; 32]));
+        let source_reservation = manifest_nonce_reservation(&backup).expect("source reservation");
+        let anchor = FreshnessAnchor::new(vault(), epoch(7), ManifestHash::from_bytes([0x61; 32]));
+        let mut restore_ledger = NonceReservationLedger::new(vault());
+
+        let first = prepare_older_backup_restore(
+            &mut restore_ledger,
+            &key(),
+            anchor,
+            generation(),
+            &backup,
+            OlderBackupRestoreConfirmed::CONFIRMED,
+        )
+        .expect("first candidate");
+        assert!(!restore_ledger.contains(source_reservation));
+        assert_eq!(restore_ledger.reservation_count(), 1);
+
+        let second = prepare_older_backup_restore(
+            &mut restore_ledger,
+            &key(),
+            anchor,
+            generation(),
+            &backup,
+            OlderBackupRestoreConfirmed::CONFIRMED,
+        )
+        .expect("retry candidate");
+        assert!(!restore_ledger.contains(source_reservation));
         assert_eq!(restore_ledger.reservation_count(), 2);
+        assert_ne!(first.envelope(), second.envelope());
     }
 
     #[test]

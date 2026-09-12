@@ -299,6 +299,31 @@ impl NonceReservationLedger {
         })
     }
 
+    /// Generates and reserves a fresh manifest nonce while excluding one exact
+    /// authenticated source reservation from the candidate space without adding
+    /// that source reservation to this ledger.
+    pub(crate) fn reserve_fresh_manifest_nonce_avoiding(
+        &mut self,
+        vault_id: VaultId,
+        key_generation: KeyGeneration,
+        forbidden: NonceReservation,
+    ) -> Result<NonceReservation, NonceLifecycleError> {
+        if vault_id != self.vault_id || forbidden.vault_id() != vault_id {
+            return Err(NonceLifecycleError::VaultMismatch);
+        }
+        if forbidden.purpose() != NoncePurpose::FreshnessManifest
+            || forbidden.key_generation() != key_generation
+        {
+            return Err(NonceLifecycleError::CorruptOrTampered);
+        }
+        self.reserve_fresh_with_excluding(
+            NoncePurpose::FreshnessManifest,
+            key_generation,
+            Some(forbidden),
+            |nonce| getrandom::fill(nonce).map_err(|_| ()),
+        )
+    }
+
     /// Production B203 entry point for a new bounded-blob encryption attempt.
     ///
     /// The nonce is reserved before B202 encryption. If B202 then fails, the nonce
@@ -328,6 +353,19 @@ impl NonceReservationLedger {
         &mut self,
         purpose: NoncePurpose,
         key_generation: KeyGeneration,
+        fill: F,
+    ) -> Result<NonceReservation, NonceLifecycleError>
+    where
+        F: FnMut(&mut [u8; VAULT_NONCE_BYTES]) -> Result<(), ()>,
+    {
+        self.reserve_fresh_with_excluding(purpose, key_generation, None, fill)
+    }
+
+    fn reserve_fresh_with_excluding<F>(
+        &mut self,
+        purpose: NoncePurpose,
+        key_generation: KeyGeneration,
+        forbidden: Option<NonceReservation>,
         mut fill: F,
     ) -> Result<NonceReservation, NonceLifecycleError>
     where
@@ -337,6 +375,9 @@ impl NonceReservationLedger {
             let mut nonce = [0_u8; VAULT_NONCE_BYTES];
             fill(&mut nonce).map_err(|()| NonceLifecycleError::RandomnessUnavailable)?;
             let reservation = NonceReservation::new(self.vault_id, purpose, key_generation, nonce);
+            if forbidden == Some(reservation) {
+                continue;
+            }
             if self.reservations.insert(reservation) {
                 return Ok(reservation);
             }
@@ -537,6 +578,38 @@ mod tests {
             .unwrap();
 
         assert_eq!(reservation.nonce(), NONCE_B);
+        assert_eq!(index, 2);
+    }
+
+    #[test]
+    fn explicit_forbidden_manifest_nonce_is_discarded_without_ledger_insertion() {
+        let forbidden = NonceReservation::new(
+            vault_a(),
+            NoncePurpose::FreshnessManifest,
+            generation(3),
+            NONCE_A,
+        );
+        let mut ledger = NonceReservationLedger::new(vault_a());
+        let candidates = [NONCE_A, NONCE_B];
+        let mut index = 0_usize;
+
+        let reservation = ledger
+            .reserve_fresh_with_excluding(
+                NoncePurpose::FreshnessManifest,
+                generation(3),
+                Some(forbidden),
+                |nonce| {
+                    *nonce = candidates[index];
+                    index += 1;
+                    Ok(())
+                },
+            )
+            .unwrap();
+
+        assert_eq!(reservation.nonce(), NONCE_B);
+        assert!(!ledger.contains(forbidden));
+        assert!(ledger.contains(reservation));
+        assert_eq!(ledger.reservation_count(), 1);
         assert_eq!(index, 2);
     }
 

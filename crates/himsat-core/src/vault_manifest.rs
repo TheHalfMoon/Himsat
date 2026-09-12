@@ -788,6 +788,21 @@ pub fn encrypt_fresh_manifest(
     Ok((reservation, envelope))
 }
 
+pub(crate) fn encrypt_fresh_manifest_avoiding_reservation(
+    ledger: &mut NonceReservationLedger,
+    vrk: &OwnedKeyMaterial,
+    context: ManifestContext,
+    plaintext: &ManifestPlaintext,
+    forbidden: NonceReservation,
+) -> Result<(NonceReservation, Vec<u8>), FreshManifestError> {
+    let reservation = ledger
+        .reserve_fresh_manifest_nonce_avoiding(context.vault_id, context.key_generation, forbidden)
+        .map_err(FreshManifestError::Nonce)?;
+    let envelope = encrypt_manifest_with_nonce(vrk, context, reservation.nonce(), plaintext)
+        .map_err(FreshManifestError::Envelope)?;
+    Ok((reservation, envelope))
+}
+
 pub fn decrypt_manifest(
     vrk: &OwnedKeyMaterial,
     expected: ManifestContext,
