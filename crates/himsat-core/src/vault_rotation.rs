@@ -1505,9 +1505,22 @@ mod tests {
         AccessScope, FreshnessAnchor, FreshnessEpoch, HardwareBacking, KeyGeneration, ManifestHash,
         ProtectedFreshnessState, UserPresencePolicy, VAULT_ID_BYTES, VaultLeaseState,
     };
-    use crate::vault_keys::{VaultKeyMaterial, VaultSessionLifetime};
+    use crate::vault_blob::{BoundedBlobContext, bounded_blob_nonce, decrypt_bounded_blob};
+    use crate::vault_keys::{
+        KeyDerivationContext, KeyPurpose, VaultKeyMaterial, VaultSessionLifetime,
+    };
     use crate::vault_lease::{KeyedHandleError, VaultLease};
+    use crate::vault_manifest::{ManifestAuthMetadata, ManifestObjectKind};
+    use crate::vault_sqlcipher::{
+        SqlCipherGenerationEndpoint, open_sqlcipher_database, stage_sqlcipher_generation,
+    };
+    use rusqlite::{Connection, OpenFlags};
+    use sha2::{Digest, Sha256};
     use std::convert::Infallible;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use zeroize::Zeroize;
 
     const SOURCE_KEY: [u8; KEY_MATERIAL_BYTES] = [0x33; KEY_MATERIAL_BYTES];
 
@@ -1823,6 +1836,433 @@ mod tests {
             self.source_recovery_retired = true;
             Ok(())
         }
+    }
+
+    const REAL_BLOB_ID: [u8; 16] = [0x71; 16];
+    const REAL_SOURCE_BLOB_STORAGE: [u8; 16] = [0x72; 16];
+    const REAL_TARGET_BLOB_STORAGE: [u8; 16] = [0x73; 16];
+    const REAL_SOURCE_DB_STORAGE: [u8; 16] = [0x74; 16];
+    const REAL_TARGET_DB_STORAGE: [u8; 16] = [0x75; 16];
+    const REAL_DB_MARKER: &str = "HIMSAT_B503_REAL_ROTATION_DATA_5D91";
+    static NEXT_REAL_FIXTURE: AtomicU64 = AtomicU64::new(0);
+
+    struct RealCryptoBackend {
+        control: PrepareBackend,
+        vault_id: VaultId,
+        source_generation: KeyGeneration,
+        target_generation: Option<KeyGeneration>,
+        source_db_path: PathBuf,
+        target_db_path: PathBuf,
+        source_blob: Vec<u8>,
+        target_blob: Option<Vec<u8>>,
+        expected_blob_plaintext: Vec<u8>,
+        staged: Vec<ManifestObject>,
+    }
+
+    impl RealCryptoBackend {
+        fn new(
+            vault_id: VaultId,
+            source_generation: KeyGeneration,
+            source_db_path: PathBuf,
+            target_db_path: PathBuf,
+            source_blob: Vec<u8>,
+            expected_blob_plaintext: Vec<u8>,
+        ) -> Self {
+            Self {
+                control: PrepareBackend::default(),
+                vault_id,
+                source_generation,
+                target_generation: None,
+                source_db_path,
+                target_db_path,
+                source_blob,
+                target_blob: None,
+                expected_blob_plaintext,
+                staged: Vec::new(),
+            }
+        }
+
+        fn sha256(bytes: &[u8]) -> [u8; 32] {
+            Sha256::digest(bytes).into()
+        }
+
+        fn source_inventory_matches(&self, manifest: &ManifestPlaintext) -> bool {
+            let db = match fs::read(&self.source_db_path) {
+                Ok(bytes) => bytes,
+                Err(_) => return false,
+            };
+            manifest.objects().len() == 2
+                && manifest.objects().iter().all(|object| match object.kind() {
+                    ManifestObjectKind::GenericArtifactBlob => {
+                        object.logical_id() == REAL_BLOB_ID
+                            && object.storage_id() == REAL_SOURCE_BLOB_STORAGE
+                            && object.key_generation() == self.source_generation
+                            && object.ciphertext_length() == self.source_blob.len() as u64
+                            && object.ciphertext_sha256() == Self::sha256(&self.source_blob)
+                            && matches!(
+                                object.auth_metadata(),
+                                ManifestAuthMetadata::GenericArtifactBlob { nonce }
+                                    if bounded_blob_nonce(&self.source_blob) == Ok(nonce)
+                            )
+                    }
+                    ManifestObjectKind::StructuredStore => {
+                        object.logical_id() == [0; 16]
+                            && object.storage_id() == REAL_SOURCE_DB_STORAGE
+                            && object.key_generation() == self.source_generation
+                            && object.ciphertext_length() == db.len() as u64
+                            && object.ciphertext_sha256() == Self::sha256(&db)
+                            && object.auth_metadata() == ManifestAuthMetadata::StructuredStore
+                    }
+                })
+        }
+
+        fn verify_target_data(
+            &self,
+            target_vrk: &OwnedKeyMaterial,
+            objects: &[ManifestObject],
+        ) -> Result<(), BackendError> {
+            let generation = self
+                .target_generation
+                .ok_or(BackendError("target generation missing"))?;
+            if objects != self.staged.as_slice() || objects.len() != 2 {
+                return Err(BackendError("target inventory mismatch"));
+            }
+            let db = fs::read(&self.target_db_path)
+                .map_err(|_| BackendError("target database missing"))?;
+            let lease = VaultLease::new(VaultLeaseIdentity::new(self.vault_id, generation));
+            let context =
+                KeyDerivationContext::new(self.vault_id, generation, KeyPurpose::StructuredStore);
+            let handle = open_sqlcipher_database(
+                &self.target_db_path,
+                lease.keyed_handle_lease(),
+                context,
+                target_vrk,
+            )
+            .map_err(|_| BackendError("target database reopen failed"))?;
+            handle
+                .verify_integrity()
+                .map_err(|_| BackendError("target database integrity failed"))?;
+            if read_real_database_marker(
+                &self.target_db_path,
+                self.vault_id,
+                generation,
+                target_vrk,
+            )
+            .as_deref()
+                != Ok(REAL_DB_MARKER)
+            {
+                return Err(BackendError("target database semantic marker mismatch"));
+            }
+
+            let blob = self
+                .target_blob
+                .as_ref()
+                .ok_or(BackendError("target blob missing"))?;
+            let blob_context = BoundedBlobContext::new(self.vault_id, REAL_BLOB_ID, generation);
+            let plaintext = decrypt_bounded_blob(target_vrk, blob_context, blob)
+                .map_err(|_| BackendError("target blob authentication failed"))?;
+            if plaintext != self.expected_blob_plaintext {
+                return Err(BackendError("target blob plaintext mismatch"));
+            }
+
+            for object in objects {
+                match object.kind() {
+                    ManifestObjectKind::GenericArtifactBlob => {
+                        let nonce = bounded_blob_nonce(blob)
+                            .map_err(|_| BackendError("target blob nonce missing"))?;
+                        let expected_auth = ManifestAuthMetadata::GenericArtifactBlob { nonce };
+                        if object.logical_id() != REAL_BLOB_ID
+                            || object.storage_id() != REAL_TARGET_BLOB_STORAGE
+                            || object.key_generation() != generation
+                            || object.ciphertext_length() != blob.len() as u64
+                            || object.ciphertext_sha256() != Self::sha256(blob)
+                            || object.auth_metadata() != expected_auth
+                        {
+                            return Err(BackendError("target blob manifest mismatch"));
+                        }
+                    }
+                    ManifestObjectKind::StructuredStore => {
+                        if object.logical_id() != [0; 16]
+                            || object.storage_id() != REAL_TARGET_DB_STORAGE
+                            || object.key_generation() != generation
+                            || object.ciphertext_length() != db.len() as u64
+                            || object.ciphertext_sha256() != Self::sha256(&db)
+                            || object.auth_metadata() != ManifestAuthMetadata::StructuredStore
+                        {
+                            return Err(BackendError("target database manifest mismatch"));
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+
+    impl FullRotationBackend for RealCryptoBackend {
+        type Error = BackendError;
+
+        fn assert_normal_writes_quiesced(&self) -> Result<(), Self::Error> {
+            self.control.assert_normal_writes_quiesced()
+        }
+        fn read_rotation_protector_binding(
+            &self,
+        ) -> Result<Option<FullRotationProtectorBinding>, Self::Error> {
+            self.control.read_rotation_protector_binding()
+        }
+        fn persist_rotation_protector_binding(
+            &mut self,
+            binding: FullRotationProtectorBinding,
+        ) -> Result<(), Self::Error> {
+            self.control.persist_rotation_protector_binding(binding)
+        }
+        fn clear_rotation_protector_binding(&mut self) -> Result<(), Self::Error> {
+            self.control.clear_rotation_protector_binding()
+        }
+        fn read_rotation_checkpoint(&self) -> Result<Option<Vec<u8>>, Self::Error> {
+            self.control.read_rotation_checkpoint()
+        }
+        fn persist_rotation_checkpoint(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            self.control.persist_rotation_checkpoint(envelope)
+        }
+        fn clear_rotation_checkpoint(&mut self) -> Result<(), Self::Error> {
+            self.control.clear_rotation_checkpoint()
+        }
+        fn read_target_recovery_wrap(&self) -> Result<Option<Vec<u8>>, Self::Error> {
+            self.control.read_target_recovery_wrap()
+        }
+        fn persist_target_recovery_wrap(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            self.control.persist_target_recovery_wrap(envelope)
+        }
+        fn remove_target_recovery_wrap(&mut self) -> Result<(), Self::Error> {
+            self.control.remove_target_recovery_wrap()
+        }
+
+        fn stage_reencrypted_inventory(
+            &mut self,
+            source_vrk: &OwnedKeyMaterial,
+            target_vrk: &OwnedKeyMaterial,
+            source_manifest: &ManifestPlaintext,
+            target_generation: KeyGeneration,
+            ledger: &mut NonceReservationLedger,
+        ) -> Result<Vec<ManifestObject>, Self::Error> {
+            if !self.source_inventory_matches(source_manifest) {
+                return Err(BackendError("source inventory mismatch"));
+            }
+            self.target_generation = Some(target_generation);
+            let source_context = KeyDerivationContext::new(
+                self.vault_id,
+                self.source_generation,
+                KeyPurpose::StructuredStore,
+            );
+            let target_context = KeyDerivationContext::new(
+                self.vault_id,
+                target_generation,
+                KeyPurpose::StructuredStore,
+            );
+            if !self.target_db_path.exists() {
+                let source_lease = VaultLease::new(VaultLeaseIdentity::new(
+                    self.vault_id,
+                    self.source_generation,
+                ));
+                let target_lease =
+                    VaultLease::new(VaultLeaseIdentity::new(self.vault_id, target_generation));
+                let source_endpoint = SqlCipherGenerationEndpoint::new(
+                    &self.source_db_path,
+                    source_lease.keyed_handle_lease(),
+                    source_context,
+                    source_vrk,
+                );
+                let target_endpoint = SqlCipherGenerationEndpoint::new(
+                    &self.target_db_path,
+                    target_lease.keyed_handle_lease(),
+                    target_context,
+                    target_vrk,
+                );
+                drop(
+                    stage_sqlcipher_generation(source_endpoint, target_endpoint)
+                        .map_err(|_| BackendError("SQLCipher generation staging failed"))?,
+                );
+            }
+
+            let source_blob_context =
+                BoundedBlobContext::new(self.vault_id, REAL_BLOB_ID, self.source_generation);
+            let plaintext =
+                decrypt_bounded_blob(source_vrk, source_blob_context, &self.source_blob)
+                    .map_err(|_| BackendError("source blob authentication failed"))?;
+            if plaintext != self.expected_blob_plaintext {
+                return Err(BackendError("source blob plaintext mismatch"));
+            }
+            let target_blob_context =
+                BoundedBlobContext::new(self.vault_id, REAL_BLOB_ID, target_generation);
+            let nonce = match &self.target_blob {
+                Some(existing) => {
+                    let reread = decrypt_bounded_blob(target_vrk, target_blob_context, existing)
+                        .map_err(|_| BackendError("existing target blob invalid"))?;
+                    if reread != self.expected_blob_plaintext {
+                        return Err(BackendError("existing target blob mismatch"));
+                    }
+                    bounded_blob_nonce(existing)
+                        .map_err(|_| BackendError("existing target blob nonce invalid"))?
+                }
+                None => {
+                    let candidate = ledger
+                        .encrypt_fresh_bounded_blob(target_vrk, target_blob_context, &plaintext)
+                        .map_err(|_| BackendError("target blob encryption failed"))?;
+                    let nonce = candidate.reservation().nonce();
+                    self.target_blob = Some(candidate.into_parts().1);
+                    nonce
+                }
+            };
+            let blob = self
+                .target_blob
+                .as_ref()
+                .ok_or(BackendError("target blob missing after staging"))?;
+            let db = fs::read(&self.target_db_path)
+                .map_err(|_| BackendError("target database missing after staging"))?;
+            self.staged = vec![
+                ManifestObject::new(
+                    REAL_BLOB_ID,
+                    REAL_TARGET_BLOB_STORAGE,
+                    target_generation,
+                    blob.len() as u64,
+                    Self::sha256(blob),
+                    ManifestAuthMetadata::GenericArtifactBlob { nonce },
+                ),
+                ManifestObject::new(
+                    [0; 16],
+                    REAL_TARGET_DB_STORAGE,
+                    target_generation,
+                    db.len() as u64,
+                    Self::sha256(&db),
+                    ManifestAuthMetadata::StructuredStore,
+                ),
+            ];
+            Ok(self.staged.clone())
+        }
+
+        fn verify_staged_inventory(
+            &mut self,
+            target_vrk: &OwnedKeyMaterial,
+            objects: &[ManifestObject],
+        ) -> Result<(), Self::Error> {
+            self.verify_target_data(target_vrk, objects)
+        }
+        fn quarantine_target_inventory(&mut self) -> Result<(), Self::Error> {
+            remove_real_database_files(&self.target_db_path);
+            self.target_blob = None;
+            self.staged.clear();
+            self.control.quarantined = true;
+            Ok(())
+        }
+        fn publish_manifest(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            self.control.publish_manifest(envelope)
+        }
+        fn read_published_manifest(&self) -> Result<Vec<u8>, Self::Error> {
+            self.control.read_published_manifest()
+        }
+        fn reopen_and_verify_published(
+            &mut self,
+            target_vrk: &OwnedKeyMaterial,
+            manifest: &ManifestPlaintext,
+        ) -> Result<(), Self::Error> {
+            self.verify_target_data(target_vrk, manifest.objects())
+        }
+        fn activate_target_protector(&mut self) -> Result<(), Self::Error> {
+            self.control.activate_target_protector()
+        }
+        fn retire_source_inventory(
+            &mut self,
+            source_generation: KeyGeneration,
+        ) -> Result<(), Self::Error> {
+            if source_generation != self.source_generation {
+                return Err(BackendError("source generation retirement mismatch"));
+            }
+            remove_real_database_files(&self.source_db_path);
+            self.source_blob.clear();
+            self.control.source_inventory_retired = true;
+            Ok(())
+        }
+        fn retire_source_recovery_wrap(&mut self) -> Result<(), Self::Error> {
+            self.control.retire_source_recovery_wrap()
+        }
+    }
+
+    fn remove_real_database_files(path: &Path) {
+        let _ = fs::remove_file(path);
+        for suffix in ["-wal", "-shm", "-journal"] {
+            let _ = fs::remove_file(PathBuf::from(format!("{}{suffix}", path.display())));
+        }
+    }
+
+    fn real_crypto_paths() -> (PathBuf, PathBuf) {
+        let sequence = NEXT_REAL_FIXTURE.fetch_add(1, Ordering::Relaxed);
+        let directory = std::env::temp_dir().join(format!(
+            "himsat-b503-real-rotation-{}-{sequence}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory).expect("real rotation fixture directory");
+        (directory.join("source.db"), directory.join("target.db"))
+    }
+
+    fn real_raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut sql = String::with_capacity(82);
+        sql.push_str("PRAGMA key = \"x'");
+        for byte in key {
+            sql.push(char::from(HEX[usize::from(byte >> 4)]));
+            sql.push(char::from(HEX[usize::from(byte & 0x0f)]));
+        }
+        sql.push_str("'\";");
+        sql
+    }
+
+    fn create_real_source_database(
+        path: &Path,
+        vault_id: VaultId,
+        generation: KeyGeneration,
+        vrk: &OwnedKeyMaterial,
+    ) {
+        remove_real_database_files(path);
+        let connection = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_WRITE
+                | OpenFlags::SQLITE_OPEN_CREATE
+                | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )
+        .expect("reviewed SQLCipher provider creates source fixture");
+        let key = KeyDerivationContext::new(vault_id, generation, KeyPurpose::StructuredStore)
+            .derive_purpose_key(vrk);
+        let mut pragma = key.with_bytes(real_raw_key_pragma);
+        connection
+            .execute_batch(&pragma)
+            .expect("source fixture keying succeeds");
+        pragma.zeroize();
+        connection
+            .execute_batch(&format!(
+                "PRAGMA journal_mode = DELETE; CREATE TABLE rotation_probe (value TEXT NOT NULL); INSERT INTO rotation_probe VALUES ('{REAL_DB_MARKER}');"
+            ))
+            .expect("source fixture semantic data persists");
+    }
+
+    fn read_real_database_marker(
+        path: &Path,
+        vault_id: VaultId,
+        generation: KeyGeneration,
+        vrk: &OwnedKeyMaterial,
+    ) -> Result<String, rusqlite::Error> {
+        let connection = Connection::open_with_flags(
+            path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        let key = KeyDerivationContext::new(vault_id, generation, KeyPurpose::StructuredStore)
+            .derive_purpose_key(vrk);
+        let mut pragma = key.with_bytes(real_raw_key_pragma);
+        let keyed = connection.execute_batch(&pragma);
+        pragma.zeroize();
+        keyed?;
+        connection.query_row("SELECT value FROM rotation_probe LIMIT 1", [], |row| {
+            row.get(0)
+        })
     }
 
     struct NoopCloser;
@@ -2158,6 +2598,191 @@ mod tests {
             ProtectedFreshnessState::Present(source_anchor)
         );
         assert!(!backend.source_inventory_retired);
+    }
+
+    #[test]
+    fn full_rotation_reencrypts_real_sqlcipher_and_bounded_blob_before_retirement() {
+        let vault_id = VaultId::from_bytes([0x61; VAULT_ID_BYTES]);
+        let source_generation = KeyGeneration::new(11).expect("non-zero source generation");
+        let epoch = FreshnessEpoch::new(13).expect("non-zero source epoch");
+        let source_vrk = OwnedKeyMaterial::from_bytes(SOURCE_KEY);
+        let (source_db_path, target_db_path) = real_crypto_paths();
+        create_real_source_database(&source_db_path, vault_id, source_generation, &source_vrk);
+        let source_db_bytes = fs::read(&source_db_path).expect("source database bytes");
+        assert_eq!(
+            read_real_database_marker(&source_db_path, vault_id, source_generation, &source_vrk)
+                .expect("source marker reads"),
+            REAL_DB_MARKER
+        );
+
+        let expected_blob_plaintext = b"HIMSAT_B503_REAL_BLOB_ROTATION_DATA_A271".to_vec();
+        let source_blob_context =
+            BoundedBlobContext::new(vault_id, REAL_BLOB_ID, source_generation);
+        let mut ledger = NonceReservationLedger::new(vault_id);
+        let source_blob_candidate = ledger
+            .encrypt_fresh_bounded_blob(&source_vrk, source_blob_context, &expected_blob_plaintext)
+            .expect("source bounded blob encrypts");
+        let source_blob_nonce = source_blob_candidate.reservation().nonce();
+        let source_blob = source_blob_candidate.into_parts().1;
+
+        let manifest = ManifestPlaintext::new(
+            vault_id,
+            epoch,
+            ManifestHash::from_bytes([0x35; 32]),
+            source_generation,
+            (RotationPhase::None, None),
+            vec![ManifestGeneration::new(
+                source_generation,
+                GenerationState::Active,
+            )],
+            vec![
+                ManifestObject::new(
+                    REAL_BLOB_ID,
+                    REAL_SOURCE_BLOB_STORAGE,
+                    source_generation,
+                    source_blob.len() as u64,
+                    RealCryptoBackend::sha256(&source_blob),
+                    ManifestAuthMetadata::GenericArtifactBlob {
+                        nonce: source_blob_nonce,
+                    },
+                ),
+                ManifestObject::new(
+                    [0; 16],
+                    REAL_SOURCE_DB_STORAGE,
+                    source_generation,
+                    source_db_bytes.len() as u64,
+                    RealCryptoBackend::sha256(&source_db_bytes),
+                    ManifestAuthMetadata::StructuredStore,
+                ),
+            ],
+        )
+        .expect("real source inventory is canonical");
+        let context = ManifestContext::new(vault_id, source_generation, epoch);
+        let (_, current_envelope) =
+            encrypt_fresh_manifest(&mut ledger, &source_vrk, context, &manifest)
+                .expect("source manifest encrypts");
+        let source_anchor = FreshnessAnchor::new(vault_id, epoch, manifest_hash(&current_envelope));
+
+        let mut source = MemoryProtector::source(vault_id, source_generation, source_anchor);
+        let mut target = MemoryProtector::empty();
+        let mut backend = RealCryptoBackend::new(
+            vault_id,
+            source_generation,
+            source_db_path.clone(),
+            target_db_path.clone(),
+            source_blob.clone(),
+            expected_blob_plaintext,
+        );
+        let lease = VaultLease::new(VaultLeaseIdentity::new(vault_id, source_generation));
+        let mut session = VaultSessionLifetime::new(
+            lease,
+            NoopCloser,
+            VaultKeyMaterial::new(OwnedKeyMaterial::from_bytes(SOURCE_KEY)),
+            NoopCache,
+        );
+        let quiesced = quiesce_for_full_rotation(&mut session).expect("rotation quiesces writes");
+        let prepared = begin_full_rotation(
+            quiesced,
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+            &current_envelope,
+            prepare_binding(),
+            prepare_policy(),
+            None,
+        )
+        .expect("PREPARE succeeds on real encrypted inventory");
+        let identity = match prepared {
+            FullRotationProgress::InProgress { identity, phase } => {
+                assert_eq!(phase, RotationPhase::Prepare);
+                identity
+            }
+            FullRotationProgress::Complete { .. } => panic!("PREPARE cannot complete rotation"),
+        };
+
+        for phase in [
+            RotationPhase::Stage,
+            RotationPhase::Verify,
+            RotationPhase::Publish,
+            RotationPhase::Anchor,
+            RotationPhase::Activate,
+            RotationPhase::Retire,
+        ] {
+            let progress = advance_full_rotation(
+                quiesced,
+                identity,
+                prepare_binding(),
+                &mut source,
+                &mut target,
+                &mut backend,
+                &mut ledger,
+            )
+            .expect("real encrypted rotation phase advances");
+            assert_eq!(
+                progress,
+                FullRotationProgress::InProgress { identity, phase }
+            );
+            assert_eq!(
+                fs::read(&source_db_path).expect("source database retained before retirement"),
+                source_db_bytes
+            );
+            assert_eq!(backend.source_blob, source_blob);
+            if phase == RotationPhase::Stage {
+                let target_db_bytes =
+                    fs::read(&target_db_path).expect("target database staged separately");
+                assert_ne!(target_db_bytes, source_db_bytes);
+                assert_ne!(
+                    backend.target_blob.as_ref().expect("target blob"),
+                    &source_blob
+                );
+                let target_vrk = OwnedKeyMaterial::from_bytes(target.key_bytes());
+                backend
+                    .verify_target_data(&target_vrk, &backend.staged)
+                    .expect("target database and blob authenticate under G+1");
+            }
+        }
+
+        let complete = advance_full_rotation(
+            quiesced,
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("real encrypted retirement completes");
+        assert!(matches!(
+            complete,
+            FullRotationProgress::Complete { identity: completed, .. } if completed == identity
+        ));
+        assert!(!source_db_path.exists());
+        assert!(backend.source_blob.is_empty());
+        assert!(target_db_path.exists());
+        assert!(backend.target_blob.is_some());
+        assert!(backend.control.target_activated);
+        assert!(backend.control.source_inventory_retired);
+        assert!(source.record.is_none());
+
+        let target_vrk = OwnedKeyMaterial::from_bytes(target.key_bytes());
+        let published = backend
+            .read_published_manifest()
+            .expect("stable target manifest remains published");
+        let published_context = manifest_context(&published).expect("stable context parses");
+        let stable = decrypt_manifest(&target_vrk, published_context, &published)
+            .expect("stable target manifest authenticates under G+1");
+        assert_eq!(stable.rotation_phase(), RotationPhase::None);
+        assert_eq!(stable.active_key_generation(), identity.target_generation());
+        backend
+            .verify_target_data(&target_vrk, stable.objects())
+            .expect("stable target inventory remains readable after source retirement");
+
+        let parent = target_db_path.parent().map(PathBuf::from);
+        remove_real_database_files(&target_db_path);
+        if let Some(parent) = parent {
+            let _ = fs::remove_dir(parent);
+        }
     }
 
     #[test]
