@@ -6,8 +6,8 @@
 //! verified. B504 owns exhaustive before/after fault-injection qualification.
 
 use crate::vault::{
-    FreshnessAnchor, KeyGeneration, ProtectedFreshnessState, ProtectorError, SecretProtector,
-    VaultId, VaultLeaseIdentity,
+    FreshnessAnchor, FreshnessEpoch, KeyGeneration, ProtectedFreshnessState, ProtectorError,
+    SecretProtector, VaultId, VaultLeaseIdentity,
 };
 use crate::vault_keys::{
     KEY_MATERIAL_BYTES, KeyedHandleCloser, OwnedKeyMaterial, PlaintextCache, VaultSessionLifetime,
@@ -353,6 +353,14 @@ fn generate_target_vrk<E>(
     Ok(target)
 }
 
+fn next_epoch<E>(current: FreshnessEpoch) -> Result<FreshnessEpoch, FullRotationError<E>> {
+    let value = current
+        .get()
+        .checked_add(1)
+        .ok_or(FullRotationError::EpochOverflow)?;
+    FreshnessEpoch::new(value).map_err(|_| FullRotationError::EpochOverflow)
+}
+
 fn target_generations_pre<E>(
     source: &ManifestPlaintext,
     target: KeyGeneration,
@@ -367,6 +375,32 @@ fn target_generations_pre<E>(
     let mut generations = source.generations().to_vec();
     generations.push(ManifestGeneration::new(target, GenerationState::Staged));
     Ok(generations)
+}
+
+fn target_generations_post<E>(
+    source: &[ManifestGeneration],
+    identity: FullRotationIdentity,
+) -> Result<Vec<ManifestGeneration>, FullRotationError<E>> {
+    let mut saw_source = false;
+    let mut saw_target = false;
+    let mut output = Vec::with_capacity(source.len());
+    for entry in source {
+        let generation = entry.generation();
+        let state = if generation == identity.source_generation {
+            saw_source = true;
+            GenerationState::Retained
+        } else if generation == identity.target_generation {
+            saw_target = true;
+            GenerationState::Active
+        } else {
+            entry.state()
+        };
+        output.push(ManifestGeneration::new(generation, state));
+    }
+    if !saw_source || !saw_target {
+        return Err(FullRotationError::InvalidState);
+    }
+    Ok(output)
 }
 
 fn build_checkpoint<E>(
@@ -692,14 +726,16 @@ fn validate_target_inventory<E>(
     Ok(())
 }
 
-fn load_prepublication_checkpoint<Source, B>(
+fn load_checkpoint<Source, Target, B>(
     identity: FullRotationIdentity,
     source_protector: &mut Source,
+    target_protector: &mut Target,
     backend_impl: &B,
     nonce_ledger: &NonceReservationLedger,
-) -> Result<(ManifestPlaintext, OwnedKeyMaterial), FullRotationError<B::Error>>
+) -> Result<(Vec<u8>, ManifestPlaintext, OwnedKeyMaterial), FullRotationError<B::Error>>
 where
     Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
     B: FullRotationBackend,
 {
     let envelope = backend_impl
@@ -708,34 +744,61 @@ where
         .ok_or(FullRotationError::InvalidState)?;
     require_retained_manifest_reservation(nonce_ledger, &envelope)?;
     let context = manifest_context(&envelope).map_err(FullRotationError::Manifest)?;
+    if context.vault_id() != identity.vault_id {
+        return Err(FullRotationError::InvalidState);
+    }
+    let vrk = if context.key_generation() == identity.source_generation {
+        unlock_verified(
+            source_protector,
+            identity.vault_id,
+            identity.source_generation,
+        )?
+    } else if context.key_generation() == identity.target_generation {
+        unlock_verified(
+            target_protector,
+            identity.vault_id,
+            identity.target_generation,
+        )?
+    } else {
+        return Err(FullRotationError::InvalidState);
+    };
+    let plaintext =
+        decrypt_manifest(&vrk, context, &envelope).map_err(FullRotationError::Manifest)?;
+    if plaintext.vault_id() != identity.vault_id
+        || plaintext.rotation_target_generation() != Some(identity.target_generation)
+        || plaintext.rotation_phase() == RotationPhase::None
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    Ok((envelope, plaintext, vrk))
+}
+
+fn published_target_manifest<B: FullRotationBackend>(
+    identity: FullRotationIdentity,
+    target_vrk: &OwnedKeyMaterial,
+    backend_impl: &B,
+    nonce_ledger: &NonceReservationLedger,
+    phase: RotationPhase,
+) -> Result<(Vec<u8>, ManifestPlaintext), FullRotationError<B::Error>> {
+    let envelope = backend_impl
+        .read_published_manifest()
+        .map_err(|error| backend(phase, error))?;
+    require_retained_manifest_reservation(nonce_ledger, &envelope)?;
+    let context = manifest_context(&envelope).map_err(FullRotationError::Manifest)?;
     if context.vault_id() != identity.vault_id
-        || context.key_generation() != identity.source_generation
+        || context.key_generation() != identity.target_generation
     {
         return Err(FullRotationError::InvalidState);
     }
-    let source_vrk = unlock_verified(
-        source_protector,
-        identity.vault_id,
-        identity.source_generation,
-    )?;
-    let checkpoint =
-        decrypt_manifest(&source_vrk, context, &envelope).map_err(FullRotationError::Manifest)?;
-    if checkpoint.vault_id() != identity.vault_id
-        || checkpoint.rotation_target_generation() != Some(identity.target_generation)
-        || !matches!(
-            checkpoint.rotation_phase(),
-            RotationPhase::Prepare | RotationPhase::Stage | RotationPhase::Verify
-        )
-    {
-        return Err(FullRotationError::InvalidState);
-    }
-    Ok((checkpoint, source_vrk))
+    let manifest =
+        decrypt_manifest(target_vrk, context, &envelope).map_err(FullRotationError::Manifest)?;
+    Ok((envelope, manifest))
 }
 
 fn persist_phase_checkpoint<B: FullRotationBackend>(
     backend_impl: &mut B,
     ledger: &mut NonceReservationLedger,
-    source_vrk: &OwnedKeyMaterial,
+    key: &OwnedKeyMaterial,
     identity: FullRotationIdentity,
     basis: &ManifestPlaintext,
     phase: RotationPhase,
@@ -747,12 +810,12 @@ fn persist_phase_checkpoint<B: FullRotationBackend>(
         basis.generations().to_vec(),
         basis.objects().to_vec(),
     )?;
-    persist_encrypted_checkpoint(backend_impl, ledger, source_vrk, identity, &checkpoint)?;
+    persist_encrypted_checkpoint(backend_impl, ledger, key, identity, &checkpoint)?;
     Ok(())
 }
 
-/// Advances one authorized pre-publication B503 transition from a live quiesced session.
-/// B503D intentionally stops at VERIFY; publication and source retirement remain later leaves.
+/// Advances exactly one durable B503 phase using a quiescence proof created from
+/// the live source session.
 #[allow(clippy::too_many_arguments)]
 pub fn advance_full_rotation<Source, Target, B>(
     quiesced: RotationQuiesced,
@@ -773,7 +836,7 @@ where
     {
         return Err(FullRotationError::InvalidState);
     }
-    advance_prepublication_inner(
+    advance_full_rotation_inner(
         identity,
         protector_binding,
         source_protector,
@@ -783,8 +846,10 @@ where
     )
 }
 
-/// Resumes one PREPARE/STAGE transition after restart while ordinary writes remain excluded.
-/// A VERIFY checkpoint is durable output of this leaf; PUBLISH is intentionally not executed here.
+/// Resumes exactly one durable B503 phase after process restart while the vault
+/// remains closed. The concrete backend must prove ordinary writes are still
+/// excluded; callers must reconstruct `identity` from persisted non-secret state
+/// with `FullRotationIdentity::for_next_generation`.
 #[allow(clippy::too_many_arguments)]
 pub fn resume_full_rotation_after_restart<Source, Target, B>(
     identity: FullRotationIdentity,
@@ -799,7 +864,7 @@ where
     Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
     B: FullRotationBackend,
 {
-    advance_prepublication_inner(
+    advance_full_rotation_inner(
         identity,
         protector_binding,
         source_protector,
@@ -809,7 +874,92 @@ where
     )
 }
 
-fn advance_prepublication_inner<Source, Target, B>(
+fn recover_stable_target_without_checkpoint<Source, Target, B>(
+    identity: FullRotationIdentity,
+    protector_binding: FullRotationProtectorBinding,
+    source_protector: &mut Source,
+    target_protector: &mut Target,
+    backend_impl: &mut B,
+    nonce_ledger: &NonceReservationLedger,
+) -> Result<FullRotationProgress, FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    match backend_impl
+        .read_rotation_protector_binding()
+        .map_err(|error| backend(RotationPhase::Retire, error))?
+    {
+        Some(existing) if existing == protector_binding => {}
+        Some(_) => return Err(FullRotationError::InvalidState),
+        None => {}
+    }
+    let target_vrk = unlock_verified(
+        target_protector,
+        identity.vault_id,
+        identity.target_generation,
+    )?;
+    let (published_envelope, published) = published_target_manifest(
+        identity,
+        &target_vrk,
+        backend_impl,
+        nonce_ledger,
+        RotationPhase::Retire,
+    )?;
+    let final_anchor = protector_anchor(target_protector, identity.vault_id)?;
+    if published.rotation_phase() != RotationPhase::None
+        || published.active_key_generation() != identity.target_generation
+        || published.freshness_epoch() != final_anchor.highest_epoch()
+        || manifest_hash(&published_envelope) != final_anchor.manifest_hash()
+        || published
+            .generations()
+            .iter()
+            .any(|entry| entry.generation() == identity.source_generation)
+        || !published.generations().iter().any(|entry| {
+            *entry == ManifestGeneration::new(identity.target_generation, GenerationState::Active)
+        })
+        || published
+            .objects()
+            .iter()
+            .any(|object| object.key_generation() != identity.target_generation)
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    backend_impl
+        .reopen_and_verify_published(&target_vrk, &published)
+        .map_err(|error| backend(RotationPhase::Retire, error))?;
+    backend_impl
+        .activate_target_protector()
+        .map_err(|error| backend(RotationPhase::Retire, error))?;
+    backend_impl
+        .retire_source_inventory(identity.source_generation)
+        .map_err(|error| backend(RotationPhase::Retire, error))?;
+    backend_impl
+        .retire_source_recovery_wrap()
+        .map_err(|error| backend(RotationPhase::Retire, error))?;
+    match source_protector.remove_protector(identity.vault_id) {
+        Ok(()) | Err(ProtectorError::ItemMissing) => {}
+        Err(error) => return Err(FullRotationError::Protector(error)),
+    }
+    backend_impl
+        .clear_rotation_checkpoint()
+        .map_err(|error| backend(RotationPhase::Retire, error))?;
+    backend_impl
+        .clear_rotation_protector_binding()
+        .map_err(|error| backend(RotationPhase::Retire, error))?;
+    Ok(FullRotationProgress::Complete {
+        identity,
+        final_anchor,
+    })
+}
+
+/// Advances exactly one durable B503 phase from the persisted authenticated checkpoint.
+/// Every repeated phase re-verifies prerequisite state; PUBLISH and later never
+/// roll backward. Post-PUBLISH checkpoints are target-generation encrypted, so
+/// RETIRE can be retried after the source protector has already been removed.
+#[allow(clippy::too_many_arguments)]
+fn advance_full_rotation_inner<Source, Target, B>(
     identity: FullRotationIdentity,
     protector_binding: FullRotationProtectorBinding,
     source_protector: &mut Source,
@@ -823,27 +973,46 @@ where
     B: FullRotationBackend,
 {
     assert_backend_quiesced(backend_impl, RotationPhase::Prepare)?;
-    if nonce_ledger.vault_id() != identity.vault_id
-        || backend_impl
-            .read_rotation_protector_binding()
-            .map_err(|error| backend(RotationPhase::Prepare, error))?
-            != Some(protector_binding)
+    if nonce_ledger.vault_id() != identity.vault_id {
+        return Err(FullRotationError::InvalidState);
+    }
+    if backend_impl
+        .read_rotation_checkpoint()
+        .map_err(|error| backend(RotationPhase::Retire, error))?
+        .is_none()
+    {
+        return recover_stable_target_without_checkpoint(
+            identity,
+            protector_binding,
+            source_protector,
+            target_protector,
+            backend_impl,
+            nonce_ledger,
+        );
+    }
+    if backend_impl
+        .read_rotation_protector_binding()
+        .map_err(|error| backend(RotationPhase::Prepare, error))?
+        != Some(protector_binding)
     {
         return Err(FullRotationError::InvalidState);
     }
 
-    let (checkpoint, source_vrk) =
-        load_prepublication_checkpoint(identity, source_protector, backend_impl, nonce_ledger)?;
-    let source_anchor = protector_anchor(source_protector, identity.vault_id)?;
-    let target_anchor = protector_anchor(target_protector, identity.vault_id)?;
-    if source_anchor != target_anchor
-        || source_anchor.highest_epoch() != checkpoint.freshness_epoch()
-    {
-        return Err(FullRotationError::InvalidState);
-    }
+    let (checkpoint_envelope, checkpoint, checkpoint_key) = load_checkpoint(
+        identity,
+        source_protector,
+        target_protector,
+        backend_impl,
+        nonce_ledger,
+    )?;
 
     let next_phase = match checkpoint.rotation_phase() {
         RotationPhase::Prepare => {
+            let source_vrk = unlock_verified(
+                source_protector,
+                identity.vault_id,
+                identity.source_generation,
+            )?;
             let target_vrk = unlock_verified(
                 target_protector,
                 identity.vault_id,
@@ -884,6 +1053,11 @@ where
             backend_impl
                 .verify_staged_inventory(&target_vrk, checkpoint.objects())
                 .map_err(|error| backend(RotationPhase::Verify, error))?;
+            let source_vrk = unlock_verified(
+                source_protector,
+                identity.vault_id,
+                identity.source_generation,
+            )?;
             persist_phase_checkpoint(
                 backend_impl,
                 nonce_ledger,
@@ -894,14 +1068,434 @@ where
             )?;
             RotationPhase::Verify
         }
-        RotationPhase::Verify => return Err(FullRotationError::InvalidState),
-        _ => return Err(FullRotationError::InvalidState),
+        RotationPhase::Verify => {
+            let target_vrk = unlock_verified(
+                target_protector,
+                identity.vault_id,
+                identity.target_generation,
+            )?;
+            backend_impl
+                .verify_staged_inventory(&target_vrk, checkpoint.objects())
+                .map_err(|error| backend(RotationPhase::Verify, error))?;
+            let source_anchor = protector_anchor(source_protector, identity.vault_id)?;
+            let target_anchor = protector_anchor(target_protector, identity.vault_id)?;
+            if source_anchor != target_anchor
+                || source_anchor.highest_epoch() != checkpoint.freshness_epoch()
+            {
+                return Err(FullRotationError::InvalidState);
+            }
+            let publish_epoch = next_epoch(source_anchor.highest_epoch())?;
+            let generations = target_generations_post(checkpoint.generations(), identity)?;
+            let publish = ManifestPlaintext::new(
+                identity.vault_id,
+                publish_epoch,
+                source_anchor.manifest_hash(),
+                identity.target_generation,
+                (RotationPhase::Publish, Some(identity.target_generation)),
+                generations,
+                checkpoint.objects().to_vec(),
+            )
+            .map_err(FullRotationError::Manifest)?;
+            let context =
+                ManifestContext::new(identity.vault_id, identity.target_generation, publish_epoch);
+            let (_, envelope) =
+                encrypt_fresh_manifest(nonce_ledger, &target_vrk, context, &publish)
+                    .map_err(FullRotationError::FreshManifest)?;
+            backend_impl
+                .publish_manifest(&envelope)
+                .map_err(|error| backend(RotationPhase::Publish, error))?;
+            let reread = backend_impl
+                .read_published_manifest()
+                .map_err(|error| backend(RotationPhase::Publish, error))?;
+            if reread != envelope
+                || decrypt_manifest(&target_vrk, context, &reread)
+                    .map_err(FullRotationError::Manifest)?
+                    != publish
+            {
+                return Err(FullRotationError::InvalidState);
+            }
+            backend_impl
+                .persist_rotation_checkpoint(&envelope)
+                .map_err(|error| backend(RotationPhase::Publish, error))?;
+            let checkpoint_reread = backend_impl
+                .read_rotation_checkpoint()
+                .map_err(|error| backend(RotationPhase::Publish, error))?
+                .ok_or(FullRotationError::InvalidState)?;
+            if checkpoint_reread != envelope {
+                return Err(FullRotationError::InvalidState);
+            }
+            RotationPhase::Publish
+        }
+        RotationPhase::Publish => {
+            let context =
+                manifest_context(&checkpoint_envelope).map_err(FullRotationError::Manifest)?;
+            if context.key_generation() != identity.target_generation {
+                return Err(FullRotationError::InvalidState);
+            }
+            let new_anchor = FreshnessAnchor::new(
+                identity.vault_id,
+                checkpoint.freshness_epoch(),
+                manifest_hash(&checkpoint_envelope),
+            );
+            let old_epoch = checkpoint
+                .freshness_epoch()
+                .get()
+                .checked_sub(1)
+                .and_then(|value| FreshnessEpoch::new(value).ok())
+                .ok_or(FullRotationError::InvalidState)?;
+            let expected_old = FreshnessAnchor::new(
+                identity.vault_id,
+                old_epoch,
+                checkpoint.previous_manifest_hash(),
+            );
+            match protector_anchor(target_protector, identity.vault_id)? {
+                anchor if anchor == expected_old => target_protector
+                    .advance_freshness_anchor(identity.vault_id, expected_old, new_anchor)
+                    .map_err(FullRotationError::Protector)?,
+                anchor if anchor == new_anchor => {}
+                _ => return Err(FullRotationError::InvalidState),
+            }
+            if protector_anchor(target_protector, identity.vault_id)? != new_anchor {
+                return Err(FullRotationError::InvalidState);
+            }
+            persist_phase_checkpoint(
+                backend_impl,
+                nonce_ledger,
+                &checkpoint_key,
+                identity,
+                &checkpoint,
+                RotationPhase::Anchor,
+            )?;
+            RotationPhase::Anchor
+        }
+        RotationPhase::Anchor => {
+            let target_vrk = unlock_verified(
+                target_protector,
+                identity.vault_id,
+                identity.target_generation,
+            )?;
+            let (published_envelope, published) = published_target_manifest(
+                identity,
+                &target_vrk,
+                backend_impl,
+                nonce_ledger,
+                RotationPhase::Activate,
+            )?;
+            let anchor = protector_anchor(target_protector, identity.vault_id)?;
+            if published.rotation_phase() != RotationPhase::Publish
+                || anchor.highest_epoch() != published.freshness_epoch()
+                || anchor.manifest_hash() != manifest_hash(&published_envelope)
+            {
+                return Err(FullRotationError::InvalidState);
+            }
+            backend_impl
+                .reopen_and_verify_published(&target_vrk, &published)
+                .map_err(|error| backend(RotationPhase::Activate, error))?;
+            backend_impl
+                .activate_target_protector()
+                .map_err(|error| backend(RotationPhase::Activate, error))?;
+            persist_phase_checkpoint(
+                backend_impl,
+                nonce_ledger,
+                &target_vrk,
+                identity,
+                &checkpoint,
+                RotationPhase::Activate,
+            )?;
+            RotationPhase::Activate
+        }
+        RotationPhase::Activate => {
+            let target_vrk = unlock_verified(
+                target_protector,
+                identity.vault_id,
+                identity.target_generation,
+            )?;
+            let (_, published) = published_target_manifest(
+                identity,
+                &target_vrk,
+                backend_impl,
+                nonce_ledger,
+                RotationPhase::Retire,
+            )?;
+            backend_impl
+                .reopen_and_verify_published(&target_vrk, &published)
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            backend_impl
+                .activate_target_protector()
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            persist_phase_checkpoint(
+                backend_impl,
+                nonce_ledger,
+                &target_vrk,
+                identity,
+                &checkpoint,
+                RotationPhase::Retire,
+            )?;
+            RotationPhase::Retire
+        }
+        RotationPhase::Retire => {
+            let target_vrk = unlock_verified(
+                target_protector,
+                identity.vault_id,
+                identity.target_generation,
+            )?;
+            let current_anchor = protector_anchor(target_protector, identity.vault_id)?;
+            let (mut published_envelope, mut published) = published_target_manifest(
+                identity,
+                &target_vrk,
+                backend_impl,
+                nonce_ledger,
+                RotationPhase::Retire,
+            )?;
+
+            let final_anchor = if published.rotation_phase() == RotationPhase::None
+                && published.freshness_epoch() == current_anchor.highest_epoch()
+                && manifest_hash(&published_envelope) == current_anchor.manifest_hash()
+            {
+                current_anchor
+            } else if published.rotation_phase() == RotationPhase::None
+                && published.previous_manifest_hash() == current_anchor.manifest_hash()
+                && published.freshness_epoch() == next_epoch(current_anchor.highest_epoch())?
+            {
+                let candidate_anchor = FreshnessAnchor::new(
+                    identity.vault_id,
+                    published.freshness_epoch(),
+                    manifest_hash(&published_envelope),
+                );
+                target_protector
+                    .advance_freshness_anchor(identity.vault_id, current_anchor, candidate_anchor)
+                    .map_err(FullRotationError::Protector)?;
+                candidate_anchor
+            } else if published.rotation_phase() == RotationPhase::Publish
+                && published.freshness_epoch() == current_anchor.highest_epoch()
+                && manifest_hash(&published_envelope) == current_anchor.manifest_hash()
+            {
+                let stable_epoch = next_epoch(current_anchor.highest_epoch())?;
+                let stable_generations = published
+                    .generations()
+                    .iter()
+                    .copied()
+                    .filter(|entry| entry.generation() != identity.source_generation)
+                    .collect();
+                let stable = ManifestPlaintext::new(
+                    identity.vault_id,
+                    stable_epoch,
+                    current_anchor.manifest_hash(),
+                    identity.target_generation,
+                    (RotationPhase::None, None),
+                    stable_generations,
+                    published.objects().to_vec(),
+                )
+                .map_err(FullRotationError::Manifest)?;
+                let context = ManifestContext::new(
+                    identity.vault_id,
+                    identity.target_generation,
+                    stable_epoch,
+                );
+                let (_, envelope) =
+                    encrypt_fresh_manifest(nonce_ledger, &target_vrk, context, &stable)
+                        .map_err(FullRotationError::FreshManifest)?;
+                backend_impl
+                    .publish_manifest(&envelope)
+                    .map_err(|error| backend(RotationPhase::Retire, error))?;
+                let reread = backend_impl
+                    .read_published_manifest()
+                    .map_err(|error| backend(RotationPhase::Retire, error))?;
+                if reread != envelope {
+                    return Err(FullRotationError::InvalidState);
+                }
+                published_envelope = envelope;
+                published = decrypt_manifest(&target_vrk, context, &published_envelope)
+                    .map_err(FullRotationError::Manifest)?;
+                let candidate_anchor = FreshnessAnchor::new(
+                    identity.vault_id,
+                    stable_epoch,
+                    manifest_hash(&published_envelope),
+                );
+                target_protector
+                    .advance_freshness_anchor(identity.vault_id, current_anchor, candidate_anchor)
+                    .map_err(FullRotationError::Protector)?;
+                candidate_anchor
+            } else {
+                return Err(FullRotationError::InvalidState);
+            };
+
+            if protector_anchor(target_protector, identity.vault_id)? != final_anchor
+                || published.rotation_phase() != RotationPhase::None
+                || published.active_key_generation() != identity.target_generation
+                || published.generations().iter().any(|entry| {
+                    entry.generation() == identity.source_generation
+                        || (entry.generation() == identity.target_generation
+                            && entry.state() != GenerationState::Active)
+                })
+                || !published.generations().iter().any(|entry| {
+                    *entry
+                        == ManifestGeneration::new(
+                            identity.target_generation,
+                            GenerationState::Active,
+                        )
+                })
+                || published
+                    .objects()
+                    .iter()
+                    .any(|object| object.key_generation() != identity.target_generation)
+            {
+                return Err(FullRotationError::InvalidState);
+            }
+            backend_impl
+                .reopen_and_verify_published(&target_vrk, &published)
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            backend_impl
+                .activate_target_protector()
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            backend_impl
+                .retire_source_inventory(identity.source_generation)
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            backend_impl
+                .retire_source_recovery_wrap()
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            match source_protector.remove_protector(identity.vault_id) {
+                Ok(()) | Err(ProtectorError::ItemMissing) => {}
+                Err(error) => return Err(FullRotationError::Protector(error)),
+            }
+            backend_impl
+                .clear_rotation_checkpoint()
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            backend_impl
+                .clear_rotation_protector_binding()
+                .map_err(|error| backend(RotationPhase::Retire, error))?;
+            return Ok(FullRotationProgress::Complete {
+                identity,
+                final_anchor,
+            });
+        }
+        RotationPhase::None => return Err(FullRotationError::InvalidState),
     };
 
     Ok(FullRotationProgress::InProgress {
         identity,
         phase: next_phase,
     })
+}
+
+/// Aborts only a PREPARE/STAGE/VERIFY attempt while the source anchor remains canonical.
+/// PUBLISH and later phases are never rolled backward by this API.
+pub fn abort_prepublication_rotation<Source, Target, B>(
+    quiesced: RotationQuiesced,
+    identity: FullRotationIdentity,
+    protector_binding: FullRotationProtectorBinding,
+    source_protector: &mut Source,
+    target_protector: &mut Target,
+    backend_impl: &mut B,
+    nonce_ledger: &NonceReservationLedger,
+) -> Result<(), FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    if quiesced.identity().vault_id() != identity.vault_id
+        || quiesced.identity().key_generation() != identity.source_generation
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    abort_prepublication_rotation_inner(
+        identity,
+        protector_binding,
+        source_protector,
+        target_protector,
+        backend_impl,
+        nonce_ledger,
+    )
+}
+
+/// Aborts a pre-publication rotation after process restart while the vault remains
+/// closed. As with restart resume, the backend must maintain concrete ordinary-write
+/// exclusion for the complete operation.
+pub fn abort_prepublication_rotation_after_restart<Source, Target, B>(
+    identity: FullRotationIdentity,
+    protector_binding: FullRotationProtectorBinding,
+    source_protector: &mut Source,
+    target_protector: &mut Target,
+    backend_impl: &mut B,
+    nonce_ledger: &NonceReservationLedger,
+) -> Result<(), FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    abort_prepublication_rotation_inner(
+        identity,
+        protector_binding,
+        source_protector,
+        target_protector,
+        backend_impl,
+        nonce_ledger,
+    )
+}
+
+fn abort_prepublication_rotation_inner<Source, Target, B>(
+    identity: FullRotationIdentity,
+    protector_binding: FullRotationProtectorBinding,
+    source_protector: &mut Source,
+    target_protector: &mut Target,
+    backend_impl: &mut B,
+    nonce_ledger: &NonceReservationLedger,
+) -> Result<(), FullRotationError<B::Error>>
+where
+    Source: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    Target: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+    B: FullRotationBackend,
+{
+    assert_backend_quiesced(backend_impl, RotationPhase::Prepare)?;
+    if nonce_ledger.vault_id() != identity.vault_id {
+        return Err(FullRotationError::InvalidState);
+    }
+    if backend_impl
+        .read_rotation_protector_binding()
+        .map_err(|error| backend(RotationPhase::Prepare, error))?
+        != Some(protector_binding)
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    let (_, checkpoint, _) = load_checkpoint(
+        identity,
+        source_protector,
+        target_protector,
+        backend_impl,
+        nonce_ledger,
+    )?;
+    if !matches!(
+        checkpoint.rotation_phase(),
+        RotationPhase::Prepare | RotationPhase::Stage | RotationPhase::Verify
+    ) {
+        return Err(FullRotationError::InvalidState);
+    }
+    let source_anchor = protector_anchor(source_protector, identity.vault_id)?;
+    let target_anchor = protector_anchor(target_protector, identity.vault_id)?;
+    if source_anchor != target_anchor
+        || source_anchor.highest_epoch() != checkpoint.freshness_epoch()
+    {
+        return Err(FullRotationError::InvalidState);
+    }
+    backend_impl
+        .quarantine_target_inventory()
+        .map_err(|error| backend(checkpoint.rotation_phase(), error))?;
+    backend_impl
+        .remove_target_recovery_wrap()
+        .map_err(|error| backend(checkpoint.rotation_phase(), error))?;
+    match target_protector.remove_protector(identity.vault_id) {
+        Ok(()) | Err(ProtectorError::ItemMissing) => {}
+        Err(error) => return Err(FullRotationError::Protector(error)),
+    }
+    backend_impl
+        .clear_rotation_checkpoint()
+        .map_err(|error| backend(checkpoint.rotation_phase(), error))?;
+    backend_impl
+        .clear_rotation_protector_binding()
+        .map_err(|error| backend(checkpoint.rotation_phase(), error))?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1037,11 +1631,19 @@ mod tests {
 
         fn advance_freshness_anchor(
             &mut self,
-            _vault_id: VaultId,
-            _expected_old: FreshnessAnchor,
-            _new_anchor: FreshnessAnchor,
+            vault_id: VaultId,
+            expected_old: FreshnessAnchor,
+            new_anchor: FreshnessAnchor,
         ) -> Result<(), ProtectorError> {
-            Err(ProtectorError::UnsupportedPolicy)
+            let record = self.record.as_mut().ok_or(ProtectorError::ItemMissing)?;
+            if record.vault_id != vault_id {
+                return Err(ProtectorError::OwnerMismatch);
+            }
+            if record.freshness != ProtectedFreshnessState::Present(expected_old) {
+                return Err(ProtectorError::AnchorConflict);
+            }
+            record.freshness = ProtectedFreshnessState::Present(new_anchor);
+            Ok(())
         }
 
         fn replace_protector(&mut self, _vault_id: VaultId) -> Result<(), ProtectorError> {
@@ -1087,8 +1689,14 @@ mod tests {
         recovery: Option<Vec<u8>>,
         fail_checkpoint_once: bool,
         staged: Option<Vec<ManifestObject>>,
+        published: Option<Vec<u8>>,
+        target_activated: bool,
+        source_inventory_retired: bool,
+        source_recovery_retired: bool,
+        quarantined: bool,
         stage_calls: usize,
         verify_calls: usize,
+        reopen_calls: usize,
     }
 
     impl FullRotationBackend for PrepareBackend {
@@ -1179,29 +1787,41 @@ mod tests {
             Ok(())
         }
         fn quarantine_target_inventory(&mut self) -> Result<(), Self::Error> {
-            Err(BackendError("abort outside B503B"))
+            self.staged = None;
+            self.quarantined = true;
+            Ok(())
         }
-        fn publish_manifest(&mut self, _: &[u8]) -> Result<(), Self::Error> {
-            Err(BackendError("PUBLISH outside B503B"))
+        fn publish_manifest(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            self.published = Some(envelope.to_vec());
+            Ok(())
         }
         fn read_published_manifest(&self) -> Result<Vec<u8>, Self::Error> {
-            Err(BackendError("PUBLISH outside B503B"))
+            self.published
+                .clone()
+                .ok_or(BackendError("published manifest missing"))
         }
         fn reopen_and_verify_published(
             &mut self,
             _: &OwnedKeyMaterial,
-            _: &ManifestPlaintext,
+            manifest: &ManifestPlaintext,
         ) -> Result<(), Self::Error> {
-            Err(BackendError("ACTIVATE outside B503B"))
+            if self.staged.as_deref() != Some(manifest.objects()) {
+                return Err(BackendError("published inventory mismatch"));
+            }
+            self.reopen_calls += 1;
+            Ok(())
         }
         fn activate_target_protector(&mut self) -> Result<(), Self::Error> {
-            Err(BackendError("ACTIVATE outside B503B"))
+            self.target_activated = true;
+            Ok(())
         }
         fn retire_source_inventory(&mut self, _: KeyGeneration) -> Result<(), Self::Error> {
-            Err(BackendError("RETIRE outside B503B"))
+            self.source_inventory_retired = true;
+            Ok(())
         }
         fn retire_source_recovery_wrap(&mut self) -> Result<(), Self::Error> {
-            Err(BackendError("RETIRE outside B503B"))
+            self.source_recovery_retired = true;
+            Ok(())
         }
     }
 
@@ -1472,6 +2092,75 @@ mod tests {
     }
 
     #[test]
+    fn prepublication_abort_quarantines_target_and_preserves_source_anchor() {
+        let PrepareFixture {
+            envelope,
+            mut source,
+            mut target,
+            mut backend,
+            mut ledger,
+            mut session,
+            source_anchor,
+            ..
+        } = prepare_fixture();
+        let quiesced = quiesce_for_full_rotation(&mut session).expect("quiescence succeeds");
+        let prepared = begin_full_rotation(
+            quiesced,
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+            &envelope,
+            prepare_binding(),
+            prepare_policy(),
+            None,
+        )
+        .expect("PREPARE succeeds");
+        let identity = match prepared {
+            FullRotationProgress::InProgress { identity, phase } => {
+                assert_eq!(phase, RotationPhase::Prepare);
+                identity
+            }
+            FullRotationProgress::Complete { .. } => panic!("PREPARE cannot complete rotation"),
+        };
+
+        advance_full_rotation(
+            quiesced,
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("STAGE succeeds before abort");
+
+        abort_prepublication_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &ledger,
+        )
+        .expect("prepublication abort succeeds");
+
+        assert!(backend.quarantined);
+        assert!(backend.staged.is_none());
+        assert!(backend.checkpoint.is_none());
+        assert!(backend.binding.is_none());
+        assert!(target.record.is_none());
+        assert!(source.record.is_some());
+        assert_eq!(
+            source
+                .read_freshness_anchor(identity.vault_id())
+                .expect("source freshness survives abort"),
+            ProtectedFreshnessState::Present(source_anchor)
+        );
+        assert!(!backend.source_inventory_retired);
+    }
+
+    #[test]
     fn stage_and_verify_are_distinct_durable_transitions_and_restart_resumes() {
         let PrepareFixture {
             envelope,
@@ -1568,17 +2257,130 @@ mod tests {
         .expect("VERIFY checkpoint authenticates");
         assert_eq!(verify_manifest.rotation_phase(), RotationPhase::Verify);
 
-        assert!(matches!(
-            resume_full_rotation_after_restart(
+        let published = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("PUBLISH resumes after VERIFY");
+        assert_eq!(
+            published,
+            FullRotationProgress::InProgress {
                 identity,
-                prepare_binding(),
-                &mut source,
-                &mut target,
-                &mut backend,
-                &mut ledger,
-            ),
-            Err(FullRotationError::InvalidState)
-        ));
+                phase: RotationPhase::Publish,
+            }
+        );
         assert!(source.record.is_some());
+        assert!(!backend.target_activated);
+        assert!(!backend.source_inventory_retired);
+
+        let anchored = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("ANCHOR resumes after PUBLISH");
+        assert_eq!(
+            anchored,
+            FullRotationProgress::InProgress {
+                identity,
+                phase: RotationPhase::Anchor,
+            }
+        );
+        assert!(source.record.is_some());
+
+        let activated = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("ACTIVATE resumes after ANCHOR");
+        assert_eq!(
+            activated,
+            FullRotationProgress::InProgress {
+                identity,
+                phase: RotationPhase::Activate,
+            }
+        );
+        assert!(backend.target_activated);
+        assert!(source.record.is_some());
+
+        let retiring = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("RETIRE checkpoint follows ACTIVATE");
+        assert_eq!(
+            retiring,
+            FullRotationProgress::InProgress {
+                identity,
+                phase: RotationPhase::Retire,
+            }
+        );
+        assert!(source.record.is_some());
+        assert!(!backend.source_inventory_retired);
+
+        let completed = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("RETIRE completes from stable target");
+        let final_anchor = match completed {
+            FullRotationProgress::Complete {
+                identity: completed_identity,
+                final_anchor,
+            } => {
+                assert_eq!(completed_identity, identity);
+                final_anchor
+            }
+            FullRotationProgress::InProgress { .. } => panic!("RETIRE must complete rotation"),
+        };
+        assert!(source.record.is_none());
+        assert!(backend.source_inventory_retired);
+        assert!(backend.source_recovery_retired);
+        assert!(backend.target_activated);
+        assert!(backend.reopen_calls >= 2);
+        assert!(backend.checkpoint.is_none());
+        assert!(backend.binding.is_none());
+        assert_eq!(
+            target
+                .read_freshness_anchor(identity.vault_id())
+                .expect("target freshness remains present"),
+            ProtectedFreshnessState::Present(final_anchor)
+        );
+
+        let recovered = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut source,
+            &mut target,
+            &mut backend,
+            &mut ledger,
+        )
+        .expect("stable target recovery remains idempotent after checkpoint cleanup");
+        assert!(matches!(
+            recovered,
+            FullRotationProgress::Complete {
+                identity: recovered_identity,
+                final_anchor: recovered_anchor,
+            } if recovered_identity == identity && recovered_anchor == final_anchor
+        ));
     }
 }
