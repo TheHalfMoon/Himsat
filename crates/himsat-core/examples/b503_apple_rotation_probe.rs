@@ -646,11 +646,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let target_vrk = target.unlock_vrk(vault_id, identity.target_generation())?;
     backend.verify_target(vault_id, &target_vrk, &backend.staged)?;
+
+    let mut restarted_source = AppleKeychainProtector::new(source.config().clone());
+    let mut restarted_target = AppleKeychainProtector::new(target.config().clone());
+    restarted_source.create_protector(
+        AccessScope::SameUserAccount,
+        UserPresencePolicy::NotRequired,
+    )?;
+    restarted_target.create_protector(
+        AccessScope::SameUserAccount,
+        UserPresencePolicy::NotRequired,
+    )?;
     let recovered = resume_full_rotation_after_restart(
         identity,
         binding,
-        &mut source,
-        &mut target,
+        &mut restarted_source,
+        &mut restarted_target,
         &mut backend,
         &mut ledger,
     )?;
