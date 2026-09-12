@@ -24,7 +24,8 @@ use crate::vault_lease::{KeyedHandleError, KeyedHandleLease};
 use rusqlite::{Connection, OpenFlags};
 use std::error::Error;
 use std::fmt;
-use std::path::Path;
+use std::fs::{self, OpenOptions};
+use std::path::{Path, PathBuf};
 use zeroize::Zeroize;
 
 /// Exact SQLCipher runtime identity produced by the reviewed 4.14.0 community source.
@@ -163,6 +164,73 @@ impl Error for SqlCipherIntegrityError {
     }
 }
 
+/// Fail-closed errors for B503 cross-generation SQLCipher staging.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SqlCipherGenerationMigrationError {
+    /// Source and target contexts do not describe the same vault.
+    VaultMismatch,
+    /// Source and target contexts are not both for the structured-store purpose.
+    PurposeMismatch,
+    /// Target generation is not strictly newer than the source generation.
+    GenerationOrder,
+    /// Source or target path could not be resolved safely.
+    Path,
+    /// Source and target resolve to the same database path.
+    SamePath,
+    /// A target database already exists and must be reconciled by the caller.
+    TargetAlreadyExists,
+    /// The verified source database could not be opened.
+    SourceOpen(SqlCipherOpenError),
+    /// The source database failed the reviewed integrity checks.
+    SourceIntegrity(SqlCipherIntegrityError),
+    /// SQLCipher could not export the source into the separately keyed target.
+    Export,
+    /// The staged target could not be durably flushed.
+    Durability,
+    /// The target database could not be reopened through the production path.
+    TargetOpen(SqlCipherOpenError),
+    /// The target database failed the reviewed integrity checks.
+    TargetIntegrity(SqlCipherIntegrityError),
+    /// Cross-generation key isolation could not be proven in both directions.
+    KeyIsolation,
+}
+
+impl fmt::Display for SqlCipherGenerationMigrationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::VaultMismatch => f.write_str("SQLCipher rotation vault identity mismatch"),
+            Self::PurposeMismatch => f.write_str("SQLCipher rotation purpose mismatch"),
+            Self::GenerationOrder => {
+                f.write_str("SQLCipher rotation target generation is not newer")
+            }
+            Self::Path => f.write_str("SQLCipher rotation path validation failed"),
+            Self::SamePath => f.write_str("SQLCipher rotation source and target paths alias"),
+            Self::TargetAlreadyExists => f.write_str("SQLCipher rotation target already exists"),
+            Self::SourceOpen(error) => write!(f, "SQLCipher rotation source open failed: {error}"),
+            Self::SourceIntegrity(error) => {
+                write!(f, "SQLCipher rotation source integrity failed: {error}")
+            }
+            Self::Export => f.write_str("SQLCipher cross-generation export failed"),
+            Self::Durability => f.write_str("SQLCipher staged target durability failed"),
+            Self::TargetOpen(error) => write!(f, "SQLCipher rotation target open failed: {error}"),
+            Self::TargetIntegrity(error) => {
+                write!(f, "SQLCipher rotation target integrity failed: {error}")
+            }
+            Self::KeyIsolation => f.write_str("SQLCipher cross-generation key isolation failed"),
+        }
+    }
+}
+
+impl Error for SqlCipherGenerationMigrationError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::SourceOpen(error) | Self::TargetOpen(error) => Some(error),
+            Self::SourceIntegrity(error) | Self::TargetIntegrity(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
 struct SqlCipherDatabase {
     // The raw provider remains private. Later authorized leaves may extend the
     // outer handle but must continue to cross the B105 lease gate for keyed I/O.
@@ -227,10 +295,26 @@ pub fn open_sqlcipher_database<P: AsRef<Path>>(
     context: KeyDerivationContext,
     vrk: &OwnedKeyMaterial,
 ) -> Result<SqlCipherDatabaseHandle, SqlCipherOpenError> {
+    let connection = open_reviewed_connection(path.as_ref(), &lease, context, vrk)?;
+    Ok(SqlCipherDatabaseHandle {
+        inner: LeaseBoundDatabaseHandle::new(
+            lease,
+            SqlCipherDatabase {
+                _connection: connection,
+            },
+        ),
+    })
+}
+
+fn open_reviewed_connection(
+    path: &Path,
+    lease: &KeyedHandleLease,
+    context: KeyDerivationContext,
+    vrk: &OwnedKeyMaterial,
+) -> Result<Connection, SqlCipherOpenError> {
     if context.purpose() != KeyPurpose::StructuredStore {
         return Err(SqlCipherOpenError::PurposeMismatch);
     }
-
     let identity = lease.identity();
     if context.vault_id() != identity.vault_id()
         || context.key_generation() != identity.key_generation()
@@ -238,25 +322,213 @@ pub fn open_sqlcipher_database<P: AsRef<Path>>(
         return Err(SqlCipherOpenError::IdentityMismatch);
     }
 
-    let backend = {
-        let _permit = lease.authorize()?;
-        let connection = Connection::open_with_flags(path, provider_open_flags())
-            .map_err(|_| SqlCipherOpenError::Open)?;
-        let structured_key = context.derive_purpose_key(vrk);
+    let _permit = lease.authorize()?;
+    let connection = Connection::open_with_flags(path, provider_open_flags())
+        .map_err(|_| SqlCipherOpenError::Open)?;
+    let structured_key = context.derive_purpose_key(vrk);
+    apply_raw_key(&connection, &structured_key)?;
+    verify_runtime_identity(&connection)?;
+    verify_encryption_active(&connection)?;
+    enforce_b303_provider_and_temp_posture(&connection)?;
+    Ok(connection)
+}
 
-        apply_raw_key(&connection, &structured_key)?;
-        verify_runtime_identity(&connection)?;
-        verify_encryption_active(&connection)?;
-        enforce_b303_provider_and_temp_posture(&connection)?;
+/// One source or target endpoint for B503 SQLCipher generation staging.
+///
+/// The endpoint owns only public path/context metadata and a lease token while
+/// borrowing opaque VRK material. Secret bytes remain inaccessible to callers.
+pub struct SqlCipherGenerationEndpoint<'a> {
+    path: PathBuf,
+    lease: KeyedHandleLease,
+    context: KeyDerivationContext,
+    vrk: &'a OwnedKeyMaterial,
+}
 
-        SqlCipherDatabase {
-            _connection: connection,
+impl<'a> SqlCipherGenerationEndpoint<'a> {
+    /// Binds one database path to its exact lease, derivation context, and VRK.
+    #[must_use]
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        lease: KeyedHandleLease,
+        context: KeyDerivationContext,
+        vrk: &'a OwnedKeyMaterial,
+    ) -> Self {
+        Self {
+            path: path.as_ref().to_path_buf(),
+            lease,
+            context,
+            vrk,
         }
-    };
+    }
+}
 
-    Ok(SqlCipherDatabaseHandle {
-        inner: LeaseBoundDatabaseHandle::new(lease, backend),
-    })
+/// Stages a separately named SQLCipher database under a newer VRK generation.
+///
+/// The source is opened and integrity-verified through the reviewed production
+/// provider path, exported into a distinct target using SQLCipher's attached-
+/// database export primitive, flushed, and reopened under the target generation.
+/// Before success, this function also proves that the source key cannot produce a
+/// healthy target and the target key cannot produce a healthy source. Neither raw
+/// VRK bytes nor a raw `rusqlite::Connection` cross this module boundary.
+///
+/// The source database is never rekeyed, renamed, deleted, or otherwise mutated by
+/// this operation. Publication, anchoring, and source retirement remain owned by
+/// the B503 rotation coordinator.
+pub fn stage_sqlcipher_generation(
+    source: SqlCipherGenerationEndpoint<'_>,
+    target: SqlCipherGenerationEndpoint<'_>,
+) -> Result<SqlCipherDatabaseHandle, SqlCipherGenerationMigrationError> {
+    validate_generation_migration_contexts(source.context, target.context)?;
+    let (source_path, target_path) =
+        resolve_generation_migration_paths(&source.path, &target.path)?;
+
+    let source_connection =
+        open_reviewed_connection(&source_path, &source.lease, source.context, source.vrk)
+            .map_err(SqlCipherGenerationMigrationError::SourceOpen)?;
+    verify_b304_integrity(&source_connection)
+        .map_err(SqlCipherGenerationMigrationError::SourceIntegrity)?;
+
+    export_to_target_generation(&source_connection, &target_path, target.context, target.vrk)?;
+    drop(source_connection);
+
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&target_path)
+        .and_then(|file| file.sync_all())
+        .map_err(|_| SqlCipherGenerationMigrationError::Durability)?;
+
+    let target_handle =
+        open_sqlcipher_database(&target_path, target.lease, target.context, target.vrk)
+            .map_err(SqlCipherGenerationMigrationError::TargetOpen)?;
+    target_handle
+        .verify_integrity()
+        .map_err(SqlCipherGenerationMigrationError::TargetIntegrity)?;
+
+    if key_opens_healthy_database(&target_path, source.context, source.vrk)
+        || key_opens_healthy_database(&source_path, target.context, target.vrk)
+    {
+        return Err(SqlCipherGenerationMigrationError::KeyIsolation);
+    }
+    Ok(target_handle)
+}
+
+fn validate_generation_migration_contexts(
+    source: KeyDerivationContext,
+    target: KeyDerivationContext,
+) -> Result<(), SqlCipherGenerationMigrationError> {
+    if source.purpose() != KeyPurpose::StructuredStore
+        || target.purpose() != KeyPurpose::StructuredStore
+    {
+        return Err(SqlCipherGenerationMigrationError::PurposeMismatch);
+    }
+    if source.vault_id() != target.vault_id() {
+        return Err(SqlCipherGenerationMigrationError::VaultMismatch);
+    }
+    if target.key_generation() <= source.key_generation() {
+        return Err(SqlCipherGenerationMigrationError::GenerationOrder);
+    }
+    Ok(())
+}
+
+fn resolve_generation_migration_paths(
+    source: &Path,
+    target: &Path,
+) -> Result<(PathBuf, PathBuf), SqlCipherGenerationMigrationError> {
+    let source = fs::canonicalize(source).map_err(|_| SqlCipherGenerationMigrationError::Path)?;
+    let parent = target.parent().unwrap_or_else(|| Path::new("."));
+    let parent = fs::canonicalize(parent).map_err(|_| SqlCipherGenerationMigrationError::Path)?;
+    let name = target
+        .file_name()
+        .ok_or(SqlCipherGenerationMigrationError::Path)?;
+    let resolved_target = parent.join(name);
+
+    if target.exists() {
+        let existing =
+            fs::canonicalize(target).map_err(|_| SqlCipherGenerationMigrationError::Path)?;
+        if existing == source {
+            return Err(SqlCipherGenerationMigrationError::SamePath);
+        }
+        return Err(SqlCipherGenerationMigrationError::TargetAlreadyExists);
+    }
+    if resolved_target == source {
+        return Err(SqlCipherGenerationMigrationError::SamePath);
+    }
+    Ok((source, resolved_target))
+}
+
+fn export_to_target_generation(
+    source: &Connection,
+    target_path: &Path,
+    target_context: KeyDerivationContext,
+    target_vrk: &OwnedKeyMaterial,
+) -> Result<(), SqlCipherGenerationMigrationError> {
+    let target_path = target_path
+        .to_str()
+        .ok_or(SqlCipherGenerationMigrationError::Path)?;
+    let target_key = target_context.derive_purpose_key(target_vrk);
+    let mut attach_sql = target_key.with_bytes(|bytes| {
+        let mut sql = String::from("ATTACH DATABASE ?1 AS himsat_rotation_target KEY ");
+        sql.push_str(&raw_key_literal(bytes));
+        sql.push(';');
+        sql
+    });
+    let attached = source.execute(&attach_sql, [target_path]).is_ok();
+    attach_sql.zeroize();
+    if !attached {
+        return Err(SqlCipherGenerationMigrationError::Export);
+    }
+
+    let exported = source
+        .query_row(
+            "SELECT sqlcipher_export('himsat_rotation_target');",
+            [],
+            |_| Ok(()),
+        )
+        .is_ok();
+    let detached = source
+        .execute_batch("DETACH DATABASE himsat_rotation_target;")
+        .is_ok();
+    if !exported || !detached {
+        remove_database_files_best_effort(Path::new(target_path));
+        return Err(SqlCipherGenerationMigrationError::Export);
+    }
+    Ok(())
+}
+
+fn key_opens_healthy_database(
+    path: &Path,
+    context: KeyDerivationContext,
+    vrk: &OwnedKeyMaterial,
+) -> bool {
+    let Ok(connection) = Connection::open_with_flags(path, read_only_provider_open_flags()) else {
+        return false;
+    };
+    let structured_key = context.derive_purpose_key(vrk);
+    if apply_raw_key(&connection, &structured_key).is_err() {
+        return false;
+    }
+    verify_b304_integrity(&connection).is_ok()
+}
+
+fn remove_database_files_best_effort(path: &Path) {
+    let _ = fs::remove_file(path);
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let sidecar = PathBuf::from(format!("{}{suffix}", path.display()));
+        let _ = fs::remove_file(sidecar);
+    }
+}
+
+fn raw_key_literal(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut literal = String::with_capacity(69);
+    literal.push_str("\"x'");
+    for byte in key {
+        literal.push(char::from(HEX[usize::from(byte >> 4)]));
+        literal.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    literal.push_str("'\"");
+    literal
 }
 
 fn provider_open_flags() -> OpenFlags {
@@ -266,6 +538,10 @@ fn provider_open_flags() -> OpenFlags {
     OpenFlags::SQLITE_OPEN_READ_WRITE
         | OpenFlags::SQLITE_OPEN_CREATE
         | OpenFlags::SQLITE_OPEN_NO_MUTEX
+}
+
+fn read_only_provider_open_flags() -> OpenFlags {
+    OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX
 }
 
 fn apply_raw_key(
@@ -439,15 +715,11 @@ fn verify_sqlite_integrity(connection: &Connection) -> Result<(), SqlCipherInteg
 }
 
 fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-
-    let mut sql = String::with_capacity(18 + (KEY_MATERIAL_BYTES * 2));
-    sql.push_str("PRAGMA key = \"x'");
-    for byte in key {
-        sql.push(char::from(HEX[usize::from(byte >> 4)]));
-        sql.push(char::from(HEX[usize::from(byte & 0x0f)]));
-    }
-    sql.push_str("'\";");
+    let literal = raw_key_literal(key);
+    let mut sql = String::with_capacity(12 + literal.len());
+    sql.push_str("PRAGMA key = ");
+    sql.push_str(&literal);
+    sql.push(';');
     sql
 }
 
@@ -456,12 +728,13 @@ mod tests {
     use super::{
         EXPECTED_OPENSSL_RUNTIME_VERSION, EXPECTED_SQLCIPHER_CRYPTO_PROVIDER,
         EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION,
-        SqlCipherIntegrityError, SqlCipherOpenError, apply_raw_key,
-        enforce_b303_provider_and_temp_posture, open_sqlcipher_database, provider_open_flags,
-        raw_key_pragma, require_crypto_provider, require_crypto_provider_version,
-        require_encryption_active, require_sqlcipher_runtime_version,
-        require_sqlite_runtime_version, verify_cipher_integrity, verify_encryption_active,
-        verify_runtime_identity, verify_sqlite_integrity,
+        SqlCipherGenerationEndpoint, SqlCipherIntegrityError, SqlCipherOpenError, apply_raw_key,
+        enforce_b303_provider_and_temp_posture, key_opens_healthy_database,
+        open_reviewed_connection, open_sqlcipher_database, provider_open_flags, raw_key_pragma,
+        require_crypto_provider, require_crypto_provider_version, require_encryption_active,
+        require_sqlcipher_runtime_version, require_sqlite_runtime_version,
+        stage_sqlcipher_generation, verify_b304_integrity, verify_cipher_integrity,
+        verify_encryption_active, verify_runtime_identity, verify_sqlite_integrity,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
@@ -469,6 +742,7 @@ mod tests {
     };
     use crate::vault_lease::{KeyedHandleError, VaultLease};
     use rusqlite::{Connection, Error as RusqliteError, OpenFlags};
+    use std::fs;
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -879,5 +1153,107 @@ mod tests {
 
         assert_eq!(error, SqlCipherOpenError::Access(KeyedHandleError::Revoked));
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn b503_cross_generation_export_preserves_source_and_proves_key_isolation() {
+        let source_path = unused_path("b503-source");
+        let target_path = unused_path("b503-target");
+        remove_database_files(&source_path);
+        remove_database_files(&target_path);
+
+        let vault_id = VaultId::from_bytes([0x91; VAULT_ID_BYTES]);
+        let source_generation = KeyGeneration::new(7).expect("source generation");
+        let target_generation = KeyGeneration::new(8).expect("target generation");
+        let source_identity = VaultLeaseIdentity::new(vault_id, source_generation);
+        let target_identity = VaultLeaseIdentity::new(vault_id, target_generation);
+        let source_context =
+            KeyDerivationContext::new(vault_id, source_generation, KeyPurpose::StructuredStore);
+        let target_context =
+            KeyDerivationContext::new(vault_id, target_generation, KeyPurpose::StructuredStore);
+        let source_vrk = OwnedKeyMaterial::from_bytes([0x92; KEY_MATERIAL_BYTES]);
+        let target_vrk = OwnedKeyMaterial::from_bytes([0x93; KEY_MATERIAL_BYTES]);
+        let marker = "HIMSAT_B503_CROSS_GENERATION_SQLCIPHER_7F21";
+
+        {
+            let lease = VaultLease::new(source_identity);
+            let connection = open_reviewed_connection(
+                &source_path,
+                &lease.keyed_handle_lease(),
+                source_context,
+                &source_vrk,
+            )
+            .expect("source provider must open");
+            connection
+                .execute_batch(
+                    "CREATE TABLE rotation_probe (value TEXT NOT NULL); PRAGMA journal_mode = DELETE;",
+                )
+                .expect("source schema must persist");
+            connection
+                .execute("INSERT INTO rotation_probe (value) VALUES (?1);", [marker])
+                .expect("source semantic row must persist");
+            verify_b304_integrity(&connection).expect("source must be healthy before rotation");
+        }
+
+        let source_bytes_before = fs::read(&source_path).expect("source bytes must be readable");
+        let source_lease = VaultLease::new(source_identity);
+        let target_lease = VaultLease::new(target_identity);
+        let source_endpoint = SqlCipherGenerationEndpoint::new(
+            &source_path,
+            source_lease.keyed_handle_lease(),
+            source_context,
+            &source_vrk,
+        );
+        let target_endpoint = SqlCipherGenerationEndpoint::new(
+            &target_path,
+            target_lease.keyed_handle_lease(),
+            target_context,
+            &target_vrk,
+        );
+        let target_handle = stage_sqlcipher_generation(source_endpoint, target_endpoint)
+            .expect("cross-generation SQLCipher staging must succeed");
+
+        assert_eq!(target_handle.identity(), target_identity);
+        assert_eq!(target_handle.verify_integrity(), Ok(()));
+        assert_eq!(
+            fs::read(&source_path).expect("source remains readable"),
+            source_bytes_before,
+            "B503 staging must not mutate the verified source database",
+        );
+        let target_bytes = fs::read(&target_path).expect("target bytes must be readable");
+        assert_ne!(
+            target_bytes, source_bytes_before,
+            "target generation must contain newly encrypted SQLCipher bytes",
+        );
+        assert!(!key_opens_healthy_database(
+            &target_path,
+            source_context,
+            &source_vrk,
+        ));
+        assert!(!key_opens_healthy_database(
+            &source_path,
+            target_context,
+            &target_vrk,
+        ));
+
+        let verification_lease = VaultLease::new(target_identity);
+        let target_connection = open_reviewed_connection(
+            &target_path,
+            &verification_lease.keyed_handle_lease(),
+            target_context,
+            &target_vrk,
+        )
+        .expect("target must reopen only through target generation");
+        let observed = target_connection
+            .query_row("SELECT value FROM rotation_probe;", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .expect("target semantic row must survive export");
+        assert_eq!(observed, marker);
+
+        drop(target_connection);
+        drop(target_handle);
+        remove_database_files(&source_path);
+        remove_database_files(&target_path);
     }
 }
