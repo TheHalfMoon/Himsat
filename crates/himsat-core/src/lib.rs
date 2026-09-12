@@ -18,7 +18,7 @@
 /// secret-protector contract surface.
 pub mod vault;
 
-/// B401 Apple data-protection Keychain adapter.
+/// B401 Apple data-protection Keychain adapter with bounded B501D freshness state.
 #[cfg(target_os = "macos")]
 pub mod vault_apple_keychain;
 
