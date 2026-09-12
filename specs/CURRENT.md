@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B502_CANONICAL_RECONCILING_B503_BOUND
+PROGRAM_STATE = SPEC_004_B503_CANONICAL_RECONCILING_B504_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -93,12 +93,16 @@ B501_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
 B501_CANONICAL_MERGE = 65ef62a2d6317a4c69382a2ce3d29ddc608b7087
 B501_B502_RECONCILIATION_STATE = CANONICAL_QUALIFIED
 B501_B502_RECONCILIATION_CANONICAL_MERGE = b6109abd6c3fc6a849306b3f280d4dd0beb4a431
-B502_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B502_DISPOSITION = CANONICAL_CLOSED
 B502_CANONICAL_MERGE = c0aa92a8d5cfa6ac91f0c47bd7a3642e6f6efe0d
-B502_B503_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B503_SEVEN_PHASE_VRK_ROTATION_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B503_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B503_SEVEN_PHASE_VRK_ROTATION_ONLY_IF_RECONCILIATION_QUALIFIED
+B502_B503_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B502_B503_RECONCILIATION_CANONICAL_MERGE = 2d6eda2b0eaece6c129bdd88eabc112122d1f28c
+B503_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B503_CANONICAL_MERGE = 47e42631a49bc2a26ec02a30f03cab17e1df6036
+B503_B504_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B504_ROTATION_COMMIT_POINT_FAULT_INJECTION_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B504_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B504_ROTATION_COMMIT_POINT_FAULT_INJECTION_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -670,7 +674,15 @@ The accepted head passed original-attempt pull-request CI `34677455893` and R3 `
 
 Original-attempt push-triggered post-merge CI `34678002932` and R3 `34678002920` both succeeded on attempt 1 on exact canonical merge `c0aa92a8d5cfa6ac91f0c47bd7a3642e6f6efe0d`; Windows Rust job `103511238943` succeeded. Durable post-merge qualification is recorded on PR #111 comment `5645854201`.
 
-The accepted B502 scope is bounded to explicit older-backup/fresh-device restore state transitions. It does not claim portable provider transport, cross-generation data migration, durable storage-coordinator publication, or final Specification 004 closeout. If this reconciliation becomes exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge qualified, B503 becomes the only authorized implementation leaf. B503 is bounded to the normative crash-atomic full VRK rotation sequence `NONE -> PREPARE -> STAGE -> VERIFY -> PUBLISH -> ANCHOR -> ACTIVATE -> RETIRE -> NONE`, with normal writes quiesced, source material retained through successful activation, and no B504 fault-injection closure claim. B504-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
+The accepted B502 scope is bounded to explicit older-backup/fresh-device restore state transitions. Canonical B502/B503 reconciliation merge `2d6eda2b0eaece6c129bdd88eabc112122d1f28c` resolved the prior conditional authority to B503 after its exact-head and post-merge qualification. B502 is therefore canonical-closed.
+
+## Canonical B503 implementation and B504 disposition
+
+The bounded B503 lineage is PR #113 through PR #119 and culminates in canonical merge `47e42631a49bc2a26ec02a30f03cab17e1df6036`. Final exact head `0ec503a148ef88bf8a5d91627124bc529a8def49` passed pre-merge CI `34723156586` and R3 `34723156531` on attempt 1, then passed genuine signed Apple native attempt 1 with exit 0 and the complete required B503 marker set. The accepted head was merged through explicit expected-head protection; exact parentage/tree were verified; and canonical merge `47e42631a49bc2a26ec02a30f03cab17e1df6036` passed push-triggered CI `34723648055` and R3 `34723648064` on attempt 1. `b503-full-rotation-final-evidence.md` is the controlling B503 evidence record.
+
+B503 becomes canonical-closed only if this B503/B504 state reconciliation itself becomes exact-head qualified, explicitly expected-head merged, exact parent/tree verified, and exact-post-merge qualified. Only then may B504 become the sole authorized implementation leaf. B504 is limited to failure injection immediately before and after every durable rotation commit point and proof of canonical decryptability/recovery under the reviewed rotation invariants. B505, B506, Specification 005, release, FIPS, and compliance claims remain unauthorized.
+
+Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3 automation, billing-blocked/skipped review bots, Cubic neutral output, CodeRabbit automation, or other automation do not substitute for the required genuinely independent substantive crypto/security review of the exact final implementation revision.
 
 ## Specification 004 delivery chain
 
@@ -715,10 +727,12 @@ The accepted B502 scope is bounded to explicit older-backup/fresh-device restore
   -> B406/B501 state reconciliation           CANONICAL_QUALIFIED
   -> B501 authenticated manifest/freshness    CANONICAL_QUALIFIED
   -> B501/B502 state reconciliation           CANONICAL_QUALIFIED
-  -> B502 older-backup/fresh-device restore   CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
-  -> B502/B503 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B503 seven-phase full VRK rotation       BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B504-B506 fault/backup/delete            BLOCKED_PENDING_PRIOR_LEAVES
+  -> B502 older-backup/fresh-device restore   CANONICAL_QUALIFIED
+  -> B502/B503 state reconciliation           CANONICAL_QUALIFIED
+  -> B503 seven-phase full VRK rotation       CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
+  -> B503/B504 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B504 rotation commit-point fault injection BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B505-B506 backup/delete                  BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
   -> Specification 005                        BLOCKED_PENDING_SPEC_004_CLOSEOUT
