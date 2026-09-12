@@ -54,6 +54,9 @@ pub mod vault_nonce;
 /// B501A canonical authenticated freshness-manifest codec.
 pub mod vault_manifest;
 
+/// B501 portable freshness open/genesis decision logic.
+pub mod vault_freshness;
+
 /// B103 portable secret-protector policy, capability, and binding validation.
 pub mod vault_protector;
 

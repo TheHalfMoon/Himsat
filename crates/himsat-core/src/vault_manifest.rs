@@ -50,6 +50,21 @@ impl ManifestContext {
             freshness_epoch,
         }
     }
+
+    #[must_use]
+    pub const fn vault_id(self) -> VaultId {
+        self.vault_id
+    }
+
+    #[must_use]
+    pub const fn key_generation(self) -> KeyGeneration {
+        self.key_generation
+    }
+
+    #[must_use]
+    pub const fn freshness_epoch(self) -> FreshnessEpoch {
+        self.freshness_epoch
+    }
 }
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(u16)]
@@ -204,6 +219,17 @@ impl ManifestPlaintext {
         value.validate()?;
         Ok(value)
     }
+
+    #[must_use]
+    pub const fn freshness_epoch(&self) -> FreshnessEpoch {
+        self.freshness_epoch
+    }
+
+    #[must_use]
+    pub const fn previous_manifest_hash(&self) -> ManifestHash {
+        self.previous_manifest_hash
+    }
+
     fn validate(&self) -> Result<(), ManifestError> {
         let zero_hash = self
             .previous_manifest_hash
@@ -786,6 +812,10 @@ pub fn decrypt_manifest(
 #[must_use]
 pub fn manifest_hash(envelope: &[u8]) -> ManifestHash {
     ManifestHash::from_bytes(Sha256::digest(envelope).into())
+}
+
+pub fn manifest_context(envelope: &[u8]) -> Result<ManifestContext, ManifestError> {
+    Ok(parse_envelope(envelope)?.context)
 }
 #[cfg(test)]
 mod tests {
