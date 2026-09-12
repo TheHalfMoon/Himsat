@@ -65,7 +65,7 @@ B503G adds a native macOS qualifier that executes the production full-rotation c
 
 The final probe was rebuilt from that exact revision and executed inside the matching signed/provisioned application context. Signing evidence:
 
-- signing authority: `Apple Development: azialshehri@gmail.com (5VU39N6XKG)`;
+- signing authority: `Apple Development: <redacted> (5VU39N6XKG)`;
 - TeamIdentifier: `5QJ8QL886F`;
 - application identifier: `5QJ8QL886F.com.thehalfmoon.himsat.b401.qualifier`;
 - unsigned candidate binary SHA-256: `71bb3c2a2284d438fed00086c716cb43491a18cf3cd2ae0e69b5143acf2fa5fd`;
