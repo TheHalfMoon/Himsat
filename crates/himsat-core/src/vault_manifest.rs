@@ -122,6 +122,18 @@ impl ManifestGeneration {
     pub const fn new(generation: KeyGeneration, state: GenerationState) -> Self {
         Self { generation, state }
     }
+
+    /// Returns the key generation represented by this authenticated manifest entry.
+    #[must_use]
+    pub const fn generation(self) -> KeyGeneration {
+        self.generation
+    }
+
+    /// Returns the authenticated lifecycle state for this key generation.
+    #[must_use]
+    pub const fn state(self) -> GenerationState {
+        self.state
+    }
 }
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(u16)]
@@ -186,6 +198,42 @@ impl ManifestObject {
     pub const fn kind(&self) -> ManifestObjectKind {
         self.auth_metadata.kind()
     }
+
+    /// Returns the authenticated logical object identifier.
+    #[must_use]
+    pub const fn logical_id(&self) -> [u8; 16] {
+        self.logical_id
+    }
+
+    /// Returns the opaque storage identifier selected by the authenticated manifest.
+    #[must_use]
+    pub const fn storage_id(&self) -> [u8; 16] {
+        self.storage_id
+    }
+
+    /// Returns the key generation that encrypts this stored object.
+    #[must_use]
+    pub const fn key_generation(&self) -> KeyGeneration {
+        self.key_generation
+    }
+
+    /// Returns the authenticated length of the exact canonical stored ciphertext bytes.
+    #[must_use]
+    pub const fn ciphertext_length(&self) -> u64 {
+        self.ciphertext_length
+    }
+
+    /// Returns SHA-256 of the exact canonical stored ciphertext bytes.
+    #[must_use]
+    pub const fn ciphertext_sha256(&self) -> [u8; 32] {
+        self.ciphertext_sha256
+    }
+
+    /// Returns the object-kind-specific authenticated metadata.
+    #[must_use]
+    pub const fn auth_metadata(&self) -> ManifestAuthMetadata {
+        self.auth_metadata
+    }
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ManifestPlaintext {
@@ -232,12 +280,40 @@ impl ManifestPlaintext {
         self.previous_manifest_hash
     }
 
+    /// Returns the vault identity authenticated by this manifest.
+    #[must_use]
     pub const fn vault_id(&self) -> VaultId {
         self.vault_id
     }
 
+    /// Returns the sole active key generation authenticated by this manifest.
+    #[must_use]
     pub const fn active_key_generation(&self) -> KeyGeneration {
         self.active_key_generation
+    }
+
+    /// Returns the authenticated durable rotation phase.
+    #[must_use]
+    pub const fn rotation_phase(&self) -> RotationPhase {
+        self.rotation_phase
+    }
+
+    /// Returns the authenticated target generation while rotation is active.
+    #[must_use]
+    pub const fn rotation_target_generation(&self) -> Option<KeyGeneration> {
+        self.rotation_target_generation
+    }
+
+    /// Returns the canonical authenticated key-generation table.
+    #[must_use]
+    pub fn generations(&self) -> &[ManifestGeneration] {
+        &self.generations
+    }
+
+    /// Returns the canonical authenticated stored-object inventory.
+    #[must_use]
+    pub fn objects(&self) -> &[ManifestObject] {
+        &self.objects
     }
 
     pub(crate) fn republish_for_restore(
