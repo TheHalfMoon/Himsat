@@ -1,8 +1,8 @@
 #[cfg(target_os = "macos")]
 use himsat_core::vault::{
     AccessScope, FreshnessAnchor, FreshnessEpoch, HardwareBacking, KeyGeneration, ManifestHash,
-    ProtectedFreshnessState, SecretProtector, UserPresencePolicy, VaultId, VaultLeaseIdentity,
-    VaultLeaseState,
+    ProtectedFreshnessState, ProtectorError, SecretProtector, UserPresencePolicy, VaultId,
+    VaultLeaseIdentity, VaultLeaseState,
 };
 #[cfg(target_os = "macos")]
 use himsat_core::vault_apple_keychain::{
@@ -411,15 +411,35 @@ struct Cleanup {
 }
 
 #[cfg(target_os = "macos")]
+impl Cleanup {
+    fn remove_config(vault_id: VaultId, config: AppleKeychainConfig) -> Result<(), ProtectorError> {
+        let mut protector = AppleKeychainProtector::new(config);
+        protector.create_protector(
+            AccessScope::SameUserAccount,
+            UserPresencePolicy::NotRequired,
+        )?;
+        match protector.remove_protector(vault_id) {
+            Ok(()) | Err(ProtectorError::ItemMissing) => Ok(()),
+            Err(error) => Err(error),
+        }
+    }
+
+    fn cleanup(&self) -> Result<(), ProtectorError> {
+        Self::remove_config(self.vault_id, self.source.clone())?;
+        Self::remove_config(self.vault_id, self.target.clone())
+    }
+}
+
+#[cfg(target_os = "macos")]
 impl Drop for Cleanup {
     fn drop(&mut self) {
-        for config in [self.source.clone(), self.target.clone()] {
-            let mut protector = AppleKeychainProtector::new(config);
-            let _ = protector.create_protector(
-                AccessScope::SameUserAccount,
-                UserPresencePolicy::NotRequired,
-            );
-            let _ = protector.remove_protector(self.vault_id);
+        for (label, config) in [
+            ("SOURCE", self.source.clone()),
+            ("TARGET", self.target.clone()),
+        ] {
+            if let Err(error) = Self::remove_config(self.vault_id, config) {
+                eprintln!("B503_NATIVE_APPLE_CLEANUP_{label}=ERROR:{error:?}");
+            }
         }
     }
 }
@@ -672,7 +692,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             final_anchor,
         }
     );
+    _cleanup.cleanup()?;
 
+    println!("B503_NATIVE_APPLE_CLEANUP=PASS");
     println!("B503_NATIVE_APPLE_SOURCE_SCOPE=SAME_USER_ACCOUNT");
     println!("B503_NATIVE_APPLE_TARGET_SCOPE=SAME_USER_ACCOUNT");
     println!("B503_NATIVE_APPLE_PRESENCE=NOT_REQUIRED");
