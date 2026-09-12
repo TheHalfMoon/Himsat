@@ -46,3 +46,30 @@ B502 does not claim that provider-visible backup metadata satisfies B505, that o
 No dependency, lockfile, provider, workflow, provenance registry, SBOM, notice, or donor-code adoption is introduced by this leaf.
 
 Q009 remains `UNSATISFIED`. Repository-owner review, ChatGPT work, CI/R3, CodeRabbit, and this evidence do not substitute for the required genuinely independent substantive crypto/security review of the exact final Specification 004 implementation revision.
+
+## Accepted successor and canonical merge
+
+```text
+IMPLEMENTATION_PR = 111
+CANONICAL_BASE = b6109abd6c3fc6a849306b3f280d4dd0beb4a431
+PREDECESSOR_HEAD = 3bb701fb31cddfb44a8399b90a4812426fdd3306 / NOT_ACCEPTED
+ACCEPTED_HEAD = fc41fbf1a2b07a7fc2bda37a6a76e1d0d916ee53
+ACCEPTED_TREE = 8e7987cd816905f633c28404c64398c4506344b8
+PREMERGE_CI = 34677455893 / SUCCESS / attempt 1 / pull_request
+PREMERGE_R3 = 34677455871 / SUCCESS / attempt 1 / pull_request
+PREMERGE_WINDOWS_JOB = 103509754398 / SUCCESS
+OWNER_RECONCILIATION_REVIEW = 5185599474 / NOT_Q009
+CANONICAL_MERGE = c0aa92a8d5cfa6ac91f0c47bd7a3642e6f6efe0d
+PARENT_1 = b6109abd6c3fc6a849306b3f280d4dd0beb4a431
+PARENT_2 = fc41fbf1a2b07a7fc2bda37a6a76e1d0d916ee53
+MERGE_TREE = 8e7987cd816905f633c28404c64398c4506344b8
+POSTMERGE_CI = 34678002932 / SUCCESS / attempt 1 / push
+POSTMERGE_R3 = 34678002920 / SUCCESS / attempt 1 / push
+POSTMERGE_WINDOWS_JOB = 103511238943 / SUCCESS
+DURABLE_QUALIFICATION_COMMENT = 5645854201
+Q009 = UNSATISFIED
+```
+
+The predecessor is not accepted. The final successor preserves retained authenticated history while allowing legitimate restore retries, prevents source-nonce reuse during republication, and binds both authenticated envelope generation and authenticated manifest active generation to the caller-supplied current generation. The substantive CodeRabbit finding was repaired forward-only and its inline thread is resolved/outdated.
+
+The guarded merge used the accepted exact head and merge method; exact canonical parentage and tree are verified. Original-attempt post-merge CI/R3 both succeeded on the canonical merge, including Windows Rust formatting, lint, tests, and dependency-closure verification. B502 is therefore canonical-qualified for this bounded state-transition scope; canonical task closure remains conditional only on the separate B502/B503 reconciliation becoming canonical-qualified. Q009 remains `UNSATISFIED`.

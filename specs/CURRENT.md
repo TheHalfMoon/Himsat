@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B501_CANONICAL_RECONCILING_B502_BOUND
+PROGRAM_STATE = SPEC_004_B502_CANONICAL_RECONCILING_B503_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -91,10 +91,14 @@ B406_B501_RECONCILIATION_STATE = CANONICAL_QUALIFIED
 B406_B501_RECONCILIATION_CANONICAL_MERGE = 115ab8c71efa29789e98cf58201e1c1b86d8e949
 B501_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
 B501_CANONICAL_MERGE = 65ef62a2d6317a4c69382a2ce3d29ddc608b7087
-B501_B502_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B502_OLDER_BACKUP_RESTORE_AND_FRESH_DEVICE_GENESIS_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B502_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B502_OLDER_BACKUP_RESTORE_AND_FRESH_DEVICE_GENESIS_ONLY_IF_RECONCILIATION_QUALIFIED
+B501_B502_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B501_B502_RECONCILIATION_CANONICAL_MERGE = b6109abd6c3fc6a849306b3f280d4dd0beb4a431
+B502_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B502_CANONICAL_MERGE = c0aa92a8d5cfa6ac91f0c47bd7a3642e6f6efe0d
+B502_B503_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B503_SEVEN_PHASE_VRK_ROTATION_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B503_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B503_SEVEN_PHASE_VRK_ROTATION_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -656,6 +660,18 @@ The accepted B501 scope is bounded: canonical authenticated manifest encoding an
 
 If this reconciliation itself later becomes exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge CI/R3 qualified, B502 becomes the only authorized implementation leaf. B502 is bounded to explicit restore state transitions: an older authenticated backup on a device with an existing trusted anchor must be republished as a new epoch greater than the current anchor and never decrement it; a genuinely fresh device may establish its first local anchor only through reviewed explicit protected `UNINITIALIZED` genesis after user-visible acceptance that global newest-ness cannot be proven. B503-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
 
+## Canonical B501/B502 reconciliation and B502 disposition
+
+PR #110 canonical merge `b6109abd6c3fc6a849306b3f280d4dd0beb4a431` resolved the B501/B502 authority transition after expected-head guarded merge, exact parent/tree verification, and original-attempt push CI `34674875652` plus R3 `34674875624` succeeded, including Windows Rust job `103502824766`. Q009 remained unsatisfied.
+
+B502 PR #111 accepted forward-only successor head `fc41fbf1a2b07a7fc2bda37a6a76e1d0d916ee53` with tree `8e7987cd816905f633c28404c64398c4506344b8`. Predecessor `3bb701fb31cddfb44a8399b90a4812426fdd3306` is not accepted. The successor fixed retry poisoning by excluding the authenticated source manifest nonce from fresh generation without inserting it into retained-history state, and it fixed the substantive CodeRabbit generation-binding finding by requiring both authenticated envelope generation and authenticated plaintext active generation to equal the current generation. The sole substantive inline thread is resolved/outdated; the exact-successor CodeRabbit re-review reported no actionable security finding in the requested B502 scope.
+
+The accepted head passed original-attempt pull-request CI `34677455893` and R3 `34677455871`; Windows Rust job `103509754398` succeeded. Owner reconciliation review `5185599474` is governance evidence only and explicitly `NOT_Q009`. The guarded merge used `expected_head_sha = fc41fbf1a2b07a7fc2bda37a6a76e1d0d916ee53` with `merge_method = merge`; GitHub returned canonical merge `c0aa92a8d5cfa6ac91f0c47bd7a3642e6f6efe0d`, parents `b6109abd6c3fc6a849306b3f280d4dd0beb4a431` + `fc41fbf1a2b07a7fc2bda37a6a76e1d0d916ee53`, and tree `8e7987cd816905f633c28404c64398c4506344b8`.
+
+Original-attempt push-triggered post-merge CI `34678002932` and R3 `34678002920` both succeeded on attempt 1 on exact canonical merge `c0aa92a8d5cfa6ac91f0c47bd7a3642e6f6efe0d`; Windows Rust job `103511238943` succeeded. Durable post-merge qualification is recorded on PR #111 comment `5645854201`.
+
+The accepted B502 scope is bounded to explicit older-backup/fresh-device restore state transitions. It does not claim portable provider transport, cross-generation data migration, durable storage-coordinator publication, or final Specification 004 closeout. If this reconciliation becomes exact-head reviewed, expected-head merged, exact parent/tree verified, and post-merge qualified, B503 becomes the only authorized implementation leaf. B503 is bounded to the normative crash-atomic full VRK rotation sequence `NONE -> PREPARE -> STAGE -> VERIFY -> PUBLISH -> ANCHOR -> ACTIVATE -> RETIRE -> NONE`, with normal writes quiesced, source material retained through successful activation, and no B504 fault-injection closure claim. B504-B506, Q009, Specification 005, and release/FIPS/compliance claims remain unauthorized.
+
 ## Specification 004 delivery chain
 
 ```text
@@ -697,10 +713,12 @@ If this reconciliation itself later becomes exact-head reviewed, expected-head m
   -> B405/B406 state reconciliation           CANONICAL_QUALIFIED
   -> B406 remaining protector qualification  CANONICAL_QUALIFIED
   -> B406/B501 state reconciliation           CANONICAL_QUALIFIED
-  -> B501 authenticated manifest/freshness    CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
-  -> B501/B502 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B502 older-backup/fresh-device restore   BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B503-B506 rotation/backup/delete         BLOCKED_PENDING_PRIOR_LEAVES
+  -> B501 authenticated manifest/freshness    CANONICAL_QUALIFIED
+  -> B501/B502 state reconciliation           CANONICAL_QUALIFIED
+  -> B502 older-backup/fresh-device restore   CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
+  -> B502/B503 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B503 seven-phase full VRK rotation       BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B504-B506 fault/backup/delete            BLOCKED_PENDING_PRIOR_LEAVES
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
   -> Specification 005                        BLOCKED_PENDING_SPEC_004_CLOSEOUT
