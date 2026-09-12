@@ -51,6 +51,9 @@ pub mod vault_migration;
 /// B203 OS-CSPRNG nonce generation, reservation, retry, restore, and collision policy.
 pub mod vault_nonce;
 
+/// B501A canonical authenticated freshness-manifest codec.
+pub mod vault_manifest;
+
 /// B103 portable secret-protector policy, capability, and binding validation.
 pub mod vault_protector;
 
