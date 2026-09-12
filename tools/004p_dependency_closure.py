@@ -25,6 +25,10 @@ EVIDENCE_REFERENCE = "specs/004-vault-key-crypto/provider-package-source-license
 
 EXPECTED_APPLE_TARGET = 'cfg(target_os = "macos")'
 EXPECTED_APPLE_DIRECT: dict[str, dict[str, Any]] = {
+    "core-foundation": {
+        "version": "=0.10.1",
+        "default-features": False,
+    },
     "security-framework": {
         "version": "=3.7.0",
         "default-features": False,
