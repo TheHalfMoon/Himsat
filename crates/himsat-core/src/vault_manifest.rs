@@ -3,6 +3,7 @@ use crate::vault_blob::{
     BOUNDED_BLOB_MAX_ENVELOPE_BYTES, BOUNDED_BLOB_MIN_ENVELOPE_BYTES, BOUNDED_BLOB_NONCE_BYTES,
 };
 use crate::vault_keys::{KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
+use crate::vault_nonce::{NonceLifecycleError, NonceReservation, NonceReservationLedger};
 use chacha20poly1305::{
     KeyInit, XChaCha20Poly1305, XNonce,
     aead::{Aead, Payload},
@@ -355,6 +356,20 @@ impl fmt::Display for ManifestError {
     }
 }
 impl Error for ManifestError {}
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FreshManifestError {
+    Nonce(NonceLifecycleError),
+    Envelope(ManifestError),
+}
+impl fmt::Display for FreshManifestError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Nonce(error) => write!(f, "manifest nonce lifecycle failed: {error}"),
+            Self::Envelope(error) => write!(f, "manifest envelope failed: {error}"),
+        }
+    }
+}
+impl Error for FreshManifestError {}
 struct Cursor<'a> {
     bytes: &'a [u8],
     offset: usize,
@@ -413,9 +428,32 @@ fn build_aad(context: ManifestContext, ciphertext_length: u32) -> Vec<u8> {
     debug_assert_eq!(aad.len(), AAD_BYTES);
     aad
 }
-fn serialize_plaintext(value: &ManifestPlaintext) -> Result<Vec<u8>, ManifestError> {
+fn encoded_plaintext_len(value: &ManifestPlaintext) -> Result<usize, ManifestError> {
+    let generation_bytes = value
+        .generations
+        .len()
+        .checked_mul(10)
+        .ok_or(ManifestError::LengthOverflow)?;
+    let mut length = (PLAINTEXT_DOMAIN.len() + 82)
+        .checked_add(generation_bytes)
+        .ok_or(ManifestError::LengthOverflow)?;
+    for object in &value.objects {
+        let metadata_bytes = match object.auth_metadata {
+            ManifestAuthMetadata::GenericArtifactBlob { .. } => MANIFEST_BLOB_AUTH_METADATA_BYTES,
+            ManifestAuthMetadata::StructuredStore => 0,
+        };
+        length = length
+            .checked_add(84 + metadata_bytes)
+            .ok_or(ManifestError::LengthOverflow)?;
+    }
+    (length <= MANIFEST_MAX_PLAINTEXT_BYTES)
+        .then_some(length)
+        .ok_or(ManifestError::PlaintextTooLarge)
+}
+fn serialize_plaintext(value: &ManifestPlaintext) -> Result<Zeroizing<Vec<u8>>, ManifestError> {
     value.validate()?;
-    let mut out = Vec::new();
+    let encoded_len = encoded_plaintext_len(value)?;
+    let mut out = Zeroizing::new(Vec::with_capacity(encoded_len));
     out.extend_from_slice(PLAINTEXT_DOMAIN);
     out.extend_from_slice(&PLAINTEXT_SCHEMA.to_be_bytes());
     out.extend_from_slice(value.vault_id.as_bytes());
@@ -460,9 +498,7 @@ fn serialize_plaintext(value: &ManifestPlaintext) -> Result<Vec<u8>, ManifestErr
             ManifestAuthMetadata::StructuredStore => out.extend_from_slice(&0_u16.to_be_bytes()),
         }
     }
-    if out.len() > MANIFEST_MAX_PLAINTEXT_BYTES {
-        return Err(ManifestError::PlaintextTooLarge);
-    }
+    debug_assert_eq!(out.len(), encoded_len);
     Ok(out)
 }
 fn parse_plaintext(bytes: &[u8]) -> Result<ManifestPlaintext, ManifestError> {
@@ -621,7 +657,7 @@ fn parse_envelope(bytes: &[u8]) -> Result<ParsedEnvelope<'_>, ManifestError> {
         ciphertext: &bytes[MANIFEST_HEADER_BYTES..],
     })
 }
-pub fn encrypt_manifest(
+fn encrypt_manifest_with_nonce(
     vrk: &OwnedKeyMaterial,
     context: ManifestContext,
     nonce: [u8; MANIFEST_NONCE_BYTES],
@@ -639,7 +675,7 @@ pub fn encrypt_manifest(
     {
         return Err(ManifestError::ContextMismatch);
     }
-    let encoded = Zeroizing::new(serialize_plaintext(plaintext)?);
+    let encoded = serialize_plaintext(plaintext)?;
     let ciphertext_length = encoded
         .len()
         .checked_add(MANIFEST_TAG_BYTES)
@@ -686,6 +722,20 @@ pub fn encrypt_manifest(
     }
     Ok(out)
 }
+pub fn encrypt_fresh_manifest(
+    ledger: &mut NonceReservationLedger,
+    vrk: &OwnedKeyMaterial,
+    context: ManifestContext,
+    plaintext: &ManifestPlaintext,
+) -> Result<(NonceReservation, Vec<u8>), FreshManifestError> {
+    let reservation = ledger
+        .reserve_fresh_manifest_nonce(context.vault_id, context.key_generation)
+        .map_err(FreshManifestError::Nonce)?;
+    let envelope = encrypt_manifest_with_nonce(vrk, context, reservation.nonce(), plaintext)
+        .map_err(FreshManifestError::Envelope)?;
+    Ok((reservation, envelope))
+}
+
 pub fn decrypt_manifest(
     vrk: &OwnedKeyMaterial,
     expected: ManifestContext,
@@ -777,19 +827,35 @@ mod tests {
     #[test]
     fn canonical_round_trip_and_hash_bind_exact_envelope() {
         let context = ManifestContext::new(vault(), generation(1), epoch(1));
-        let envelope =
-            encrypt_manifest(&key(), context, [0x55; 24], &base_manifest()).expect("encrypt");
+        let envelope = encrypt_manifest_with_nonce(&key(), context, [0x55; 24], &base_manifest())
+            .expect("encrypt");
         assert_eq!(&envelope[..ENVELOPE_DOMAIN.len()], ENVELOPE_DOMAIN);
         assert_eq!(
             decrypt_manifest(&key(), context, &envelope).expect("decrypt"),
             base_manifest()
         );
-        assert_ne!(manifest_hash(&envelope), ManifestHash::from_bytes([0; 32]));
+        let expected_hash = ManifestHash::from_bytes([
+            0x64, 0x96, 0xd1, 0x17, 0x1c, 0xbd, 0xae, 0xbb, 0x01, 0xce, 0x7c, 0xff, 0x14, 0x84,
+            0xcd, 0x87, 0xe7, 0xea, 0x10, 0x73, 0x48, 0x88, 0xed, 0xb9, 0xa9, 0xe1, 0x44, 0xc5,
+            0xd2, 0x61, 0xd9, 0x44,
+        ]);
+        assert_eq!(manifest_hash(&envelope), expected_hash);
         let mut tampered = envelope.clone();
         tampered[MANIFEST_HEADER_BYTES] ^= 1;
+        assert_ne!(manifest_hash(&tampered), expected_hash);
         assert_eq!(
             decrypt_manifest(&key(), context, &tampered),
             Err(ManifestError::AuthenticationFailed)
+        );
+
+        let mut ledger = NonceReservationLedger::new(vault());
+        let (reservation, fresh) =
+            encrypt_fresh_manifest(&mut ledger, &key(), context, &base_manifest())
+                .expect("fresh manifest");
+        assert!(ledger.contains(reservation));
+        assert_eq!(
+            decrypt_manifest(&key(), context, &fresh).expect("decrypt fresh"),
+            base_manifest()
         );
     }
 }
