@@ -142,7 +142,7 @@ The encrypted authenticated manifest carries epoch, previous hash, active genera
 
 A normal commit writes/flushes encrypted objects, writes/fsyncs manifest `N+1`, verifies it, compare-and-advances the OS anchor, then retires superseded material. Stale epochs and hash mismatch fail closed.
 
-An intentional restore never decrements the anchor: verified older data is republished into a new epoch greater than the trusted local anchor. A fresh device without a prior anchor can authenticate a backup but cannot prove global newest-ness; that limitation remains explicit residual risk.
+An intentional restore never decrements the anchor: verified older data is republished into a new epoch greater than the trusted local anchor. A fresh device without a prior anchor can authenticate a backup but cannot prove global newest-ness; that limitation remains explicit residual risk. Existing-device portable restore composes across completed VRK rotation by rebasing the verified backup into the already-current generation before B502: source state is authenticated under backup generation `G`, current stable state is authenticated under `H`, restored SQLCipher/blob content is copied or re-encrypted into fresh verified target storage under `H`, a non-canonical B501-format staging manifest under `H` preserves the source epoch, and canonical B502 alone creates the final `anchor + 1` publication. The operation never creates a new VRK generation and retains both the detached backup and pre-restore current state until final anchor/reopen verification.
 
 ### A7. Crash-atomic full VRK rotation — D012
 
@@ -169,7 +169,7 @@ Fixtures must contain distinctive semantic markers and logical IDs; the test fai
 
 Closeout records unavoidable residual leakage: ciphertext size distributions, counts, operation/upload timing, and rotation cadence.
 
-Detached exported backups are independently retained copies. Active-vault deletion cannot remotely revoke a recovery-wrapped backup, provider snapshot, or user-made duplicate. The product must state this at export/deletion time; physical erase and provider deletion are separate concerns.
+Detached exported backups are independently retained copies. Active-vault deletion cannot remotely revoke a recovery-wrapped backup, provider snapshot, or user-made duplicate. The product must state this at export/deletion time; physical erase and provider deletion are separate concerns. Cross-generation existing-device restore is also part of this boundary: provider bytes stay immutable while local restored content is rebased into the current active generation with B503-qualified copy/re-encrypt semantics, fresh target storage IDs, explicit same-generation key-identity checks, and B502-owned final freshness publication.
 
 ### A9. Locked key/handle lifecycle — D016
 

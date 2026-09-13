@@ -279,22 +279,65 @@ Publication does not advance the vault freshness anchor and does not make provid
 
 ## Restore protocol
 
-Provider transport and vault-state restoration remain separate security boundaries. B505 retrieves and authenticates a portable backup; B502 controls how an authenticated recovered state becomes local canonical state.
+Provider transport and vault-state restoration remain separate security boundaries. B505 retrieves and authenticates a portable backup; B502 remains the sole owner of the existing-anchor freshness republication transition. Cross-generation existing-device restore is a B505/B503 composition boundary and MUST be rebased into the already-current local generation before B502 is invoked.
 
-Restore MUST:
+Restore MUST first:
 
 1. select one opaque set descriptor, parse all provider-visible fields under the strict bounds above, and require the descriptor's Argon2id version, memory, passes, parallelism, and output length to equal the fixed canonical policy before any Argon2id invocation; any mismatch is `CorruptOrTampered`;
 2. obtain the user's recovery passphrase without logging or provider transmission;
 3. execute only the validated fixed Argon2id policy from the descriptor, derive the bootstrap key, authenticate/decrypt the 183-byte slot, and parse the exact inner B204 envelope;
-4. require inner/outer generation, salt, policy, and suite equality; authenticate the inner B204 recovery envelope and release the VRK only on success;
-5. derive the distinct backup-set-specific index/object keys from the recovered VRK, authenticated `VaultId`, descriptor generation, and parsed `BackupSetId`;
+4. require inner/outer generation, salt, policy, and suite equality; authenticate the inner B204 recovery envelope and release the source VRK only on success;
+5. derive the distinct backup-set-specific index/object keys from the recovered source VRK, authenticated `VaultId`, descriptor generation, and parsed `BackupSetId`;
 6. authenticate/decrypt the index before interpreting any logical ID, role, epoch, or object relationship;
 7. fetch objects only by authenticated `BackupObjectId`, parse the outer object envelope, authenticate each chunk, and reconstruct every payload with checked lengths/counts;
 8. require every reconstructed payload hash/length to match the authenticated index;
-9. authenticate and canonically parse the recovered B501 manifest; require `rotation_phase == NONE`, `rotation_target_generation == 0`, every inventory `object_key_generation == active_key_generation`, and an exact one-to-one match from every non-manifest index `source_storage_id`/logical identity to the authenticated B501 inventory; then Round-4-verify every reconstructed B202 payload and run canonical SQLCipher provider/integrity checks on the staged structured store;
-10. hand the fully verified recovered state to B502 restore-state logic; B505 MUST NOT decrement or directly replace an existing trusted freshness anchor.
+9. authenticate and canonically parse the recovered B501 manifest; require `rotation_phase == NONE`, `rotation_target_generation == 0`, every inventory `object_key_generation == active_key_generation`, and an exact one-to-one match from every non-manifest index `source_storage_id`/logical identity to the authenticated B501 inventory; then Round-4-verify every reconstructed B202 payload and run canonical SQLCipher provider/integrity checks on the staged structured store.
 
-On a genuinely fresh device, B502's explicit protected `UNINITIALIZED` genesis and user-visible inability-to-prove-global-newestness rule remains mandatory. On an existing device with a trusted anchor, an older recovered backup is republished as a new epoch greater than the current anchor; the portable bytes are source evidence, not authority to roll the anchor backward.
+### Fresh-device restore
+
+On a genuinely fresh device, B502's explicit protected `UNINITIALIZED` genesis and user-visible inability-to-prove-global-newestness rule remains mandatory. The recovered source generation becomes the local generation selected by the authenticated backup. B505 MUST NOT claim that the selected backup was globally newest.
+
+### Existing-device restore rebase
+
+For an existing device with a trusted anchor, let `G` be the recovered backup generation and `H` the already-current active local generation. Before any canonical local mutation, B505 MUST acquire the vault coordination boundary, quiesce ordinary writes, unlock the current vault normally, and authenticate the exact current manifest/anchor under the current VRK `H`.
+
+The current local state MUST be a stable normal-open state: current manifest epoch equals the protected anchor epoch, current manifest hash equals the protected anchor hash, `rotation_phase == NONE`, `rotation_target_generation == 0`, the generation table identifies `H` as the current active generation, and every current inventory object is under `H`. Any interrupted publication, freshness gap, active rotation, retained transition requiring recovery, or inventory-generation mismatch fails `RestoreStateNotStable` and MUST be resolved by its owning recovery path before B505 restore continues.
+
+The recovered backup `VaultId` MUST equal the current vault/anchor `VaultId`, and its authenticated source epoch MUST be strictly less than the current protected anchor epoch. B505 v1 also rejects a source generation greater than the current active generation as `RestoreGenerationAhead`; this fail-closed rule prevents an unproven divergent/future generation from being silently rewritten as an ancestor of the current trusted state.
+
+B505 then creates a non-canonical restore target using fresh, non-colliding local storage IDs. Target IDs MUST NOT alias any current canonical storage ID, any source backup storage ID, or another target ID in the same attempt.
+
+When `G == H`, the recovered source VRK MUST equal the already-unlocked current VRK byte-for-byte. A generation-number match with different key material fails `KeyGenerationIdentityMismatch`. After equality is proven, verified SQLCipher bytes may be copied to a fresh staging location and exact authenticated B202 envelopes may be copied byte-for-byte to fresh target storage locations. This is preservation of an already-authenticated envelope, not a new encryption attempt; B203 copy/restore nonce-preservation rules remain controlling. Before accepting a copied B202 envelope, B505 MUST reconcile its `(VaultId, BoundedBlob, H, nonce)` reservation against the authenticated current/retained `H` reservation set. An unseen reservation is admitted as the existing source encryption instance. A reservation already present is allowed only when the source logical identity, canonical envelope length/hash, and exact authenticated envelope bytes identify the same encryption instance; otherwise restore fails `NonceReservationConflict`. Physical copying of one already-authenticated encryption instance MUST NOT be misclassified as a second encryption attempt, and a conflicting ciphertext under the same reservation MUST NOT be accepted.
+
+When `G < H`, B505 performs a restore rebase using the already-current VRK `H`; it does not rotate or replace the current root key. The complete source state is first authenticated under `G`. Structured-store content is then copied/exported through the canonical SQLCipher path into a separately named database encrypted under the current `H` structured-store key. Every B202 payload is authenticated/decrypted under `G`, re-encrypted under `H` with a fresh B203 nonce, written under a fresh target storage ID, and reread/authenticated under `H`. The source backup bytes and current canonical local state remain retained and unmodified throughout this staging operation. B503F's qualified copy/re-encrypt/verify semantics and B307's source-retaining copy-verify-publish ordering are the implementation precedent; B505 MUST NOT invoke the B503 root-rotation state machine or create a new generation.
+
+After target verification, B505 constructs one synthetic **restore-staging manifest** under `H`. It is an authenticated B501-format envelope used only as B502 input and is never itself published or anchored. Its plaintext:
+
+- keeps the authenticated source backup freshness epoch and source `previous_manifest_hash`;
+- uses the current stable generation table with `H` active and no restore-created generation;
+- references only the fresh verified target storage IDs;
+- records `object_key_generation == H` for every target inventory object;
+- records the exact target envelope lengths/hashes and unchanged logical identities/roles required by B501/Round 4.
+
+The staging manifest nonce is generated from an ephemeral B203 manifest-nonce ledger seeded with every retained authenticated canonical manifest reservation known to the current vault. When `G == H`, the authenticated portable source manifest reservation is additionally passed as the exact forbidden reservation for staging-manifest nonce generation; it may already be present in retained local history, but it MUST NOT be reused for the synthetic staging encryption. When `G < H`, the source manifest belongs to a different generation/purpose-key uniqueness domain and is not inserted into the `H` ledger. This proves the staging nonce does not collide with retained canonical `H` history or, for same-generation restore, the detached source manifest encryption. The real B502 restore ledger is independently seeded from the same retained canonical reservations but does not contain the synthetic staging reservation. B505 then calls canonical B502 `prepare_older_backup_restore` with the current VRK `H`, current protected anchor, current generation `H`, the authenticated staging envelope, and explicit user-confirmed older-backup recovery. B502's existing `encrypt_fresh_manifest_avoiding_reservation` rule MUST exclude the staging reservation from the final canonical manifest nonce.
+
+B502 remains the sole owner of the final existing-anchor freshness transition:
+
+```text
+final_epoch = trusted_anchor.highest_epoch + 1
+final_previous_manifest_hash = trusted_anchor.manifest_hash
+final_active_generation = H
+```
+
+B505 MUST write/fsync the verified rebased objects and the B502 final manifest candidate, reread/authenticate the complete final object set, and only then publish the final manifest through the canonical copy-verify-publish boundary. After publication it invokes the already-qualified protected compare-and-advance operation with B502's exact `expected_old_anchor` and `new_anchor`. B505 MUST NOT construct an alternate anchor transition, decrement the anchor, or rewrite B502's returned final manifest semantics.
+
+Crash/restart rules are fail closed:
+
+- before final-manifest publication, the pre-restore anchor/current manifest remain authoritative and all restore targets are unaccepted staging material;
+- after final-manifest publication but before anchor advancement, canonical B501 interrupted-publication recovery applies only if the published candidate is exactly `old_anchor + 1`, links to the old anchor hash, and its complete rebased object set verifies under `H`;
+- after a successful anchor advancement, restart MUST reopen and verify the exact anchored manifest and complete rebased object set under `H` before ordinary writes resume;
+- the pre-restore current object set is retained through successful anchor/reopen verification, and B505 makes no B506 deletion or physical-erasure claim;
+- retry after an unaccepted attempt uses fresh target storage IDs and fresh encryption nonces for every re-encrypted object and never mutates the detached provider backup.
 
 ## Provider-view qualification
 
@@ -320,7 +363,15 @@ Required negative cases include:
 - return a set descriptor whose provider key has a non-zero descriptor leaf or whose set component and embedded `BackupSetId` differ;
 - return a data object with the reserved all-zero `BackupObjectId`, or whose provider key and embedded `(BackupSetId, BackupObjectId)` differ;
 - derive index/object keys without the exact parsed `BackupSetId`, or transplant ciphertext between backup sets;
-- authenticate a B204 envelope during creation that yields a VRK different from the active unlocked VRK.
+- authenticate a B204 envelope during creation that yields a VRK different from the active unlocked VRK;
+- attempt existing-device restore while the current manifest/anchor is not a stable exact normal-open pair;
+- restore a backup whose `VaultId` differs from the current trusted vault, whose source generation is greater than current `H`, or whose source epoch is not strictly older than the current anchor;
+- claim `G == H` while the recovered backup VRK differs from the current unlocked VRK;
+- for `G == H`, present a copied B202 nonce reservation that collides with current/retained `H` history but does not identify the exact same authenticated logical object/envelope;
+- for `G == H`, force the synthetic staging-manifest nonce candidate to equal the authenticated portable source-manifest reservation;
+- collide a restore target storage ID with current/source/staged storage identity;
+- accept a cross-generation target whose SQLCipher/B202 re-encryption cannot be reread and authenticated under `H`;
+- generate a synthetic staging-manifest nonce that collides with retained canonical history, or allow B502's final manifest to reuse the staging reservation.
 
 Every failure MUST be fail-closed, release no unauthenticated plaintext, and leave the candidate set or restore unaccepted.
 
@@ -349,7 +400,7 @@ This amendment is not self-authorizing. Before B505 product code begins, all of 
 3. live base/head/diff/checks/reviews/threads/comments/mergeability are reconciled immediately before merge;
 4. merge uses explicit `expected_head_sha` protection and exact parent/tree are verified;
 5. push-triggered post-merge CI and R3 succeed on the exact canonical merge;
-6. a genuinely independent substantive crypto/security reviewer examines that exact canonical Round 5 revision, including the D013 conflict, bootstrap/KDF/key separation, envelope/AAD layouts, chunking, nonce rules, index semantics, snapshot consistency, restore composition with B502, and provider-view negative tests;
+6. a genuinely independent substantive crypto/security reviewer examines that exact canonical Round 5 revision, including the D013 conflict, bootstrap/KDF/key separation, envelope/AAD layouts, chunking, nonce rules, index semantics, snapshot consistency, restore composition with B502, B503-integrated cross-generation restore rebase and crash semantics, and provider-view negative tests;
 7. no unresolved blocking finding remains.
 
 Only then may canonical state reopen authority to the bounded B505 implementation. Any later security-semantic change to this contract invalidates that approval and requires re-review of the new exact canonical revision.
