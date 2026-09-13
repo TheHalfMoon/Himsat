@@ -523,7 +523,9 @@ Power-loss/fault-injection evidence is required immediately before and after eve
 
 A portable backup contains encrypted structured data, encrypted opaque blobs, an encrypted authenticated manifest/inventory, and—only when the user opts into recovery—a recovery-wrapped VRK plus the public KDF/envelope fields required to open it.
 
-Provider-visible metadata is restricted to the following v1 allowlist:
+For B505 provider transport, `round5-portable-backup-provider-privacy-contract.md` is controlling. Canonical B202, B204, and B501 inner envelope bytes MUST NOT be uploaded directly; they remain byte-for-byte intact only inside the Round 5 outer provider-privacy boundary. B505 v1 claims fresh-device portability only when the canonical recovery envelope is enabled; otherwise portable-backup creation fails RecoveryRequired rather than inventing escrow or weakening recovery policy.
+
+The original v1 provider-view baseline below is superseded for B505 transport by the stricter Round 5 provider-visible allowlist. B505 MUST expose only the Round 5 outer fields; no B202/B204/B501 inner public field is provider-visible before outer authentication. The original baseline was:
 
 - backup container/version identifier;
 - opaque random backup-set identifier unrelated to `VaultId`;
@@ -541,7 +543,7 @@ The following must **not** be deliberately exposed in backup filenames/keys or u
 - plaintext session/document/transcript/note content;
 - user-created timestamps or evidence ranges.
 
-The encrypted manifest maps opaque backup object names to logical identities. Backup qualification must capture the provider-view surface and fail if a forbidden field/fixture marker appears outside encrypted payloads.
+For B505, the encrypted Round 5 index maps opaque provider object IDs/chunks to exact inner payloads, while the authenticated inner manifest continues to own logical vault inventory. Backup qualification must capture the complete provider-view surface and fail if a forbidden field/fixture marker appears outside the exact Round 5 allowlist and encrypted payloads.
 
 ### Other visible metadata surfaces
 

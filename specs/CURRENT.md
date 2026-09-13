@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B504_CANONICAL_RECONCILING_B505_BOUND
+PROGRAM_STATE = SPEC_004_B505A_PROVIDER_PRIVACY_DESIGN_REMEDIATION
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -101,12 +101,13 @@ B503_DISPOSITION = CANONICAL_CLOSED
 B503_CANONICAL_MERGE = 47e42631a49bc2a26ec02a30f03cab17e1df6036
 B503_B504_RECONCILIATION_STATE = CANONICAL_QUALIFIED
 B503_B504_RECONCILIATION_CANONICAL_MERGE = 96ea50a69ab0b29fdd0869bb4390df12f53ec5e9
-B504_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B504_DISPOSITION = CANONICAL_CLOSED
 B504_CANONICAL_MERGE = 1de8a70db3935fba52e1e0fea2abb77e54a7c0b1
-B504_B505_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B505_OPAQUE_PORTABLE_BACKUP_RESTORE_METADATA_ALLOWLIST_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B505_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B505_OPAQUE_PORTABLE_BACKUP_RESTORE_METADATA_ALLOWLIST_ONLY_IF_RECONCILIATION_QUALIFIED
+B504_B505_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B504_B505_RECONCILIATION_CANONICAL_MERGE = 1f6cf11a0df427521adfd1d728c78483e09285d1
+NEXT_IMPLEMENTATION_LEAF = NONE_PENDING_B505A_ROUND5_SECURITY_SEMANTIC_REVIEW
+SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_PENDING_B505A_ROUND5_CANONICAL_QUALIFICATION_AND_INDEPENDENT_SECURITY_REVIEW
+PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_B505A_ROUND5_REVIEW
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -117,7 +118,7 @@ Live GitHub/repository truth overrides this file whenever repository state chang
 
 ## Canonical Specification 004 authority
 
-Specification 004A has an exact independently reviewed design. Review-only PR #29 examined canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE` with no unresolved blocking finding. `round3-normative-contracts.md` remains controlling for recovery, bounded-blob, freshness, nonce, and rotation contracts. `round4-blob-inventory-contract.md` remains controlling for `GENERIC_ARTIFACT_BLOB` canonical stored-object and manifest-inventory semantics.
+Specification 004A has an exact independently reviewed design. Review-only PR #29 examined canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE` with no unresolved blocking finding. `round3-normative-contracts.md` remains controlling for recovery, bounded-blob, freshness, nonce, and rotation contracts. `round4-blob-inventory-contract.md` remains controlling for `GENERIC_ARTIFACT_BLOB` canonical stored-object and manifest-inventory semantics. The proposed `round5-portable-backup-provider-privacy-contract.md` is security-semantic remediation only and does not become implementation authority until its own exact canonical independent-review gate closes.
 
 Specification 004P is closed canonically. The reviewed dependency closure already contains the exact providers required by B301-B307; this reconciliation adopts no dependency and changes no provider/provenance bytes.
 
@@ -696,7 +697,11 @@ The final head passed pull-request CI `34730429135` and R3 `34730429139`. Owner 
 
 Push-triggered post-merge CI `34730852426` and R3 `34730852422` both succeeded on attempt 1 on exact canonical merge `1de8a70db3935fba52e1e0fea2abb77e54a7c0b1`; Windows Rust job `103653248966` succeeded. Durable post-merge qualification is recorded on PR #121 comment `5650032419`. Complete evidence is `b504-rotation-fault-recovery-final-evidence.md`.
 
-B504 becomes canonical-closed only if this B504/B505 state reconciliation itself becomes exact-head qualified, explicitly expected-head merged, exact parent/tree verified, and exact-post-merge qualified. Only then may B505 become the sole authorized implementation leaf. B505 is bounded to opaque-name portable backup/restore and exact provider-visible metadata allowlist qualification under the reviewed Specification 004 contract. B506, Q009, Specification 005, release, FIPS, and compliance claims remain unauthorized.
+The B504/B505 reconciliation is now canonical-qualified. PR #122 exact head `0f001979360ab65168a51d1adaa339cdfe96307a` passed pull-request CI `34732381630` and R3 `34732381732`, merged as canonical `1f6cf11a0df427521adfd1d728c78483e09285d1`, and passed push-triggered post-merge CI `34733251420` plus R3 `34733251409` on attempt 1. B504 is therefore canonical-closed.
+
+Pre-implementation review of B505 exposed a security-semantic conflict between D013 provider privacy and the public bytes of canonical B202/B204/B501 envelopes. B505 implementation authority is intentionally withdrawn while Round 5 design remediation is qualified and independently reviewed. `round5-portable-backup-provider-privacy-contract.md` is the proposed controlling amendment; `b505a-provider-privacy-conflict-evidence.md` preserves the conflict and diagnostic evidence. No B505 product code is authorized by this docs branch.
+
+B506, Q009, Specification 005, release, FIPS, and compliance claims remain unauthorized.
 
 Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3 automation, CodeRabbit, Cubic, or other automation do not substitute for the required genuinely independent substantive crypto/security review of the exact final implementation revision.
 
@@ -747,9 +752,10 @@ Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3
   -> B502/B503 state reconciliation           CANONICAL_QUALIFIED
   -> B503 seven-phase full VRK rotation       CANONICAL_QUALIFIED
   -> B503/B504 state reconciliation           CANONICAL_QUALIFIED
-  -> B504 rotation commit-point fault injection CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
-  -> B504/B505 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B505 opaque portable backup/restore      BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B504 rotation commit-point fault injection CANONICAL_QUALIFIED
+  -> B504/B505 state reconciliation           CANONICAL_QUALIFIED
+  -> B505A provider-privacy design remediation ACTIVE_PENDING_CANONICAL_REVIEW
+  -> B505 opaque portable backup/restore      BLOCKED_PENDING_ROUND5_INDEPENDENT_REVIEW
   -> B506 active-vault deletion               BLOCKED_PENDING_PRIOR_LEAF
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION

@@ -158,7 +158,7 @@ Old-generation material remains until the new encrypted set is complete, authent
 
 ### A8. Metadata leakage and portable backup — D004/D013/D014
 
-The allowed provider-visible metadata set is frozen in `spec.md`. Backup objects use opaque random storage names; logical vault/object IDs and user filenames stay in the encrypted manifest. Qualification must inspect four boundaries independently:
+The provider-visible metadata contract is frozen in `spec.md` as amended by the controlling Round 5 portable-backup provider-privacy contract. Canonical B202/B204/B501 inner envelopes are never directly provider-visible; B505 uses opaque set/object names, an encrypted index, a recovery bootstrap, and uniform outer provider-privacy object envelopes. Qualification must inspect four boundaries independently:
 
 1. local database/WAL/journal/temp files;
 2. local blob/filesystem names and public envelope bytes;
