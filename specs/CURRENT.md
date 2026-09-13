@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B503_CANONICAL_RECONCILING_B504_BOUND
+PROGRAM_STATE = SPEC_004_B504_CANONICAL_RECONCILING_B505_BOUND
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -97,12 +97,16 @@ B502_DISPOSITION = CANONICAL_CLOSED
 B502_CANONICAL_MERGE = c0aa92a8d5cfa6ac91f0c47bd7a3642e6f6efe0d
 B502_B503_RECONCILIATION_STATE = CANONICAL_QUALIFIED
 B502_B503_RECONCILIATION_CANONICAL_MERGE = 2d6eda2b0eaece6c129bdd88eabc112122d1f28c
-B503_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B503_DISPOSITION = CANONICAL_CLOSED
 B503_CANONICAL_MERGE = 47e42631a49bc2a26ec02a30f03cab17e1df6036
-B503_B504_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
-NEXT_IMPLEMENTATION_LEAF = B504_ROTATION_COMMIT_POINT_FAULT_INJECTION_ONLY
-SPEC_004_IMPLEMENTATION_AUTHORITY = B504_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
-PRODUCT_FEATURE_AUTHORITY = SPEC_004_B504_ROTATION_COMMIT_POINT_FAULT_INJECTION_ONLY_IF_RECONCILIATION_QUALIFIED
+B503_B504_RECONCILIATION_STATE = CANONICAL_QUALIFIED
+B503_B504_RECONCILIATION_CANONICAL_MERGE = 96ea50a69ab0b29fdd0869bb4390df12f53ec5e9
+B504_DISPOSITION = CANONICAL_CLOSED_IF_THIS_RECONCILIATION_QUALIFIES
+B504_CANONICAL_MERGE = 1de8a70db3935fba52e1e0fea2abb77e54a7c0b1
+B504_B505_RECONCILIATION_STATE = ACTIVE_NOT_YET_CANONICAL
+NEXT_IMPLEMENTATION_LEAF = B505_OPAQUE_PORTABLE_BACKUP_RESTORE_METADATA_ALLOWLIST_ONLY
+SPEC_004_IMPLEMENTATION_AUTHORITY = B505_ONLY_IF_THIS_RECONCILIATION_IS_CANONICAL_EXPECTED_HEAD_GUARDED_AND_POSTMERGE_QUALIFIED
+PRODUCT_FEATURE_AUTHORITY = SPEC_004_B505_OPAQUE_PORTABLE_BACKUP_RESTORE_METADATA_ALLOWLIST_ONLY_IF_RECONCILIATION_QUALIFIED
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -680,9 +684,21 @@ The accepted B502 scope is bounded to explicit older-backup/fresh-device restore
 
 The bounded B503 lineage is PR #113 through PR #119 and culminates in canonical merge `47e42631a49bc2a26ec02a30f03cab17e1df6036`. Final exact head `0ec503a148ef88bf8a5d91627124bc529a8def49` passed pre-merge CI `34723156586` and R3 `34723156531` on attempt 1, then passed genuine signed Apple native attempt 1 with exit 0 and the complete required B503 marker set. The accepted head was merged through explicit expected-head protection; exact parentage/tree were verified; and canonical merge `47e42631a49bc2a26ec02a30f03cab17e1df6036` passed push-triggered CI `34723648055` and R3 `34723648064` on attempt 1. `b503-full-rotation-final-evidence.md` is the controlling B503 evidence record.
 
-B503 becomes canonical-closed only if this B503/B504 state reconciliation itself becomes exact-head qualified, explicitly expected-head merged, exact parent/tree verified, and exact-post-merge qualified. Only then may B504 become the sole authorized implementation leaf. B504 is limited to failure injection immediately before and after every durable rotation commit point and proof of canonical decryptability/recovery under the reviewed rotation invariants. B505, B506, Specification 005, release, FIPS, and compliance claims remain unauthorized.
+Canonical B503/B504 reconciliation merge `96ea50a69ab0b29fdd0869bb4390df12f53ec5e9` resolved the prior conditional authority after exact-head qualification, expected-head guarded merge, exact parent/tree verification, and successful push-triggered post-merge CI/R3. B503 is therefore canonical-closed.
 
 Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3 automation, billing-blocked/skipped review bots, Cubic neutral output, CodeRabbit automation, or other automation do not substitute for the required genuinely independent substantive crypto/security review of the exact final implementation revision.
+
+## Canonical B504 implementation and B505 disposition
+
+B504 PR #121 accepted final forward-only head `5101835348c2e17793d16eed11f443e7a60f7f24` with tree `bbf2a52ff984260af48f8ad5255585398f78bbaf`. Predecessor `ae23c1e9860843b3e1f52b0fc59a7eaab2a0ca59` was superseded after review identified missing post-completion target recovery-wrap authentication. Successor `dcd3b7ce72c662a72130ed99c9e8273f8520c9d2` repaired that gap but was superseded after review identified that source-retention qualification could skip checks if the source protector disappeared prematurely. The final head preserves both forward-only repairs and no shared history was rewritten.
+
+The final head passed pull-request CI `34730429135` and R3 `34730429139`. Owner reconciliation review `5188924919` is governance evidence only and explicitly `NOT_Q009`. The guarded merge used explicit `expected_head_sha = 5101835348c2e17793d16eed11f443e7a60f7f24` with `merge_method = merge`; GitHub returned canonical merge `1de8a70db3935fba52e1e0fea2abb77e54a7c0b1`, parents `96ea50a69ab0b29fdd0869bb4390df12f53ec5e9` + `5101835348c2e17793d16eed11f443e7a60f7f24`, and merge tree `bbf2a52ff984260af48f8ad5255585398f78bbaf`, exactly matching the accepted head tree. GitHub reports the merge signature verified/valid.
+
+Push-triggered post-merge CI `34730852426` and R3 `34730852422` both succeeded on attempt 1 on exact canonical merge `1de8a70db3935fba52e1e0fea2abb77e54a7c0b1`; Windows Rust job `103653248966` succeeded. Durable post-merge qualification is recorded on PR #121 comment `5650032419`. Complete evidence is `b504-rotation-fault-recovery-final-evidence.md`.
+
+B504 becomes canonical-closed only if this B504/B505 state reconciliation itself becomes exact-head qualified, explicitly expected-head merged, exact parent/tree verified, and exact-post-merge qualified. Only then may B505 become the sole authorized implementation leaf. B505 is bounded to opaque-name portable backup/restore and exact provider-visible metadata allowlist qualification under the reviewed Specification 004 contract. B506, Q009, Specification 005, release, FIPS, and compliance claims remain unauthorized.
+
+Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3 automation, CodeRabbit, Cubic, or other automation do not substitute for the required genuinely independent substantive crypto/security review of the exact final implementation revision.
 
 ## Specification 004 delivery chain
 
@@ -729,10 +745,12 @@ Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3
   -> B501/B502 state reconciliation           CANONICAL_QUALIFIED
   -> B502 older-backup/fresh-device restore   CANONICAL_QUALIFIED
   -> B502/B503 state reconciliation           CANONICAL_QUALIFIED
-  -> B503 seven-phase full VRK rotation       CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
-  -> B503/B504 state reconciliation           ACTIVE_NOT_YET_CANONICAL
-  -> B504 rotation commit-point fault injection BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
-  -> B505-B506 backup/delete                  BLOCKED_PENDING_PRIOR_LEAVES
+  -> B503 seven-phase full VRK rotation       CANONICAL_QUALIFIED
+  -> B503/B504 state reconciliation           CANONICAL_QUALIFIED
+  -> B504 rotation commit-point fault injection CANONICAL_QUALIFIED_IF_THIS_RECONCILIATION_QUALIFIES
+  -> B504/B505 state reconciliation           ACTIVE_NOT_YET_CANONICAL
+  -> B505 opaque portable backup/restore      BLOCKED_PENDING_RECONCILIATION_QUALIFICATION
+  -> B506 active-vault deletion               BLOCKED_PENDING_PRIOR_LEAF
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
   -> Specification 005                        BLOCKED_PENDING_SPEC_004_CLOSEOUT
