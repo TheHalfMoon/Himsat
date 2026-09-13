@@ -3481,8 +3481,19 @@ mod tests {
         .expect("B504 authenticated retained reservations rehydrate")
     }
 
-    fn b504_assert_recoverable_state(fixture: &mut B504FaultFixture) {
-        if fixture.source.inner.record.is_some() {
+    fn b504_assert_recoverable_state(fixture: &mut B504FaultFixture, target: B504FaultTarget) {
+        let source_present = fixture.source.inner.record.is_some();
+        let source_must_be_present = match target.op {
+            B504FaultOp::RemoveSourceProtector => target.side == B504FaultSide::Before,
+            B504FaultOp::ClearCheckpoint | B504FaultOp::ClearBinding => false,
+            _ => true,
+        };
+        assert_eq!(
+            source_present, source_must_be_present,
+            "B504 target {target:?} must preserve source protector until its explicit removal boundary"
+        );
+
+        if source_present {
             let source_vrk = fixture
                 .source
                 .inner
@@ -3561,7 +3572,7 @@ mod tests {
             fixture.faults.fired(),
             "B504 target {target:?} must inject exactly one failure"
         );
-        b504_assert_recoverable_state(&mut fixture);
+        b504_assert_recoverable_state(&mut fixture, target);
 
         let rehydrated = b504_rehydrate_ledger(&fixture);
         fixture.ledger = rehydrated;
