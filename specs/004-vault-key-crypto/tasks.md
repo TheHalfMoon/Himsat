@@ -200,11 +200,21 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 - [x] B505A001 Reverify exact canonical `main`, PR #122 guarded reconciliation lineage, exact parent/tree, and push-triggered post-merge CI/R3 before B505 work.
 - [x] B505A002 Prove the D013 provider-view conflict: canonical B202/B204/B501 public bytes expose identifiers forbidden at the portable-backup provider boundary, while Round 4 forbids rewriting the B202 inner stored-object boundary.
 - [x] B505A003 Author the controlling Round 5 outer provider-privacy contract plus durable conflict evidence without product code or dependency adoption.
-- [ ] B505A004 Exact-head qualify the final Round 5 docs/design/evidence/state revision with CI and Diffcipline R3.
-- [ ] B505A005 Reconcile exact diff, live `main`, checks, reviews, review threads, comments, and mergeability immediately before merge.
-- [ ] B505A006 Merge only with explicit `expected_head_sha`, verify exact canonical parent/tree, and require original-attempt push-triggered post-merge CI/R3 SUCCESS.
-- [ ] B505A007 Obtain genuinely independent substantive crypto/security review of the exact canonical Round 5 revision; automation/owner review alone is not sufficient for this design-reopening gate.
-- [ ] B505A008 Record every finding/residual risk and reopen B505 implementation authority only if the exact reviewed canonical security semantics have no unresolved blocker.
+- [x] B505A004 Exact-head qualify accepted Round 5 successor `dcbcbc1e2f15a3bfa370e6d861b9b1c68fc127d7`: pre-merge CI `34739727295` SUCCESS and R3 `34739727288` SUCCESS on attempt 1.
+- [x] B505A005 Reconcile exact successor diff, live `main`, checks, reviews, review threads, comments, and mergeability immediately before guarded merge.
+- [x] B505A006 Merge with explicit `expected_head_sha = dcbcbc1e2f15a3bfa370e6d861b9b1c68fc127d7`; canonical merge `52544ad82f2f2071c470183d6788b5334a19a5d3` has exact accepted tree `63cabfde8934eebe34ab1f12134cec8b5562d439`, and post-merge CI `34740286573` / R3 `34740286572` both succeeded on attempt 1.
+- [ ] B505A007 Obtain genuinely independent substantive human crypto/security review of the final exact canonical Round 5 revision; review-only PR #124 targeting `52544ad82f2f2071c470183d6788b5334a19a5d3` is superseded by B505B self-audit findings before any qualifying human review. Automation/owner/agent review alone is not sufficient.
+- [ ] B505A008 Record every finding/residual risk and reopen B505 implementation authority only if the final exact reviewed canonical security semantics have no unresolved blocker.
+
+## B505B Round 5 self-audit remediation
+
+- [x] B505B001 Record six forward-only self-audit findings against initial canonical Round 5 SHA `52544ad82f2f2071c470183d6788b5334a19a5d3`: missing authenticated source `storage_id` mapping, incomplete capacity versus B501 maximum inventory, missing stable/single-active-generation backup precondition, filesystem-incompatible provider-key hierarchy, generation-scoped rather than set-scoped backup data keys, and missing proof that the recovery envelope wraps the active VRK.
+- [x] B505B002 Amend Round 5 design/evidence/state only: add encrypted `source_storage_id`, bounded full-capacity index/object limits, stable rotation-state and active-generation requirements, filesystem-safe reserved descriptor leaf, backup-set-specific HKDF context, creation-time recovery-envelope/active-VRK equality proof, restore cross-checks, and negative evidence.
+- [x] B505B003 Locally qualify the final remediation candidate tree and prove the diff is bounded to Specification 004 docs/design/evidence/state only; provenance validation/generated/dependency closure, fmt, clippy, full workspace tests, diff checks, and Linux provenance self-test pass, while the preserved Windows provenance self-test fixture mismatch remains explicitly NOT PASS.
+- [ ] B505B004 Push the exact successor, obtain original-attempt PR CI/R3, and reconcile all comments/reviews/threads without weakening policy.
+- [ ] B505B005 Merge only with explicit `expected_head_sha`, verify exact canonical parent/tree, and require original-attempt push-triggered post-merge CI/R3 SUCCESS.
+- [ ] B505B006 Create a new review-only PR whose head points directly to the remediated exact canonical SHA; close/supersede PR #124 without merge.
+- [ ] B505B007 Obtain the required genuinely independent substantive human crypto/security disposition for the remediated exact canonical SHA with no unresolved blocker.
 
 - [ ] B505 Implement only the independently approved Round 5 opaque portable backup/restore packaging and exact provider-visible metadata allowlist/adversarial qualification.
 - [ ] B506 Implement active-vault deletion across canonical/derived/temp/wrap surfaces while preserving detached-backup and physical-erasure limitations.
