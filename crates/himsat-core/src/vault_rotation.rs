@@ -3008,4 +3008,741 @@ mod tests {
             } if recovered_identity == identity && recovered_anchor == final_anchor
         ));
     }
+
+    #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+    enum B504FaultOp {
+        PersistBinding,
+        TargetCreate,
+        TargetStore,
+        TargetGenesis,
+        PersistRecovery,
+        StageInventory,
+        PersistCheckpoint,
+        PublishManifest,
+        AdvanceTargetAnchor,
+        ActivateTarget,
+        RetireSourceInventory,
+        RetireSourceRecovery,
+        RemoveSourceProtector,
+        ClearCheckpoint,
+        ClearBinding,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum B504FaultSide {
+        Before,
+        After,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    struct B504FaultTarget {
+        op: B504FaultOp,
+        ordinal: usize,
+        side: B504FaultSide,
+    }
+
+    #[derive(Default)]
+    struct B504FaultState {
+        target: Option<B504FaultTarget>,
+        calls: std::collections::BTreeMap<B504FaultOp, usize>,
+        fired: bool,
+    }
+
+    #[derive(Clone)]
+    struct B504FaultController(std::rc::Rc<std::cell::RefCell<B504FaultState>>);
+
+    impl B504FaultController {
+        fn new(target: B504FaultTarget) -> Self {
+            Self(std::rc::Rc::new(std::cell::RefCell::new(B504FaultState {
+                target: Some(target),
+                ..B504FaultState::default()
+            })))
+        }
+
+        fn enter(&self, op: B504FaultOp) -> usize {
+            let mut state = self.0.borrow_mut();
+            let calls = state.calls.entry(op).or_insert(0);
+            *calls += 1;
+            *calls
+        }
+
+        fn should_fail(&self, op: B504FaultOp, ordinal: usize, side: B504FaultSide) -> bool {
+            let mut state = self.0.borrow_mut();
+            if !state.fired && state.target == Some(B504FaultTarget { op, ordinal, side }) {
+                state.fired = true;
+                true
+            } else {
+                false
+            }
+        }
+
+        fn fired(&self) -> bool {
+            self.0.borrow().fired
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum B504ProtectorRole {
+        Source,
+        Target,
+    }
+
+    struct B504FaultingProtector {
+        inner: MemoryProtector,
+        role: B504ProtectorRole,
+        faults: B504FaultController,
+    }
+
+    impl B504FaultingProtector {
+        fn new(
+            inner: MemoryProtector,
+            role: B504ProtectorRole,
+            faults: B504FaultController,
+        ) -> Self {
+            Self {
+                inner,
+                role,
+                faults,
+            }
+        }
+
+        fn before(&self, op: B504FaultOp, ordinal: usize) -> Result<(), ProtectorError> {
+            if self.faults.should_fail(op, ordinal, B504FaultSide::Before) {
+                Err(ProtectorError::Unavailable)
+            } else {
+                Ok(())
+            }
+        }
+
+        fn after(&self, op: B504FaultOp, ordinal: usize) -> Result<(), ProtectorError> {
+            if self.faults.should_fail(op, ordinal, B504FaultSide::After) {
+                Err(ProtectorError::Unavailable)
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    impl SecretProtector for B504FaultingProtector {
+        type VaultRootKey = OwnedKeyMaterial;
+
+        fn create_protector(
+            &mut self,
+            requested_scope: AccessScope,
+            user_presence_policy: UserPresencePolicy,
+        ) -> Result<(), ProtectorError> {
+            if self.role != B504ProtectorRole::Target {
+                return self
+                    .inner
+                    .create_protector(requested_scope, user_presence_policy);
+            }
+            let ordinal = self.faults.enter(B504FaultOp::TargetCreate);
+            self.before(B504FaultOp::TargetCreate, ordinal)?;
+            self.inner
+                .create_protector(requested_scope, user_presence_policy)?;
+            self.after(B504FaultOp::TargetCreate, ordinal)
+        }
+
+        fn protect_or_store_vrk(
+            &mut self,
+            vault_id: VaultId,
+            key_generation: KeyGeneration,
+            vrk: &OwnedKeyMaterial,
+        ) -> Result<(), ProtectorError> {
+            if self.role != B504ProtectorRole::Target {
+                return self
+                    .inner
+                    .protect_or_store_vrk(vault_id, key_generation, vrk);
+            }
+            let ordinal = self.faults.enter(B504FaultOp::TargetStore);
+            self.before(B504FaultOp::TargetStore, ordinal)?;
+            self.inner
+                .protect_or_store_vrk(vault_id, key_generation, vrk)?;
+            self.after(B504FaultOp::TargetStore, ordinal)
+        }
+
+        fn unlock_vrk(
+            &mut self,
+            vault_id: VaultId,
+            key_generation: KeyGeneration,
+        ) -> Result<OwnedKeyMaterial, ProtectorError> {
+            self.inner.unlock_vrk(vault_id, key_generation)
+        }
+
+        fn read_freshness_anchor(
+            &self,
+            vault_id: VaultId,
+        ) -> Result<ProtectedFreshnessState, ProtectorError> {
+            self.inner.read_freshness_anchor(vault_id)
+        }
+
+        fn install_genesis_freshness_anchor(
+            &mut self,
+            vault_id: VaultId,
+            expected_state: ProtectedFreshnessState,
+            new_anchor: FreshnessAnchor,
+        ) -> Result<(), ProtectorError> {
+            if self.role != B504ProtectorRole::Target {
+                return self.inner.install_genesis_freshness_anchor(
+                    vault_id,
+                    expected_state,
+                    new_anchor,
+                );
+            }
+            let ordinal = self.faults.enter(B504FaultOp::TargetGenesis);
+            self.before(B504FaultOp::TargetGenesis, ordinal)?;
+            self.inner
+                .install_genesis_freshness_anchor(vault_id, expected_state, new_anchor)?;
+            self.after(B504FaultOp::TargetGenesis, ordinal)
+        }
+
+        fn advance_freshness_anchor(
+            &mut self,
+            vault_id: VaultId,
+            expected_old: FreshnessAnchor,
+            new_anchor: FreshnessAnchor,
+        ) -> Result<(), ProtectorError> {
+            if self.role != B504ProtectorRole::Target {
+                return self
+                    .inner
+                    .advance_freshness_anchor(vault_id, expected_old, new_anchor);
+            }
+            let ordinal = self.faults.enter(B504FaultOp::AdvanceTargetAnchor);
+            self.before(B504FaultOp::AdvanceTargetAnchor, ordinal)?;
+            self.inner
+                .advance_freshness_anchor(vault_id, expected_old, new_anchor)?;
+            self.after(B504FaultOp::AdvanceTargetAnchor, ordinal)
+        }
+
+        fn replace_protector(&mut self, vault_id: VaultId) -> Result<(), ProtectorError> {
+            self.inner.replace_protector(vault_id)
+        }
+
+        fn remove_protector(&mut self, vault_id: VaultId) -> Result<(), ProtectorError> {
+            if self.role != B504ProtectorRole::Source {
+                return self.inner.remove_protector(vault_id);
+            }
+            let ordinal = self.faults.enter(B504FaultOp::RemoveSourceProtector);
+            self.before(B504FaultOp::RemoveSourceProtector, ordinal)?;
+            match self.inner.remove_protector(vault_id) {
+                Ok(()) => self.after(B504FaultOp::RemoveSourceProtector, ordinal),
+                Err(error) => Err(error),
+            }
+        }
+
+        fn actual_access_scope(&self) -> AccessScope {
+            self.inner.actual_access_scope()
+        }
+
+        fn requires_user_presence(&self) -> bool {
+            self.inner.requires_user_presence()
+        }
+
+        fn hardware_backed_state(&self) -> HardwareBacking {
+            self.inner.hardware_backed_state()
+        }
+    }
+
+    struct B504FaultingBackend {
+        inner: PrepareBackend,
+        faults: B504FaultController,
+    }
+
+    impl B504FaultingBackend {
+        fn new(inner: PrepareBackend, faults: B504FaultController) -> Self {
+            Self { inner, faults }
+        }
+
+        fn before(&self, op: B504FaultOp, ordinal: usize) -> Result<(), BackendError> {
+            if self.faults.should_fail(op, ordinal, B504FaultSide::Before) {
+                Err(BackendError(
+                    "B504 injected failure before durable mutation",
+                ))
+            } else {
+                Ok(())
+            }
+        }
+
+        fn after(&self, op: B504FaultOp, ordinal: usize) -> Result<(), BackendError> {
+            if self.faults.should_fail(op, ordinal, B504FaultSide::After) {
+                Err(BackendError("B504 injected failure after durable mutation"))
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    impl FullRotationBackend for B504FaultingBackend {
+        type Error = BackendError;
+
+        fn assert_normal_writes_quiesced(&self) -> Result<(), Self::Error> {
+            self.inner.assert_normal_writes_quiesced()
+        }
+
+        fn read_rotation_protector_binding(
+            &self,
+        ) -> Result<Option<FullRotationProtectorBinding>, Self::Error> {
+            self.inner.read_rotation_protector_binding()
+        }
+
+        fn persist_rotation_protector_binding(
+            &mut self,
+            binding: FullRotationProtectorBinding,
+        ) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::PersistBinding);
+            self.before(B504FaultOp::PersistBinding, ordinal)?;
+            self.inner.persist_rotation_protector_binding(binding)?;
+            self.after(B504FaultOp::PersistBinding, ordinal)
+        }
+
+        fn clear_rotation_protector_binding(&mut self) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::ClearBinding);
+            self.before(B504FaultOp::ClearBinding, ordinal)?;
+            self.inner.clear_rotation_protector_binding()?;
+            self.after(B504FaultOp::ClearBinding, ordinal)
+        }
+
+        fn read_rotation_checkpoint(&self) -> Result<Option<Vec<u8>>, Self::Error> {
+            self.inner.read_rotation_checkpoint()
+        }
+
+        fn persist_rotation_checkpoint(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::PersistCheckpoint);
+            self.before(B504FaultOp::PersistCheckpoint, ordinal)?;
+            self.inner.persist_rotation_checkpoint(envelope)?;
+            self.after(B504FaultOp::PersistCheckpoint, ordinal)
+        }
+
+        fn clear_rotation_checkpoint(&mut self) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::ClearCheckpoint);
+            self.before(B504FaultOp::ClearCheckpoint, ordinal)?;
+            self.inner.clear_rotation_checkpoint()?;
+            self.after(B504FaultOp::ClearCheckpoint, ordinal)
+        }
+
+        fn read_target_recovery_wrap(&self) -> Result<Option<Vec<u8>>, Self::Error> {
+            self.inner.read_target_recovery_wrap()
+        }
+
+        fn persist_target_recovery_wrap(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::PersistRecovery);
+            self.before(B504FaultOp::PersistRecovery, ordinal)?;
+            self.inner.persist_target_recovery_wrap(envelope)?;
+            self.after(B504FaultOp::PersistRecovery, ordinal)
+        }
+
+        fn remove_target_recovery_wrap(&mut self) -> Result<(), Self::Error> {
+            self.inner.remove_target_recovery_wrap()
+        }
+
+        fn stage_reencrypted_inventory(
+            &mut self,
+            source_vrk: &OwnedKeyMaterial,
+            target_vrk: &OwnedKeyMaterial,
+            source_manifest: &ManifestPlaintext,
+            target_generation: KeyGeneration,
+            nonce_ledger: &mut NonceReservationLedger,
+        ) -> Result<Vec<ManifestObject>, Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::StageInventory);
+            self.before(B504FaultOp::StageInventory, ordinal)?;
+            let staged = self.inner.stage_reencrypted_inventory(
+                source_vrk,
+                target_vrk,
+                source_manifest,
+                target_generation,
+                nonce_ledger,
+            )?;
+            self.after(B504FaultOp::StageInventory, ordinal)?;
+            Ok(staged)
+        }
+
+        fn verify_staged_inventory(
+            &mut self,
+            target_vrk: &OwnedKeyMaterial,
+            staged_objects: &[ManifestObject],
+        ) -> Result<(), Self::Error> {
+            self.inner
+                .verify_staged_inventory(target_vrk, staged_objects)
+        }
+
+        fn quarantine_target_inventory(&mut self) -> Result<(), Self::Error> {
+            self.inner.quarantine_target_inventory()
+        }
+
+        fn publish_manifest(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::PublishManifest);
+            self.before(B504FaultOp::PublishManifest, ordinal)?;
+            self.inner.publish_manifest(envelope)?;
+            self.after(B504FaultOp::PublishManifest, ordinal)
+        }
+
+        fn read_published_manifest(&self) -> Result<Vec<u8>, Self::Error> {
+            self.inner.read_published_manifest()
+        }
+
+        fn reopen_and_verify_published(
+            &mut self,
+            target_vrk: &OwnedKeyMaterial,
+            manifest: &ManifestPlaintext,
+        ) -> Result<(), Self::Error> {
+            self.inner.reopen_and_verify_published(target_vrk, manifest)
+        }
+
+        fn activate_target_protector(&mut self) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::ActivateTarget);
+            self.before(B504FaultOp::ActivateTarget, ordinal)?;
+            self.inner.activate_target_protector()?;
+            self.after(B504FaultOp::ActivateTarget, ordinal)
+        }
+
+        fn retire_source_inventory(
+            &mut self,
+            source_generation: KeyGeneration,
+        ) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::RetireSourceInventory);
+            self.before(B504FaultOp::RetireSourceInventory, ordinal)?;
+            self.inner.retire_source_inventory(source_generation)?;
+            self.after(B504FaultOp::RetireSourceInventory, ordinal)
+        }
+
+        fn retire_source_recovery_wrap(&mut self) -> Result<(), Self::Error> {
+            let ordinal = self.faults.enter(B504FaultOp::RetireSourceRecovery);
+            self.before(B504FaultOp::RetireSourceRecovery, ordinal)?;
+            self.inner.retire_source_recovery_wrap()?;
+            self.after(B504FaultOp::RetireSourceRecovery, ordinal)
+        }
+    }
+
+    struct B504FaultFixture {
+        vault_id: VaultId,
+        source_generation: KeyGeneration,
+        source_anchor: FreshnessAnchor,
+        current_envelope: Vec<u8>,
+        source: B504FaultingProtector,
+        target: B504FaultingProtector,
+        backend: B504FaultingBackend,
+        ledger: NonceReservationLedger,
+        quiesced: RotationQuiesced,
+        faults: B504FaultController,
+    }
+
+    fn b504_fault_fixture(target: B504FaultTarget) -> B504FaultFixture {
+        let PrepareFixture {
+            vault_id,
+            generation,
+            envelope,
+            source,
+            target: target_protector,
+            backend,
+            ledger,
+            mut session,
+            source_anchor,
+        } = prepare_fixture();
+        let quiesced = quiesce_for_full_rotation(&mut session).expect("B504 quiescence succeeds");
+        let faults = B504FaultController::new(target);
+        B504FaultFixture {
+            vault_id,
+            source_generation: generation,
+            source_anchor,
+            current_envelope: envelope,
+            source: B504FaultingProtector::new(source, B504ProtectorRole::Source, faults.clone()),
+            target: B504FaultingProtector::new(
+                target_protector,
+                B504ProtectorRole::Target,
+                faults.clone(),
+            ),
+            backend: B504FaultingBackend::new(backend, faults.clone()),
+            ledger,
+            quiesced,
+            faults,
+        }
+    }
+
+    fn b504_rehydrate_ledger(fixture: &B504FaultFixture) -> NonceReservationLedger {
+        let mut reservations = Vec::new();
+        for envelope in [
+            Some(fixture.current_envelope.as_slice()),
+            fixture.backend.inner.checkpoint.as_deref(),
+            fixture.backend.inner.published.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            let reservation = manifest_nonce_reservation(envelope)
+                .expect("B504 retained manifest reservation parses");
+            if !reservations.contains(&reservation) {
+                reservations.push(reservation);
+            }
+        }
+        NonceReservationLedger::from_authenticated_canonical_reservations(
+            fixture.vault_id,
+            reservations,
+        )
+        .expect("B504 authenticated retained reservations rehydrate")
+    }
+
+    fn b504_assert_recoverable_state(fixture: &mut B504FaultFixture, target: B504FaultTarget) {
+        let source_present = fixture.source.inner.record.is_some();
+        let source_must_be_present = match target.op {
+            B504FaultOp::RemoveSourceProtector => target.side == B504FaultSide::Before,
+            B504FaultOp::ClearCheckpoint | B504FaultOp::ClearBinding => false,
+            _ => true,
+        };
+        assert_eq!(
+            source_present, source_must_be_present,
+            "B504 target {target:?} must preserve source protector until its explicit removal boundary"
+        );
+
+        if source_present {
+            let source_vrk = fixture
+                .source
+                .inner
+                .unlock_vrk(fixture.vault_id, fixture.source_generation)
+                .expect("B504 retained source VRK unlocks");
+            let context = manifest_context(&fixture.current_envelope)
+                .expect("B504 source manifest context parses");
+            let source_manifest = decrypt_manifest(&source_vrk, context, &fixture.current_envelope)
+                .expect("B504 retained source manifest decrypts");
+            assert_eq!(source_manifest.rotation_phase(), RotationPhase::None);
+            assert_eq!(
+                source_manifest.active_key_generation(),
+                fixture.source_generation
+            );
+            assert_eq!(
+                fixture
+                    .source
+                    .inner
+                    .read_freshness_anchor(fixture.vault_id)
+                    .expect("B504 source freshness reads"),
+                ProtectedFreshnessState::Present(fixture.source_anchor)
+            );
+        }
+
+        if let Some(published) = fixture.backend.inner.published.as_deref() {
+            let target_vrk = OwnedKeyMaterial::from_bytes(fixture.target.inner.key_bytes());
+            let context = manifest_context(published).expect("B504 published context parses");
+            let manifest = decrypt_manifest(&target_vrk, context, published)
+                .expect("B504 published target state decrypts");
+            assert_eq!(manifest.active_key_generation(), context.key_generation());
+            assert!(matches!(
+                manifest.rotation_phase(),
+                RotationPhase::Publish | RotationPhase::None
+            ));
+        }
+    }
+
+    fn b504_drive_fault_scenario(target: B504FaultTarget, recovery: Option<(&[u8], &str)>) {
+        let mut fixture = b504_fault_fixture(target);
+        let identity =
+            FullRotationIdentity::for_next_generation(fixture.vault_id, fixture.source_generation)
+                .expect("B504 next generation exists");
+        let recovery_input =
+            recovery.map(|(envelope, passphrase)| RecoveryRotationInput::new(envelope, passphrase));
+
+        let first = begin_full_rotation(
+            fixture.quiesced,
+            &mut fixture.source,
+            &mut fixture.target,
+            &mut fixture.backend,
+            &mut fixture.ledger,
+            &fixture.current_envelope,
+            prepare_binding(),
+            prepare_policy(),
+            recovery_input,
+        );
+        if first.is_ok() {
+            loop {
+                match resume_full_rotation_after_restart(
+                    identity,
+                    prepare_binding(),
+                    &mut fixture.source,
+                    &mut fixture.target,
+                    &mut fixture.backend,
+                    &mut fixture.ledger,
+                ) {
+                    Ok(FullRotationProgress::InProgress { .. }) => {}
+                    Ok(FullRotationProgress::Complete { .. }) => {
+                        panic!("B504 target {target:?} did not fire before completion")
+                    }
+                    Err(_) => break,
+                }
+            }
+        }
+        assert!(
+            fixture.faults.fired(),
+            "B504 target {target:?} must inject exactly one failure"
+        );
+        b504_assert_recoverable_state(&mut fixture, target);
+
+        let rehydrated = b504_rehydrate_ledger(&fixture);
+        fixture.ledger = rehydrated;
+        if fixture.backend.inner.checkpoint.is_none() && fixture.backend.inner.published.is_none() {
+            let retried = begin_full_rotation(
+                fixture.quiesced,
+                &mut fixture.source,
+                &mut fixture.target,
+                &mut fixture.backend,
+                &mut fixture.ledger,
+                &fixture.current_envelope,
+                prepare_binding(),
+                prepare_policy(),
+                recovery_input,
+            )
+            .expect("B504 pre-checkpoint retry must recover");
+            assert_eq!(
+                retried,
+                FullRotationProgress::InProgress {
+                    identity,
+                    phase: RotationPhase::Prepare,
+                }
+            );
+        }
+
+        let final_anchor = loop {
+            match resume_full_rotation_after_restart(
+                identity,
+                prepare_binding(),
+                &mut fixture.source,
+                &mut fixture.target,
+                &mut fixture.backend,
+                &mut fixture.ledger,
+            )
+            .expect("B504 restart must roll forward")
+            {
+                FullRotationProgress::InProgress { .. } => {}
+                FullRotationProgress::Complete {
+                    identity: completed,
+                    final_anchor,
+                } => {
+                    assert_eq!(completed, identity);
+                    break final_anchor;
+                }
+            }
+        };
+
+        assert!(fixture.source.inner.record.is_none());
+        assert!(fixture.backend.inner.source_inventory_retired);
+        assert!(fixture.backend.inner.source_recovery_retired);
+        assert!(fixture.backend.inner.target_activated);
+        assert!(fixture.backend.inner.checkpoint.is_none());
+        assert!(fixture.backend.inner.binding.is_none());
+
+        let target_vrk = fixture
+            .target
+            .inner
+            .unlock_vrk(fixture.vault_id, identity.target_generation())
+            .expect("B504 final target VRK unlocks");
+        let published = fixture
+            .backend
+            .inner
+            .published
+            .as_deref()
+            .expect("B504 stable target manifest remains published");
+        let context = manifest_context(published).expect("B504 stable context parses");
+        let stable = decrypt_manifest(&target_vrk, context, published)
+            .expect("B504 stable target manifest decrypts");
+        assert_eq!(stable.rotation_phase(), RotationPhase::None);
+        assert_eq!(stable.active_key_generation(), identity.target_generation());
+        assert_eq!(
+            fixture
+                .target
+                .inner
+                .read_freshness_anchor(fixture.vault_id)
+                .expect("B504 final target anchor reads"),
+            ProtectedFreshnessState::Present(final_anchor)
+        );
+        assert_eq!(manifest_hash(published), final_anchor.manifest_hash());
+
+        fixture.ledger = b504_rehydrate_ledger(&fixture);
+        let repeated = resume_full_rotation_after_restart(
+            identity,
+            prepare_binding(),
+            &mut fixture.source,
+            &mut fixture.target,
+            &mut fixture.backend,
+            &mut fixture.ledger,
+        )
+        .expect("B504 stable completion is idempotent after another restart");
+        assert_eq!(
+            repeated,
+            FullRotationProgress::Complete {
+                identity,
+                final_anchor,
+            }
+        );
+
+        if let Some((_, passphrase)) = recovery {
+            let target_recovery = fixture
+                .backend
+                .inner
+                .recovery
+                .as_deref()
+                .expect("B504 target recovery wrap remains retained after stable restart");
+            let recovered_target = decrypt_recovery_envelope(
+                RecoveryContext::new(fixture.vault_id, identity.target_generation()),
+                passphrase,
+                target_recovery,
+            )
+            .expect("B504 retained target recovery wrap authenticates after stable restart");
+            assert!(key_material_equal(&target_vrk, &recovered_target));
+        }
+    }
+
+    #[test]
+    fn b504_fault_injection_before_after_every_rotation_commit_point_recovers() {
+        let points = [
+            (B504FaultOp::PersistBinding, 1),
+            (B504FaultOp::TargetCreate, 1),
+            (B504FaultOp::TargetStore, 1),
+            (B504FaultOp::TargetGenesis, 1),
+            (B504FaultOp::PersistCheckpoint, 1),
+            (B504FaultOp::StageInventory, 1),
+            (B504FaultOp::PersistCheckpoint, 2),
+            (B504FaultOp::PersistCheckpoint, 3),
+            (B504FaultOp::PublishManifest, 1),
+            (B504FaultOp::PersistCheckpoint, 4),
+            (B504FaultOp::AdvanceTargetAnchor, 1),
+            (B504FaultOp::PersistCheckpoint, 5),
+            (B504FaultOp::ActivateTarget, 1),
+            (B504FaultOp::PersistCheckpoint, 6),
+            (B504FaultOp::ActivateTarget, 2),
+            (B504FaultOp::PersistCheckpoint, 7),
+            (B504FaultOp::PublishManifest, 2),
+            (B504FaultOp::AdvanceTargetAnchor, 2),
+            (B504FaultOp::ActivateTarget, 3),
+            (B504FaultOp::RetireSourceInventory, 1),
+            (B504FaultOp::RetireSourceRecovery, 1),
+            (B504FaultOp::RemoveSourceProtector, 1),
+            (B504FaultOp::ClearCheckpoint, 1),
+            (B504FaultOp::ClearBinding, 1),
+        ];
+        assert_eq!(points.len(), 24);
+        for (op, ordinal) in points {
+            for side in [B504FaultSide::Before, B504FaultSide::After] {
+                b504_drive_fault_scenario(B504FaultTarget { op, ordinal, side }, None);
+            }
+        }
+    }
+
+    #[test]
+    fn b504_target_recovery_wrap_before_after_commit_recovers() {
+        for side in [B504FaultSide::Before, B504FaultSide::After] {
+            let fixture = prepare_fixture();
+            let source_vrk = OwnedKeyMaterial::from_bytes(SOURCE_KEY);
+            let source_envelope = encrypt_recovery_envelope(
+                &source_vrk,
+                RecoveryContext::new(fixture.vault_id, fixture.generation),
+                "b504-recovery-passphrase",
+            )
+            .expect("B504 source recovery envelope encrypts");
+            b504_drive_fault_scenario(
+                B504FaultTarget {
+                    op: B504FaultOp::PersistRecovery,
+                    ordinal: 1,
+                    side,
+                },
+                Some((&source_envelope, "b504-recovery-passphrase")),
+            );
+        }
+    }
 }
