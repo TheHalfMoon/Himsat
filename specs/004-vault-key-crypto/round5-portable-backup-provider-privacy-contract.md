@@ -49,14 +49,16 @@ Residual leakage remains explicit: ciphertext sizes, counts, upload/operation ti
 
 ## Opaque identifiers and provider keys
 
-`BackupSetId` and every `BackupObjectId` are independently generated as exactly 16 bytes from the approved OS CSPRNG. Generation failure aborts before any provider-visible candidate becomes canonical. All-zero values are rejected and regenerated. Duplicate object identifiers inside one backup set are rejected and regenerated before publication.
+`BackupSetId` and every data-object `BackupObjectId` are independently generated as exactly 16 bytes from the approved OS CSPRNG. Generation failure aborts before any provider-visible candidate becomes canonical. All-zero values are rejected and regenerated. Duplicate object identifiers inside one backup set are rejected and regenerated before publication.
 
 The canonical provider key encoding is lowercase hexadecimal of the raw opaque identifier bytes. A provider hierarchy, where available, is:
 
-On read, the set-descriptor provider key MUST decode to the exact embedded BackupSetId. Every data-object provider key MUST decode to the exact embedded (BackupSetId, BackupObjectId). Mismatch is CorruptOrTampered before payload release.
+The all-zero 16-byte object identifier is reserved exclusively for the set-descriptor provider-key leaf and MUST NOT be generated or accepted as a data-object `BackupObjectId`. This fixed reserved leaf permits the same canonical hierarchy to work on filesystem-style providers without requiring one path to be both a file and a directory.
+
+On read, the set-descriptor provider key MUST decode to the exact embedded `BackupSetId` plus the reserved all-zero leaf. Every data-object provider key MUST decode to the exact embedded `(BackupSetId, BackupObjectId)`, and the data-object ID MUST be non-zero. Mismatch is `CorruptOrTampered` before payload release.
 
 ```text
-set descriptor key = hex_lower(BackupSetId)
+set descriptor key = hex_lower(BackupSetId) / 00000000000000000000000000000000
 data object key     = hex_lower(BackupSetId) / hex_lower(BackupObjectId)
 ```
 
@@ -68,12 +70,12 @@ Round 5 adds distinct reviewed HKDF domains so backup index and backup object en
 
 ```text
 index_key = HKDF-SHA-256(VRK, salt = raw VaultId,
-    info = ASCII("HIMSAT/004/BACKUP-INDEX/v1") || u64be(key_generation), L = 32)
+    info = ASCII("HIMSAT/004/BACKUP-INDEX/v1") || u64be(key_generation) || raw BackupSetId, L = 32)
 object_key = HKDF-SHA-256(VRK, salt = raw VaultId,
-    info = ASCII("HIMSAT/004/BACKUP-OBJECT/v1") || u64be(key_generation), L = 32)
+    info = ASCII("HIMSAT/004/BACKUP-OBJECT/v1") || u64be(key_generation) || raw BackupSetId, L = 32)
 ```
 
-The labels are unique and MUST NOT reuse `StructuredStore`, `BoundedBlob`, or `FreshnessManifest` key material. Index and object encryption use different derived keys. These purposes are design-only until the exact Round 5 canonical revision receives the required independent security approval. Product code MUST NOT silently add them before that gate.
+The labels are unique and MUST NOT reuse `StructuredStore`, `BoundedBlob`, or `FreshnessManifest` key material. Index and object encryption use different derived keys, and the raw `BackupSetId` in each HKDF info string makes both keys backup-set-specific even when the same vault generation is exported more than once. Cross-set nonce equality therefore cannot create same-key nonce reuse, while fresh OS-CSPRNG nonces remain mandatory for every set. These purposes are design-only until the exact Round 5 canonical revision receives the required independent security approval. Product code MUST NOT silently add them before that gate.
 
 The only cryptographic primitive families used by this amendment are already-reviewed families: HKDF-SHA-256, XChaCha20-Poly1305, Argon2id, SHA-256, and the OS CSPRNG.
 
@@ -86,7 +88,7 @@ domain("HIMSAT/BACKUP/SET/ENVELOPE/v1")
 u16(1)                         # set format version
 opaque16(BackupSetId)
 u64(key_generation)              # non-zero
-u32(data_object_count)          # 2..=131072
+u32(data_object_count)          # 2..=1_048_576
 u16(1)                         # bootstrap cipher: XChaCha20-Poly1305
 u16(1)                         # recovery policy: ARGON2ID_RFC9106_64M_V1
 u16(0x0013)                    # Argon2 version
@@ -190,7 +192,7 @@ Provider keys and the object envelope reveal no payload role. Manifest, structur
 
 ## Encrypted backup index v1
 
-The index plaintext is encrypted with the distinct Round 5 `index_key`. Its XChaCha20-Poly1305 nonce is fresh per attempt and MUST NOT be reused with the same index key. The index plaintext maximum is 16 MiB and `payload_count`/`chunk_count` values are validated before allocation. The 131072 payload/object caps are chosen so the worst-case canonical record overhead remains below this 16 MiB plaintext bound.
+The index plaintext is encrypted with the distinct Round 5 `index_key`. Its XChaCha20-Poly1305 nonce is fresh per attempt and MUST NOT be reused with the same index key. The index plaintext maximum is 64 MiB. `payload_count`, per-payload `chunk_count`, and their checked global sum are validated before allocation. V1 permits at most 262,145 payloads (the complete B501 inventory maximum of 262,144 objects plus the manifest payload) and at most 1,048,576 provider data objects/chunks. With the fixed 82-byte payload record and 24-byte chunk record defined below, even the simultaneous maxima consume 46,661,714 record bytes before the small fixed index header, remaining below the 64 MiB plaintext bound.
 
 The canonical plaintext begins:
 
@@ -201,7 +203,7 @@ id128(VaultId)
 u64(key_generation)
 u64(source_freshness_epoch)
 bytes32(source_manifest_hash)   # exact canonical B501 envelope hash
-u32(payload_count)              # 2..=131072
+u32(payload_count)              # 2..=262145
 ```
 
 Each payload record then encodes exactly:
@@ -210,24 +212,25 @@ Each payload record then encodes exactly:
 u32(payload_ordinal)            # contiguous 0..payload_count-1
 u16(payload_kind)               # 1=MANIFEST, 2=STRUCTURED_STORE, 3=GENERIC_ARTIFACT_BLOB
 id128(logical_id)               # zero for kinds 1/2; ArtifactId for kind 3
+opaque16(source_storage_id)      # zero for MANIFEST; exact B501 storage_id for kinds 2/3
 u64(exact_payload_length)
 bytes32(exact_payload_sha256)
-u32(chunk_count)                # 1..=131072
+u32(chunk_count)                # 1..=1_048_576
 repeat chunk_count times:
     u32(chunk_ordinal)          # contiguous 0..chunk_count-1
     opaque16(BackupObjectId)
     u32(plaintext_chunk_length)
 ```
 
-The complete index MUST contain exactly one `MANIFEST` payload at ordinal 0 and exactly one `STRUCTURED_STORE` payload at ordinal 1. Remaining records are `GENERIC_ARTIFACT_BLOB` records sorted lexicographically by `logical_id`. Blob logical IDs are unique. All `BackupObjectId` values are unique across the set. The sum of every payload `chunk_count` MUST equal the set descriptor `data_object_count`.
+The complete index MUST contain exactly one `MANIFEST` payload at ordinal 0 and exactly one `STRUCTURED_STORE` payload at ordinal 1. Remaining records are `GENERIC_ARTIFACT_BLOB` records sorted lexicographically by `logical_id`. Blob logical IDs are unique. All `BackupObjectId` values are unique across the set. The `MANIFEST` record MUST use all-zero `source_storage_id`; every `STRUCTURED_STORE` and `GENERIC_ARTIFACT_BLOB` record MUST copy the exact authenticated B501 inventory `storage_id` for that source object. Source storage identifiers are inside the encrypted index and therefore are not provider-visible. The sum of every payload `chunk_count` MUST equal the set descriptor `data_object_count` and MUST NOT exceed 1,048,576.
 
 For every payload, `exact_payload_length` MUST equal the checked sum of its chunk plaintext lengths, and `exact_payload_sha256` is SHA-256 of the exact reconstructed payload bytes in chunk order.
 
 Payload semantics are fixed:
 
 - `MANIFEST`: exact complete canonical B501 authenticated manifest envelope bytes; its SHA-256 MUST equal `source_manifest_hash` and its authenticated `VaultId`, generation, and freshness epoch MUST match the index.
-- `STRUCTURED_STORE`: exact bytes of the quiesced, integrity-verified SQLCipher snapshot selected by the authenticated manifest/state. Restore MUST verify the reconstructed SQLCipher file using the canonical B301-B305 provider/runtime/integrity path before accepting it.
-- `GENERIC_ARTIFACT_BLOB`: exact complete canonical B202 envelope bytes. After reconstruction, Round 4 full-envelope length/hash and B501 inventory binding MUST succeed before plaintext can be released.
+- `STRUCTURED_STORE`: exact bytes of the quiesced, integrity-verified SQLCipher snapshot selected by the authenticated manifest/state. Its `source_storage_id` MUST equal the authenticated B501 `STRUCTURED_STORE` inventory record selected for the snapshot. Restore MUST verify the reconstructed SQLCipher file using the canonical B301-B305 provider/runtime/integrity path before accepting it.
+- `GENERIC_ARTIFACT_BLOB`: exact complete canonical B202 envelope bytes. Its `source_storage_id` MUST equal the authenticated B501 inventory `storage_id` for the same `ArtifactId`. After reconstruction, Round 4 full-envelope length/hash, storage-ID resolution, and B501 inventory binding MUST succeed before plaintext can be released.
 
 No logical identifier, payload kind, epoch, hash, or semantic role from the index is provider-visible before successful index authentication.
 
@@ -246,24 +249,26 @@ bytes32(bootstrap_slot_sha256)
 
 `bootstrap_slot_sha256` is SHA-256 of the exact 183 bootstrap ciphertext/tag bytes. This binds the encrypted index to the recovery bootstrap selected for the same backup set without exposing the inner recovery envelope.
 
-`index_ciphertext_and_tag_length` MUST be between 16 and `16_777_232` bytes inclusive, and the complete descriptor MUST contain exactly that many index ciphertext/tag bytes with no trailing bytes.
+`index_ciphertext_and_tag_length` MUST be between 16 and `67_108_880` bytes inclusive (64 MiB plaintext plus the 16-byte AEAD tag), and the complete descriptor MUST contain exactly that many index ciphertext/tag bytes with no trailing bytes.
 
-After index decryption, the parser rejects unknown payload kinds, duplicate logical IDs, duplicate or non-contiguous ordinals, duplicate `BackupObjectId` values, zero or oversized chunks, count mismatches, overflow, non-canonical ordering, zero generation/epoch, and trailing plaintext bytes as `CorruptOrTampered`.
+After index decryption, the parser rejects unknown payload kinds, duplicate `(payload_kind, logical_id)` records, duplicate blob logical IDs, duplicate or non-contiguous ordinals, duplicate `BackupObjectId` values, zero or oversized chunks, payload/chunk/global-count overflow, non-canonical ordering, zero generation/epoch, a non-zero manifest `source_storage_id`, and trailing plaintext bytes as `CorruptOrTampered`. The required `MANIFEST` and `STRUCTURED_STORE` records may both use all-zero `logical_id` only because their `payload_kind` values are distinct. After the B501 manifest authenticates, every non-manifest `source_storage_id` and logical identity MUST match exactly one authenticated inventory record; missing, duplicate, extra, or mismatched mappings are `CorruptOrTampered`.
 
 ## Backup snapshot and publication protocol
 
 B505 backup creation MUST operate on one verified logical vault state. It MUST NOT combine a manifest from one state with SQLCipher/blob bytes from another concurrent mutation.
 
+A portable set is self-contained around exactly one recovered active VRK generation. Therefore backup creation MUST require the authenticated source manifest to be in stable state before any provider-visible publication: `rotation_phase == NONE`, `rotation_target_generation == 0`, and every authenticated B501 inventory record MUST have `object_key_generation == active_key_generation`. If any inventory object requires another generation, or rotation is in progress, creation fails `BackupStateNotStable`; B505 MUST NOT export a set that requires a second VRK not carried by the recovery bootstrap.
+
 The minimum protocol is:
 
 1. obtain the vault's normal coordination boundary and quiesce commits that could change the authenticated manifest/object set;
-2. authenticate the currently accepted B501 manifest against the trusted freshness state and verify its complete referenced inventory;
-3. require an authenticated B204 recovery envelope for the same active generation, otherwise fail `RecoveryRequired` before any provider-visible publication;
+2. authenticate the currently accepted B501 manifest against the trusted freshness state, require the stable single-active-generation backup condition above, and verify its complete referenced inventory using each authenticated `storage_id`;
+3. require an authenticated B204 recovery envelope for the same active generation, otherwise fail `RecoveryRequired`; obtain the user's recovery passphrase locally, derive the canonical Recovery KEK under the fixed B204 policy, authenticate/decrypt that exact B204 envelope, and require the recovered VRK to equal the currently active unlocked VRK before deriving the bootstrap key or performing any provider-visible publication. Wrong-passphrase/tag failures remain `RecoveryAuthenticationFailed`; a successfully authenticated recovery envelope that yields a different VRK than the active vault is `CorruptOrTampered`. The passphrase/Recovery KEK MUST NOT be logged, transmitted to the provider, or persisted as backup metadata;
 4. while writes remain quiesced, use the canonical SQLCipher provider to checkpoint/truncate any WAL so every committed page is represented in the main database, verify no committed state remains only in a sidecar, and close the source handles required for a stable copy;
 5. copy the exact stable main-database bytes to a separately named staging file and run the canonical SQLCipher provider/runtime/integrity checks against that staged copy;
 6. read and Round-4-verify every exact B202 envelope referenced by the authenticated manifest;
 7. generate a fresh `BackupSetId`, fresh `BackupObjectId` values, bootstrap nonce, index nonce, and per-object nonces from the OS CSPRNG;
-8. chunk and outer-encrypt every manifest/database/blob payload, construct the encrypted canonical index, then construct the set descriptor;
+8. chunk and outer-encrypt every manifest/database/blob payload, require `payload_count <= 262_145` and the checked global chunk/data-object count `<= 1_048_576`, construct the encrypted canonical index within the 64 MiB plaintext bound, then construct the set descriptor;
 9. publish only to the new opaque set namespace; never overwrite a previously accepted portable backup in place;
 10. reread every uploaded byte through the same provider abstraction and perform full bootstrap/index/object/reconstruction/inner-format verification;
 11. mark the backup complete locally only after reread verification succeeds, then release the quiescence boundary.
@@ -282,11 +287,11 @@ Restore MUST:
 2. obtain the user's recovery passphrase without logging or provider transmission;
 3. execute only the validated fixed Argon2id policy from the descriptor, derive the bootstrap key, authenticate/decrypt the 183-byte slot, and parse the exact inner B204 envelope;
 4. require inner/outer generation, salt, policy, and suite equality; authenticate the inner B204 recovery envelope and release the VRK only on success;
-5. derive the distinct index/object keys from the recovered VRK and authenticated `VaultId`;
+5. derive the distinct backup-set-specific index/object keys from the recovered VRK, authenticated `VaultId`, descriptor generation, and parsed `BackupSetId`;
 6. authenticate/decrypt the index before interpreting any logical ID, role, epoch, or object relationship;
 7. fetch objects only by authenticated `BackupObjectId`, parse the outer object envelope, authenticate each chunk, and reconstruct every payload with checked lengths/counts;
 8. require every reconstructed payload hash/length to match the authenticated index;
-9. authenticate and canonically parse the recovered B501 manifest, Round-4-verify every reconstructed B202 payload, and run canonical SQLCipher provider/integrity checks on the staged structured store;
+9. authenticate and canonically parse the recovered B501 manifest; require `rotation_phase == NONE`, `rotation_target_generation == 0`, every inventory `object_key_generation == active_key_generation`, and an exact one-to-one match from every non-manifest index `source_storage_id`/logical identity to the authenticated B501 inventory; then Round-4-verify every reconstructed B202 payload and run canonical SQLCipher provider/integrity checks on the staged structured store;
 10. hand the fully verified recovered state to B502 restore-state logic; B505 MUST NOT decrement or directly replace an existing trusted freshness anchor.
 
 On a genuinely fresh device, B502's explicit protected `UNINITIALIZED` genesis and user-visible inability-to-prove-global-newestness rule remains mandatory. On an existing device with a trusted anchor, an older recovered backup is republished as a new epoch greater than the current anchor; the portable bytes are source evidence, not authority to roll the anchor backward.
@@ -308,9 +313,14 @@ Required negative cases include:
 - mutate any outer public length/version/suite/nonce/identifier field;
 - truncate or append descriptor, bootstrap, index, or object bytes;
 - reorder/duplicate/omit index payloads or chunks;
+- alter, duplicate, omit, or mis-map an encrypted `source_storage_id`;
+- present a source manifest with `rotation_phase != NONE`, a non-zero rotation target, or any inventory object outside the active key generation;
+- exceed the 262,145 payload, 1,048,576 data-object/chunk, or 64 MiB index-plaintext bounds;
 - corrupt reconstructed SQLCipher, manifest, or B202 payload bytes;
-- return a set descriptor whose provider key and embedded `BackupSetId` differ;
-- return a provider object whose key and embedded `(BackupSetId, BackupObjectId)` differ.
+- return a set descriptor whose provider key has a non-zero descriptor leaf or whose set component and embedded `BackupSetId` differ;
+- return a data object with the reserved all-zero `BackupObjectId`, or whose provider key and embedded `(BackupSetId, BackupObjectId)` differ;
+- derive index/object keys without the exact parsed `BackupSetId`, or transplant ciphertext between backup sets;
+- authenticate a B204 envelope during creation that yields a VRK different from the active unlocked VRK.
 
 Every failure MUST be fail-closed, release no unauthenticated plaintext, and leave the candidate set or restore unaccepted.
 
