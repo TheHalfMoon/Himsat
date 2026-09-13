@@ -278,9 +278,9 @@ Provider transport and vault-state restoration remain separate security boundari
 
 Restore MUST:
 
-1. select one opaque set descriptor and parse all provider-visible fields under the strict bounds above;
+1. select one opaque set descriptor, parse all provider-visible fields under the strict bounds above, and require the descriptor's Argon2id version, memory, passes, parallelism, and output length to equal the fixed canonical policy before any Argon2id invocation; any mismatch is `CorruptOrTampered`;
 2. obtain the user's recovery passphrase without logging or provider transmission;
-3. execute only the fixed Argon2id policy from the descriptor, derive the bootstrap key, authenticate/decrypt the 183-byte slot, and parse the exact inner B204 envelope;
+3. execute only the validated fixed Argon2id policy from the descriptor, derive the bootstrap key, authenticate/decrypt the 183-byte slot, and parse the exact inner B204 envelope;
 4. require inner/outer generation, salt, policy, and suite equality; authenticate the inner B204 recovery envelope and release the VRK only on success;
 5. derive the distinct index/object keys from the recovered VRK and authenticated `VaultId`;
 6. authenticate/decrypt the index before interpreting any logical ID, role, epoch, or object relationship;
