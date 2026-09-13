@@ -251,7 +251,7 @@ bytes32(bootstrap_slot_sha256)
 
 `index_ciphertext_and_tag_length` MUST be between 16 and `67_108_880` bytes inclusive (64 MiB plaintext plus the 16-byte AEAD tag), and the complete descriptor MUST contain exactly that many index ciphertext/tag bytes with no trailing bytes.
 
-After index decryption, the parser rejects unknown payload kinds, duplicate logical IDs, duplicate or non-contiguous ordinals, duplicate `BackupObjectId` values, zero or oversized chunks, payload/chunk/global-count overflow, non-canonical ordering, zero generation/epoch, a non-zero manifest `source_storage_id`, and trailing plaintext bytes as `CorruptOrTampered`. After the B501 manifest authenticates, every non-manifest `source_storage_id` and logical identity MUST match exactly one authenticated inventory record; missing, duplicate, extra, or mismatched mappings are `CorruptOrTampered`.
+After index decryption, the parser rejects unknown payload kinds, duplicate `(payload_kind, logical_id)` records, duplicate blob logical IDs, duplicate or non-contiguous ordinals, duplicate `BackupObjectId` values, zero or oversized chunks, payload/chunk/global-count overflow, non-canonical ordering, zero generation/epoch, a non-zero manifest `source_storage_id`, and trailing plaintext bytes as `CorruptOrTampered`. The required `MANIFEST` and `STRUCTURED_STORE` records may both use all-zero `logical_id` only because their `payload_kind` values are distinct. After the B501 manifest authenticates, every non-manifest `source_storage_id` and logical identity MUST match exactly one authenticated inventory record; missing, duplicate, extra, or mismatched mappings are `CorruptOrTampered`.
 
 ## Backup snapshot and publication protocol
 

@@ -81,6 +81,14 @@ The initial protocol required a current authenticated B204 envelope but did not 
 
 Remediation requires local passphrase entry, canonical B204 KDF/authentication, equality with the active unlocked VRK, and bootstrap-key derivation from that same verified Recovery KEK before any provider-visible publication. Wrong-passphrase/tag failures remain uniform; an authenticated envelope yielding a different VRK is `CorruptOrTampered`.
 
+## Finding B505B-F007 -- parser logical-ID uniqueness conflicted with required zero IDs
+
+CodeRabbit inline review comment `3999042756` on PR #126 against predecessor `b89ca01ef8cdc3e3f3669bd738df13bab3d385d2` identified that the Round 5 parser sentence rejected duplicate logical IDs globally even though the required `MANIFEST` and `STRUCTURED_STORE` payload records both use all-zero `logical_id`. Taken literally, the parser rule would reject every conforming index containing both required records.
+
+Remediation scopes uniqueness correctly: duplicate `(payload_kind, logical_id)` records are rejected; duplicate `GENERIC_ARTIFACT_BLOB` logical IDs are rejected; the required MANIFEST and STRUCTURED_STORE zero logical IDs are allowed only because their payload kinds differ.
+
+This is a security-semantic parser-contract correction. Predecessor commit `b89ca01ef8cdc3e3f3669bd738df13bab3d385d2` remains preserved as review evidence and is not amended or rewritten.
+
 ## Governance disposition
 
 These findings are security-semantic. They invalidate `52544ad82f2f2071c470183d6788b5334a19a5d3` as the final Round 5 human-review target before any qualifying human review was obtained.

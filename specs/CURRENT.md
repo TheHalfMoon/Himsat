@@ -110,7 +110,7 @@ INITIAL_ROUND5_ACCEPTED_HEAD = dcbcbc1e2f15a3bfa370e6d861b9b1c68fc127d7
 INITIAL_ROUND5_POSTMERGE_CI = 34740286573_SUCCESS_ATTEMPT_1
 INITIAL_ROUND5_POSTMERGE_R3 = 34740286572_SUCCESS_ATTEMPT_1
 INITIAL_ROUND5_REVIEW_ONLY_PR = 124_SUPERSEDED_BEFORE_HUMAN_REVIEW
-B505B_SELF_AUDIT_FINDINGS = STORAGE_ID_MAPPING,CAPACITY_BOUND,STABLE_SINGLE_GENERATION,FILESYSTEM_SAFE_PROVIDER_KEYS,SET_SCOPED_KEYS,RECOVERY_ACTIVE_VRK_PROOF
+B505B_SELF_AUDIT_FINDINGS = STORAGE_ID_MAPPING,CAPACITY_BOUND,STABLE_SINGLE_GENERATION,FILESYSTEM_SAFE_PROVIDER_KEYS,SET_SCOPED_KEYS,RECOVERY_ACTIVE_VRK_PROOF,PARSER_LOGICAL_ID_SCOPE
 NEXT_IMPLEMENTATION_LEAF = NONE_PENDING_B505B_ROUND5_REMEDIATION_AND_HUMAN_SECURITY_REVIEW
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_PENDING_B505B_ROUND5_REMEDIATION_CANONICAL_QUALIFICATION_AND_INDEPENDENT_HUMAN_SECURITY_REVIEW
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_B505B_ROUND5_REMEDIATION_AND_REVIEW
@@ -124,7 +124,7 @@ Live GitHub/repository truth overrides this file whenever repository state chang
 
 ## Canonical Specification 004 authority
 
-Specification 004A has an exact independently reviewed pre-Round-5 design. Review-only PR #29 examined canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE` with no unresolved blocking finding. `round3-normative-contracts.md` remains controlling for recovery, bounded-blob, freshness, nonce, and rotation contracts, and `round4-blob-inventory-contract.md` remains controlling for `GENERIC_ARTIFACT_BLOB` canonical stored-object and manifest-inventory semantics. Initial Round 5 provider-privacy semantics became canonical and post-merge qualified at `52544ad82f2f2071c470183d6788b5334a19a5d3`, but pre-implementation self-audit then identified six security-semantic gaps recorded in `b505b-round5-self-audit-remediation-evidence.md`. Review-only PR #124 therefore targets a superseded revision and cannot open B505 authority. The Round 5 contract remains implementation-blocking until the B505B remediation becomes canonical-qualified and receives the required genuinely independent substantive human security review with no unresolved blocker.
+Specification 004A has an exact independently reviewed pre-Round-5 design. Review-only PR #29 examined canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE` with no unresolved blocking finding. `round3-normative-contracts.md` remains controlling for recovery, bounded-blob, freshness, nonce, and rotation contracts, and `round4-blob-inventory-contract.md` remains controlling for `GENERIC_ARTIFACT_BLOB` canonical stored-object and manifest-inventory semantics. Initial Round 5 provider-privacy semantics became canonical and post-merge qualified at `52544ad82f2f2071c470183d6788b5334a19a5d3`, but pre-implementation self-audit then identified seven security-semantic gaps recorded in `b505b-round5-self-audit-remediation-evidence.md`. Review-only PR #124 therefore targets a superseded revision and cannot open B505 authority. The Round 5 contract remains implementation-blocking until the B505B remediation becomes canonical-qualified and receives the required genuinely independent substantive human security review with no unresolved blocker.
 
 Specification 004P is closed canonically. The reviewed dependency closure already contains the exact providers required by B301-B307; this reconciliation adopts no dependency and changes no provider/provenance bytes.
 
