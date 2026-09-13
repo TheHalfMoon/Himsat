@@ -3659,6 +3659,22 @@ mod tests {
                 final_anchor,
             }
         );
+
+        if let Some((_, passphrase)) = recovery {
+            let target_recovery = fixture
+                .backend
+                .inner
+                .recovery
+                .as_deref()
+                .expect("B504 target recovery wrap remains retained after stable restart");
+            let recovered_target = decrypt_recovery_envelope(
+                RecoveryContext::new(fixture.vault_id, identity.target_generation()),
+                passphrase,
+                target_recovery,
+            )
+            .expect("B504 retained target recovery wrap authenticates after stable restart");
+            assert!(key_material_equal(&target_vrk, &recovered_target));
+        }
     }
 
     #[test]
