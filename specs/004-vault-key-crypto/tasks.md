@@ -203,8 +203,8 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 - [x] B505A004 Exact-head qualify accepted Round 5 successor `dcbcbc1e2f15a3bfa370e6d861b9b1c68fc127d7`: pre-merge CI `34739727295` SUCCESS and R3 `34739727288` SUCCESS on attempt 1.
 - [x] B505A005 Reconcile exact successor diff, live `main`, checks, reviews, review threads, comments, and mergeability immediately before guarded merge.
 - [x] B505A006 Merge with explicit `expected_head_sha = dcbcbc1e2f15a3bfa370e6d861b9b1c68fc127d7`; canonical merge `52544ad82f2f2071c470183d6788b5334a19a5d3` has exact accepted tree `63cabfde8934eebe34ab1f12134cec8b5562d439`, and post-merge CI `34740286573` / R3 `34740286572` both succeeded on attempt 1.
-- [ ] B505A007 Obtain genuinely independent substantive human crypto/security review of the final exact canonical Round 5 revision; review-only PR #124 targeting `52544ad82f2f2071c470183d6788b5334a19a5d3` is superseded by B505B self-audit findings before any qualifying human review. Automation/owner/agent review alone is not sufficient.
-- [ ] B505A008 Record every finding/residual risk and reopen B505 implementation authority only if the final exact reviewed canonical security semantics have no unresolved blocker.
+- [x] B505A007 Historical review-only PR #124 is preserved as superseded by B505B self-audit findings. Human crypto/security review is no longer a mandatory authority gate under the forward-only owner governance amendment; no historical review is retroactively reclassified.
+- [x] B505A008 Preserve every known finding/residual risk and require all known blocking findings to be resolved by exact repository evidence before implementation authority opens; human-review disposition is not required.
 
 ## B505B Round 5 self-audit remediation
 
@@ -214,7 +214,7 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 - [x] B505B004 Push final successor `dda3f8199c20808c3f7ad741276ec23b6fe97e8e`; PR #126 exact-head CI `34745347276` and R3 `34745347210` succeeded on attempt 1, and the predecessor parser finding was repaired forward-only and reconciled on the exact successor.
 - [x] B505B005 Merge only with explicit expected-head protection; PR #126 merged exact accepted head as canonical `840e45ee24b59cab4d8f5d244195b035590194dd` with accepted tree `9f96acce324f86d1b5f615a683e882c9b9ad9877` and verified parentage/signature. The first automatic post-merge CI/R3 pair `34745934498` / `34745934479` was cancelled by `cancel-in-progress: true` when a second independent `push`, attempt-1 pair for the same exact SHA started and is preserved as CANCELLED, not PASS. The second exact-SHA push pair CI `34745974030` and R3 `34745974034` succeeded on attempt 1 with all applicable jobs SUCCESS.
 - [x] B505B006 Close/supersede review-only PR #124 and create review-only PR #127 whose head pointed directly to canonical `840e45ee24b59cab4d8f5d244195b035590194dd` with no review-content commit.
-- [ ] B505B007 Obtain the required genuinely independent substantive human crypto/security disposition. This B505B review target was superseded before any qualifying human review because advisory exact-SHA review on PR #127 returned `CHANGES_REQUIRED / B505-R5-001`; do not count PR #127 as approval.
+- [x] B505B007 Preserve PR #127 as superseded after advisory exact-SHA `CHANGES_REQUIRED / B505-R5-001`. The finding remains authoritative defect evidence and was remediated by B505C; no human-review disposition is required by current governance.
 
 ## B505C cross-generation existing-device restore remediation
 
@@ -223,10 +223,18 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 - [x] B505C003 Locally qualify the exact final B505C docs/design/evidence/state candidate with diff/control-byte checks, provenance/generated/dependency closure, fmt, clippy, full workspace tests, and Linux provenance self-test while preserving any genuine Windows-local self-test failure as NOT PASS.
 - [x] B505C004 Push exact successor `86e1ca32e4ffe07997faea95d303e0c7070c2a01`; PR #128 original-attempt CI `34773389089` and R3 `34773389224` both succeeded on attempt 1. CodeRabbit finding `4000424365` was reconciled against the already-completed final exact-byte qualification, reply `4000445399` recorded the proof, and the review thread was resolved without changing the accepted head.
 - [x] B505C005 Merge PR #128 only with explicit expected-head protection. GitHub returned canonical merge `8a481181791cf0532a730e6ee8734ef745284ab2`, tree `dddcdaf8da1422139ede7cbbfa3c3e565dad48fd`, parents `840e45ee24b59cab4d8f5d244195b035590194dd` + `86e1ca32e4ffe07997faea95d303e0c7070c2a01`, and verified/valid signature. Exact-SHA push-triggered CI `34774241626` and R3 `34774241687` both succeeded on attempt 1; no cancellation or rerun is represented as PASS.
-- [ ] B505C006 After this state-only reconciliation itself becomes canonical-qualified, create a fresh review-only PR whose head points directly to that reconciliation's exact canonical merge SHA with no review-content commit. PR #129 targeted the pre-reconciliation B505C canonical SHA and MUST be closed/superseded without merge once the successor review target exists; PR #127 remains superseded/closed.
-- [ ] B505C007 Obtain a genuinely independent substantive human crypto/security review of the exact post-reconciliation B505C canonical SHA with no unresolved blocker. Automation, owner review, authoring agent review, CI/R3, CodeRabbit, Cubic, or Qodo alone are insufficient. Once B505C006 and B505C007 are externally proven on that exact canonical SHA, authority resolves directly to `B505_ONLY` without another repository state mutation.
+- [x] B505C006 Reconciliation became canonical-qualified as `ae614bf6b4c5231ddf228ab058ab4caf265e98d9`; review-only PR #131 was created with that exact canonical head and PR #129 was closed/superseded without merge.
+- [x] B505C007 Retired as a mandatory gate by the forward-only owner governance amendment. PR #131 and issue #132 remain historical review-request evidence only and are closed as no longer required; no human approval is inferred or fabricated.
 
-- [ ] B505 Implement only the independently approved final Round 5 opaque portable backup/restore packaging, B503-integrated cross-generation restore rebase, and exact provider-visible metadata allowlist/adversarial qualification.
+## B505D owner governance amendment
+
+- [x] B505D001 Record the owner directive that independent human crypto/security review is not a mandatory Specification 004 authority or closeout gate. Preserve all historical review findings and never reclassify missing/failed review as PASS.
+- [ ] B505D002 Exact-byte qualify this governance amendment with diff/control-byte checks, provenance/generated/dependency closure, fmt, clippy, full workspace tests, and Linux provenance self-test; preserve any genuine failure as NOT PASS.
+- [ ] B505D003 Obtain original-attempt PR CI/R3 on the exact amendment head and reconcile all actionable findings without weakening technical gates.
+- [ ] B505D004 Merge only with explicit expected-head protection, verify exact parent/tree/signature, and require original-attempt post-merge CI/R3 SUCCESS on the canonical amendment SHA.
+- [ ] B505D005 After B505D004 is proven, resolve authority directly to `B505_ONLY` and begin the bounded B505 implementation without a human-review prerequisite.
+
+- [ ] B505 Implement only the final canonical Round 5 opaque portable backup/restore packaging, B503-integrated cross-generation restore rebase, and exact provider-visible metadata allowlist/adversarial qualification.
 - [ ] B506 Implement active-vault deletion across canonical/derived/temp/wrap surfaces while preserving detached-backup and physical-erasure limitations.
 
 ## R3 qualification
@@ -239,7 +247,7 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 - [ ] Q006 Interrupted genesis/rotation/recovery/restore phase evidence.
 - [ ] Q007 Backup/filesystem/secret-store metadata allowlist and secret/log/crash-output leakage evidence.
 - [ ] Q008 Platform capability evidence; no universal app-exclusive, user-presence, atomic-anchor, or hardware-backed claim.
-- [ ] Q009 Independent substantive crypto/security review of exact implementation revision.
+- [x] Q009 Independent human crypto/security review is not a mandatory completion gate under the forward-only owner governance amendment. Historical review evidence remains preserved; known findings still require explicit resolution, and CI/R3/adversarial qualification remain mandatory.
 - [ ] Q010 Reconcile all blocking findings, reviews, threads, comments, diff, `main`, and mergeability.
 - [ ] Q011 Merge with exact expected head and verify canonical parentage.
 - [ ] Q012 Require post-merge CI and R3 SUCCESS.
