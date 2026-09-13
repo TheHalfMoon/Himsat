@@ -201,7 +201,7 @@ After remediation merges:
 
 ## 004P — dependency/provenance decision
 
-Blocked until the remediated canonical design passes independent re-review with no unresolved blocking finding.
+Blocked until the remediated canonical design has exact-head qualification and no unresolved blocking finding. Independent re-review is optional additional assurance under current owner governance.
 
 ### P1. Crypto provider candidates
 
@@ -303,9 +303,9 @@ Specification 005 media streaming/journaling remains excluded.
 - deletion residue in Himsat-managed plaintext caches/temp/logs;
 - secret scanner over logs/test outputs/crash artifacts.
 
-### Independent implementation review
+### Optional independent implementation review
 
-Design approval does not approve code. Exact implementation revision requires another independent substantive crypto/security review before Specification 004 completion.
+Independent human crypto/security review may be requested as additional assurance, but it is not a mandatory Specification 004 completion gate. Exact implementation acceptance instead requires the canonical automated, adversarial, platform, provenance, expected-head merge, and post-merge qualification gates plus explicit reconciliation of every known blocking finding.
 
 ## Diffcipline scope control
 

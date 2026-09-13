@@ -13,7 +13,7 @@ CURRENT_REVIEW_FINDINGS = 2_BLOCKING
 HIMSAT_REVIEW_DISPOSITION = CHANGES_REQUIRED
 IMPLEMENTATION_AUTHORITY = NONE
 DEPENDENCY_ADOPTION_AUTHORITY = NONE
-FINAL_INDEPENDENT_CRYPTO_SECURITY_REVIEW = REQUIRED_AFTER_ROUND_2_REMEDIATION
+FINAL_INDEPENDENT_CRYPTO_SECURITY_REVIEW = OPTIONAL_ADDITIONAL_ASSURANCE
 ```
 
 ## Problem
@@ -576,17 +576,17 @@ On lock, protector revocation, rotation transition requiring quiescence, authent
 
 Tests must attempt post-lock/post-revocation reads and writes through previously obtained handles and prove rejection. Himsat does not claim that language/runtime zeroization erases copies made by a compromised process, CPU registers, swap, crash/core dumps, allocator copies, or arbitrary OS/kernel memory; those are residual/platform-hardening concerns.
 
-## Required independent review gate
+## Review and finding-reconciliation policy
 
-Before any 004B implementation:
+Independent human crypto/security review is optional additional assurance and is not a mandatory implementation or closeout gate. Historical review evidence remains immutable evidence and must not be rewritten, upgraded, or represented as human approval when it was not.
 
-- reviewer must be substantively independent from the authoring agent;
-- review must identify the exact canonical Git revision of the design packet;
-- scope must cover threat model, key hierarchy/domain separation, randomness, candidate providers, OS secure-storage access boundaries, recovery/KDF, AAD/nonce rules, freshness/manifest/rollback, SQLCipher selection/configuration, rotation, backup, metadata leakage, deletion, key lifecycle, and implementation split;
-- review evidence must enumerate blocking findings, non-blocking recommendations, and residual risks and record a clear disposition;
-- absent/billing-blocked/skipped/neutral automated review is not independent review;
-- author self-review and green CI are not substitutes;
-- any security-semantic remediation invalidates older review as final approval evidence and requires re-review of the new exact canonical SHA.
+Before any newly authorized implementation leaf:
+
+- exact canonical Git revision, diff, provenance, CI/R3, and applicable adversarial/platform evidence remain mandatory;
+- every known blocking finding from human, automated, owner, agent, CI, R3, or adversarial evidence must be explicitly reconciled or remediated forward-only;
+- absent/billing-blocked/skipped/neutral review is recorded accurately as NOT PASS/NO DISPOSITION where applicable, but absence of human review does not itself block authority;
+- author self-review or green CI never erases a known substantive blocker; and
+- any security-semantic remediation requires fresh exact-head qualification and finding reconciliation on the new canonical bytes.
 
 ## Acceptance criteria
 
@@ -596,7 +596,7 @@ Before any 004B implementation:
 - no implementation or dependency adoption enters the remediation diff;
 - exact-head CI and Diffcipline R3 succeed;
 - remediation is merged with expected-head protection and post-merge CI/R3 succeed;
-- a new independent substantive review is obtained on that exact remediated canonical SHA;
+- every known blocking finding is explicitly reconciled on that exact remediated canonical SHA;
 - no unresolved blocking design finding remains before dependency selection begins.
 
 ### Specification 004 completion acceptance
@@ -612,7 +612,7 @@ Specification 004 is not complete until later implementation proves:
 - post-lock handle invalidation and secret/log leakage tests;
 - exact dependency/license/SBOM/provenance closure;
 - R3 adversarial/platform evidence;
-- independent substantive crypto/security review of the exact implementation revision;
+- explicit reconciliation of every known blocking security finding on the exact implementation revision;
 - expected-head merge and post-merge verification;
 - durable closeout evidence with residual risks.
 

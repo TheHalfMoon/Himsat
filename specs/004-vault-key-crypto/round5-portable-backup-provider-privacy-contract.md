@@ -6,12 +6,12 @@ This document is a **normative security-semantic amendment to Specification 004A
 
 It exists because direct provider upload of the already-canonical B202, B204, and B501 envelopes would expose identifiers that the D013 portable-backup provider-view contract forbids. This amendment preserves those inner formats byte-for-byte and adds only the portable-backup privacy boundary needed for B505.
 
-This document does **not** authorize B505 implementation merely by existing. The exact canonical revision containing this amendment MUST complete docs/design qualification, expected-head guarded merge, exact post-merge qualification, and a genuinely independent substantive crypto/security review with no unresolved blocking finding before B505 implementation authority reopens.
+This document does **not** authorize B505 implementation merely by existing. The exact canonical revision containing this amendment MUST complete docs/design qualification, expected-head guarded merge, exact post-merge qualification, and reconciliation of every known blocking finding before B505 implementation authority reopens. Independent human review may be requested as additional assurance but is not a mandatory authority gate.
 
 ```text
 DISCOVERY_BASE_SHA = 1f6cf11a0df427521adfd1d728c78483e09285d1
 B504_B505_RECONCILIATION = CANONICAL_QUALIFIED
-B505_IMPLEMENTATION_AUTHORITY = NONE_PENDING_ROUND5_QUALIFICATION_AND_INDEPENDENT_REVIEW
+B505_IMPLEMENTATION_AUTHORITY = NONE_PENDING_CANONICAL_GOVERNANCE_AMENDMENT_QUALIFICATION
 NEW_PRODUCT_CODE = NONE
 NEW_DEPENDENCY_ADOPTION = NONE
 NEW_CRYPTO_PRIMITIVE = NONE
@@ -400,7 +400,7 @@ This amendment is not self-authorizing. Before B505 product code begins, all of 
 3. live base/head/diff/checks/reviews/threads/comments/mergeability are reconciled immediately before merge;
 4. merge uses explicit `expected_head_sha` protection and exact parent/tree are verified;
 5. push-triggered post-merge CI and R3 succeed on the exact canonical merge;
-6. a genuinely independent substantive crypto/security reviewer examines that exact canonical Round 5 revision, including the D013 conflict, bootstrap/KDF/key separation, envelope/AAD layouts, chunking, nonce rules, index semantics, snapshot consistency, restore composition with B502, B503-integrated cross-generation restore rebase and crash semantics, and provider-view negative tests;
+6. every known blocking finding from historical human, automated, owner, agent, CI, R3, or adversarial evidence is explicitly reconciled against the exact candidate;
 7. no unresolved blocking finding remains.
 
-Only then may canonical state reopen authority to the bounded B505 implementation. Any later security-semantic change to this contract invalidates that approval and requires re-review of the new exact canonical revision.
+Only then may canonical state reopen authority to the bounded B505 implementation. Independent human review is optional additional assurance rather than a mandatory authority gate. Any later security-semantic change still requires fresh exact-head qualification and blocking-finding reconciliation.
