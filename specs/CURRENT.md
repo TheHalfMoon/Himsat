@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_004_B505C_CROSS_GENERATION_RESTORE_REMEDIATION
+PROGRAM_STATE = SPEC_004_B505C_CANONICAL_RECONCILIATION_PENDING_HUMAN_REVIEW
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -121,9 +121,18 @@ B505B_POSTMERGE_CI = 34745974030_SUCCESS_PUSH_ATTEMPT_1
 B505B_POSTMERGE_R3 = 34745974034_SUCCESS_PUSH_ATTEMPT_1
 B505B_REVIEW_ONLY_PR = 127_SUPERSEDED_CHANGES_REQUIRED_B505_R5_001
 B505C_BLOCKING_FINDING = B505_R5_001_CROSS_GENERATION_EXISTING_DEVICE_RESTORE
-NEXT_IMPLEMENTATION_LEAF = NONE_PENDING_B505C_ROUND5_REMEDIATION_AND_HUMAN_SECURITY_REVIEW
-SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_PENDING_B505C_CANONICAL_QUALIFICATION_AND_INDEPENDENT_HUMAN_SECURITY_REVIEW
-PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_B505C_REMEDIATION_AND_REVIEW
+B505C_ACCEPTED_HEAD = 86e1ca32e4ffe07997faea95d303e0c7070c2a01
+B505C_ACCEPTED_TREE = dddcdaf8da1422139ede7cbbfa3c3e565dad48fd
+B505C_PREMERGE_CI = 34773389089_SUCCESS_ATTEMPT_1
+B505C_PREMERGE_R3 = 34773389224_SUCCESS_ATTEMPT_1
+B505C_CANONICAL_MERGE = 8a481181791cf0532a730e6ee8734ef745284ab2
+B505C_POSTMERGE_CI = 34774241626_SUCCESS_PUSH_ATTEMPT_1
+B505C_POSTMERGE_R3 = 34774241687_SUCCESS_PUSH_ATTEMPT_1
+B505C_PRE_RECONCILIATION_REVIEW_ONLY_PR = 129_AUTOMATED_APPROVE_NOT_HUMAN_GATE
+B505C_CANONICAL_QUALIFICATION = PROVEN_PENDING_STATE_RECONCILIATION
+NEXT_IMPLEMENTATION_LEAF = NONE_PENDING_B505C_POST_RECONCILIATION_REVIEW_ONLY_AND_HUMAN_SECURITY_REVIEW
+SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_PENDING_B505C_POST_RECONCILIATION_EXACT_SHA_HUMAN_SECURITY_REVIEW
+PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_B505C_POST_RECONCILIATION_HUMAN_REVIEW
 SPEC_005_AUTHORITY = BLOCKED_PENDING_SPEC_004_CLOSEOUT
 DONOR_CODE_ADOPTION_AUTHORITY = NONE
 RELEASE_AUTHORITY = NONE
@@ -134,7 +143,7 @@ Live GitHub/repository truth overrides this file whenever repository state chang
 
 ## Canonical Specification 004 authority
 
-Specification 004A has an exact independently reviewed pre-Round-5 design. Review-only PR #29 examined canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE` with no unresolved blocking finding. `round3-normative-contracts.md` remains controlling for recovery, bounded-blob, freshness, nonce, and rotation contracts, and `round4-blob-inventory-contract.md` remains controlling for `GENERIC_ARTIFACT_BLOB` canonical stored-object and manifest-inventory semantics. Initial Round 5 provider-privacy semantics became canonical and post-merge qualified at `52544ad82f2f2071c470183d6788b5334a19a5d3`; pre-implementation self-audit then identified seven security-semantic gaps recorded in `b505b-round5-self-audit-remediation-evidence.md`. B505B repaired those gaps forward-only and became canonical as `840e45ee24b59cab4d8f5d244195b035590194dd` from accepted head `dda3f8199c20808c3f7ad741276ec23b6fe97e8e`, with exact-head and post-merge CI/R3 qualification. Review-only PR #127 then received advisory exact-SHA `CHANGES_REQUIRED` finding `B505-R5-001` before any qualifying human review: existing-device restore did not compose with canonical B502 after a completed VRK rotation. PR #127 is therefore superseded and cannot open B505 authority. B505C is the active forward-only design remediation defining a B503-integrated cross-generation restore rebase into the already-current generation before B502 final freshness republication. B505 remains blocked until B505C becomes canonical-qualified and receives the required genuinely independent substantive human security review with no unresolved blocker.
+Specification 004A has an exact independently reviewed pre-Round-5 design. Review-only PR #29 examined canonical SHA `5fe8a99b0d8a623cda6a73a9ea8ed39cba957d98` and returned `APPROVE` with no unresolved blocking finding. `round3-normative-contracts.md` remains controlling for recovery, bounded-blob, freshness, nonce, and rotation contracts, and `round4-blob-inventory-contract.md` remains controlling for `GENERIC_ARTIFACT_BLOB` canonical stored-object and manifest-inventory semantics. Initial Round 5 provider-privacy semantics became canonical and post-merge qualified at `52544ad82f2f2071c470183d6788b5334a19a5d3`; pre-implementation self-audit then identified seven security-semantic gaps recorded in `b505b-round5-self-audit-remediation-evidence.md`. B505B repaired those gaps forward-only and became canonical as `840e45ee24b59cab4d8f5d244195b035590194dd` from accepted head `dda3f8199c20808c3f7ad741276ec23b6fe97e8e`, with exact-head and post-merge CI/R3 qualification. Review-only PR #127 then received advisory exact-SHA `CHANGES_REQUIRED` finding `B505-R5-001` before any qualifying human review: existing-device restore did not compose with canonical B502 after a completed VRK rotation. PR #127 is therefore superseded and cannot open B505 authority. B505C is the active forward-only design remediation defining a B503-integrated cross-generation restore rebase into the already-current generation before B502 final freshness republication. B505C design remediation is canonical-qualified at `8a481181791cf0532a730e6ee8734ef745284ab2`; this forward-only state reconciliation records that proven lineage without changing any B505 design or product byte. After this reconciliation itself becomes exact-head merged, exact parent/tree verified, and post-merge CI/R3 qualified, a new review-only PR MUST point directly to that reconciliation canonical SHA with no review-content commit. If and only if a genuinely independent human crypto/security reviewer returns `APPROVE` with no unresolved blocker on that exact SHA, conditional authority resolves directly to `B505_ONLY` without another repository state mutation. Until then B505 remains blocked.
 
 Specification 004P is closed canonically. The reviewed dependency closure already contains the exact providers required by B301-B307; this reconciliation adopts no dependency and changes no provider/provenance bytes.
 
@@ -770,7 +779,7 @@ Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3
   -> B503/B504 state reconciliation           CANONICAL_QUALIFIED
   -> B504 rotation commit-point fault injection CANONICAL_QUALIFIED
   -> B504/B505 state reconciliation           CANONICAL_QUALIFIED
-  -> B505C cross-generation restore remediation ACTIVE_PENDING_CANONICAL_QUALIFICATION
+  -> B505C cross-generation restore remediation CANONICAL_QUALIFIED_PENDING_STATE_RECONCILIATION_AND_HUMAN_REVIEW
   -> B505 opaque portable backup/restore      BLOCKED_PENDING_B505C_HUMAN_SECURITY_REVIEW
   -> B506 active-vault deletion               BLOCKED_PENDING_PRIOR_LEAF
   -> Q001-Q012 exact implementation review/R3 BLOCKED_PENDING_IMPLEMENTATION
