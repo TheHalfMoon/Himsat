@@ -50,6 +50,8 @@ pub mod vault_backup_index;
 
 /// B505 immutable provider publication and reread-acceptance boundary.
 pub mod vault_backup_provider;
+/// Portable-backup fresh-device restore preparation.
+pub mod vault_backup_restore;
 
 pub mod vault_backup_packaging;
 
