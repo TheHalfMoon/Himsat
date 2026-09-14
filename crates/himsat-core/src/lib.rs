@@ -49,6 +49,8 @@ pub mod vault_backup_index;
 /// B505 immutable provider publication and reread-acceptance boundary.
 pub mod vault_backup_provider;
 
+pub mod vault_backup_packaging;
+
 /// Canonical staged SQLCipher verification for authenticated portable backups.
 pub mod vault_backup_sqlcipher;
 /// B505 provider reconstruction and pre-SQLCipher semantic verification.

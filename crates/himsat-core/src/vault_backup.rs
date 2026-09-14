@@ -426,6 +426,12 @@ fn parse_backup_object(envelope: &[u8]) -> Result<ParsedBackupObject<'_>, Backup
         ciphertext: &envelope[BACKUP_OBJECT_HEADER_BYTES..],
     })
 }
+/// Returns the public nonce from one structurally valid B505 object envelope.
+/// This does not authenticate or decrypt the ciphertext.
+pub fn backup_object_nonce(envelope: &[u8]) -> Result<[u8; BACKUP_NONCE_BYTES], BackupCodecError> {
+    Ok(parse_backup_object(envelope)?.nonce)
+}
+
 pub fn validate_backup_object_binding(
     provider_key: &str,
     expected_context: BackupObjectContext,
