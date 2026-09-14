@@ -40,6 +40,9 @@ pub mod vault_blob;
 /// B505 opaque portable-backup provider codec/key foundation.
 pub mod vault_backup;
 
+/// B505 encrypted portable-backup index codec and authenticated binding.
+pub mod vault_backup_index;
+
 /// B105 lease-gated database/blob read/write wrappers and stale-handle proof.
 pub mod vault_io;
 
