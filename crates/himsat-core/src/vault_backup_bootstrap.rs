@@ -348,8 +348,8 @@ pub fn recover_backup_recovery_bootstrap(
         plaintext.zeroize();
         return Err(BackupBootstrapError::CorruptOrTampered);
     }
-    let recovered = decrypt_recovery_envelope(context, passphrase, &plaintext)
-        .map_err(map_recovery_error);
+    let recovered =
+        decrypt_recovery_envelope(context, passphrase, &plaintext).map_err(map_recovery_error);
     plaintext.zeroize();
     let vrk = recovered?;
     Ok(RecoveredBackupBootstrap { context, vrk })
