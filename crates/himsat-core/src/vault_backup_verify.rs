@@ -326,10 +326,12 @@ fn matching_manifest_object<'a, E>(
         }
     }
     let (index, object) = found.ok_or(BackupSemanticError::CorruptOrTampered)?;
-    if !matched.insert(index)
-        || object.storage_id() != payload.source_storage_id()
-        || object.ciphertext_length() != payload.exact_payload_length()
-        || object.ciphertext_sha256() != payload.exact_payload_sha256()
+    if !matched.insert(index) || object.storage_id() != payload.source_storage_id() {
+        return Err(BackupSemanticError::CorruptOrTampered);
+    }
+    if expected_kind == ManifestObjectKind::GenericArtifactBlob
+        && (object.ciphertext_length() != payload.exact_payload_length()
+            || object.ciphertext_sha256() != payload.exact_payload_sha256())
     {
         return Err(BackupSemanticError::CorruptOrTampered);
     }
@@ -576,7 +578,12 @@ mod tests {
         structured_bytes: Vec<u8>,
     }
 
-    fn fixture(unstable: bool, mismatched_blob_storage: bool) -> Fixture {
+    fn fixture(
+        unstable: bool,
+        mismatched_blob_storage: bool,
+        structured_inventory_matches_snapshot: bool,
+        mismatched_structured_storage: bool,
+    ) -> Fixture {
         let vault = vault_id();
         let source_generation = generation(7);
         let vrk = OwnedKeyMaterial::from_bytes([0x11; 32]);
@@ -593,6 +600,11 @@ mod tests {
         )
         .unwrap();
         let structured_bytes = b"encrypted SQLCipher fixture bytes pending B505J".to_vec();
+        let structured_inventory_bytes = if structured_inventory_matches_snapshot {
+            structured_bytes.as_slice()
+        } else {
+            b"pre-checkpoint SQLCipher inventory bytes"
+        };
 
         let mut generations = vec![ManifestGeneration::new(
             source_generation,
@@ -625,8 +637,8 @@ mod tests {
                     [0_u8; 16],
                     structured_storage,
                     source_generation,
-                    u64::try_from(structured_bytes.len()).unwrap(),
-                    sha(&structured_bytes),
+                    u64::try_from(structured_inventory_bytes.len()).unwrap(),
+                    sha(structured_inventory_bytes),
                     ManifestAuthMetadata::StructuredStore,
                 ),
             ],
@@ -661,6 +673,11 @@ mod tests {
         } else {
             blob_storage
         };
+        let structured_index_storage = if mismatched_structured_storage {
+            [0x89; 16]
+        } else {
+            structured_storage
+        };
         let index = crate::vault_backup_index::BackupIndexPlaintext::new(
             vault,
             source_generation,
@@ -677,7 +694,7 @@ mod tests {
                 payload(
                     BackupIndexPayloadKind::StructuredStore,
                     [0; 16],
-                    structured_storage,
+                    structured_index_storage,
                     &structured_bytes,
                     structured_object_id,
                 ),
@@ -732,7 +749,7 @@ mod tests {
 
     #[test]
     fn reconstructs_manifest_and_b202_before_sqlcipher() {
-        let mut fixture = fixture(false, false);
+        let mut fixture = fixture(false, false, true, false);
         let mut staged = Vec::new();
         let verified = verify_backup_semantics_before_sqlcipher(
             &mut fixture.provider,
@@ -766,7 +783,39 @@ mod tests {
 
     #[test]
     fn authenticated_index_storage_mismatch_is_rejected() {
-        let mut fixture = fixture(false, true);
+        let mut fixture = fixture(false, true, true, false);
+        assert_eq!(
+            verify_backup_semantics_before_sqlcipher(
+                &mut fixture.provider,
+                &fixture.descriptor,
+                PASSPHRASE,
+                &mut Vec::new(),
+            )
+            .err(),
+            Some(BackupSemanticError::CorruptOrTampered)
+        );
+    }
+
+    #[test]
+    fn post_checkpoint_structured_snapshot_identity_may_differ_from_manifest_inventory() {
+        let mut fixture = fixture(false, false, false, false);
+        let mut staged = Vec::new();
+        let verified = verify_backup_semantics_before_sqlcipher(
+            &mut fixture.provider,
+            &fixture.descriptor,
+            PASSPHRASE,
+            &mut staged,
+        )
+        .expect(
+            "post-checkpoint SQLCipher snapshot remains bound by authenticated storage identity",
+        );
+        assert_eq!(staged, fixture.structured_bytes);
+        assert_eq!(verified.structured_store_source_storage_id(), [0x66; 16]);
+    }
+
+    #[test]
+    fn post_checkpoint_structured_snapshot_still_requires_exact_storage_binding() {
+        let mut fixture = fixture(false, false, false, true);
         assert_eq!(
             verify_backup_semantics_before_sqlcipher(
                 &mut fixture.provider,
@@ -781,7 +830,7 @@ mod tests {
 
     #[test]
     fn provider_object_tamper_fails_outer_authentication() {
-        let mut fixture = fixture(false, false);
+        let mut fixture = fixture(false, false, true, false);
         let key = object_provider_key(set_id(), object_id(3));
         let object = fixture.provider.objects.get_mut(&key).unwrap();
         *object.last_mut().unwrap() ^= 0x01;
@@ -799,7 +848,7 @@ mod tests {
 
     #[test]
     fn authenticated_rotation_state_is_not_export_stable() {
-        let mut fixture = fixture(true, false);
+        let mut fixture = fixture(true, false, true, false);
         assert_eq!(
             verify_backup_semantics_before_sqlcipher(
                 &mut fixture.provider,

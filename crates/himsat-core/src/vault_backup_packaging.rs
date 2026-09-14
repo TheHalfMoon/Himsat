@@ -22,7 +22,7 @@ use crate::vault_manifest::{
 };
 use crate::vault_recovery::RecoveryContext;
 use crate::vault_sqlcipher::{
-    SqlCipherIntegrityError, SqlCipherOpenError, open_sqlcipher_database,
+    SqlCipherBackupSnapshot, SqlCipherIntegrityError, SqlCipherOpenError, open_sqlcipher_database,
 };
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
@@ -56,9 +56,21 @@ pub enum BackupPackagingError {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+enum BackupSourceVerification {
+    ManifestExact,
+    SqlCipherSnapshot {
+        source_precheckpoint_byte_length: u64,
+        source_precheckpoint_sha256: [u8; 32],
+        snapshot_byte_length: u64,
+        snapshot_sha256: [u8; 32],
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BackupSourceFile {
     storage_id: [u8; 16],
     path: PathBuf,
+    verification: BackupSourceVerification,
 }
 
 impl BackupSourceFile {
@@ -66,6 +78,24 @@ impl BackupSourceFile {
         Self {
             storage_id,
             path: path.into(),
+            verification: BackupSourceVerification::ManifestExact,
+        }
+    }
+
+    #[must_use]
+    pub fn from_sqlcipher_snapshot(
+        storage_id: [u8; 16],
+        snapshot: &SqlCipherBackupSnapshot,
+    ) -> Self {
+        Self {
+            storage_id,
+            path: snapshot.path().to_path_buf(),
+            verification: BackupSourceVerification::SqlCipherSnapshot {
+                source_precheckpoint_byte_length: snapshot.source_precheckpoint_byte_length(),
+                source_precheckpoint_sha256: snapshot.source_precheckpoint_sha256(),
+                snapshot_byte_length: snapshot.byte_length(),
+                snapshot_sha256: snapshot.sha256(),
+            },
         }
     }
 }
@@ -506,7 +536,7 @@ pub fn prepare_disk_backed_backup_set(
         .map_err(|_| BackupPackagingError::ResourceLimit)?;
     for source in source_files {
         if source_by_storage
-            .insert(source.storage_id, &source.path)
+            .insert(source.storage_id, source)
             .is_some()
         {
             return Err(BackupPackagingError::SourceMapMismatch);
@@ -516,7 +546,7 @@ pub fn prepare_disk_backed_backup_set(
         return Err(BackupPackagingError::SourceMapMismatch);
     }
 
-    let mut structured_store: Option<(&ManifestObject, &PathBuf)> = None;
+    let mut structured_store: Option<(&ManifestObject, &PathBuf, u64, [u8; 32])> = None;
     let mut generic_artifacts = Vec::new();
     generic_artifacts
         .try_reserve(manifest.objects().len())
@@ -527,30 +557,63 @@ pub fn prepare_disk_backed_backup_set(
     )?;
 
     for object in manifest.objects() {
-        let path = source_by_storage
+        let source = source_by_storage
             .get(&object.storage_id())
             .copied()
             .ok_or(BackupPackagingError::SourceMapMismatch)?;
+        let path = &source.path;
         let identity = file_identity(path)?;
-        if identity != (object.ciphertext_length(), object.ciphertext_sha256()) {
-            return Err(BackupPackagingError::SourceIdentityMismatch);
-        }
-        expected_object_count = expected_object_count
-            .checked_add(checked_chunk_count(object.ciphertext_length())?)
-            .ok_or(BackupPackagingError::ResourceLimit)?;
-        if expected_object_count > BACKUP_DATA_OBJECT_COUNT_MAX {
-            return Err(BackupPackagingError::ResourceLimit);
-        }
-        match (object.kind(), object.auth_metadata()) {
-            (ManifestObjectKind::StructuredStore, ManifestAuthMetadata::StructuredStore) => {
-                if structured_store.replace((object, path)).is_some() {
+        let payload_length = match (object.kind(), object.auth_metadata(), &source.verification) {
+            (
+                ManifestObjectKind::StructuredStore,
+                ManifestAuthMetadata::StructuredStore,
+                BackupSourceVerification::ManifestExact,
+            ) => {
+                if identity != (object.ciphertext_length(), object.ciphertext_sha256()) {
+                    return Err(BackupPackagingError::SourceIdentityMismatch);
+                }
+                if structured_store
+                    .replace((object, path, identity.0, identity.1))
+                    .is_some()
+                {
                     return Err(BackupPackagingError::CorruptOrTampered);
                 }
+                identity.0
+            }
+            (
+                ManifestObjectKind::StructuredStore,
+                ManifestAuthMetadata::StructuredStore,
+                BackupSourceVerification::SqlCipherSnapshot {
+                    source_precheckpoint_byte_length,
+                    source_precheckpoint_sha256,
+                    snapshot_byte_length,
+                    snapshot_sha256,
+                },
+            ) => {
+                if (
+                    *source_precheckpoint_byte_length,
+                    *source_precheckpoint_sha256,
+                ) != (object.ciphertext_length(), object.ciphertext_sha256())
+                    || (*snapshot_byte_length, *snapshot_sha256) != identity
+                {
+                    return Err(BackupPackagingError::SourceIdentityMismatch);
+                }
+                if structured_store
+                    .replace((object, path, identity.0, identity.1))
+                    .is_some()
+                {
+                    return Err(BackupPackagingError::CorruptOrTampered);
+                }
+                identity.0
             }
             (
                 ManifestObjectKind::GenericArtifactBlob,
                 ManifestAuthMetadata::GenericArtifactBlob { nonce },
+                BackupSourceVerification::ManifestExact,
             ) => {
+                if identity != (object.ciphertext_length(), object.ciphertext_sha256()) {
+                    return Err(BackupPackagingError::SourceIdentityMismatch);
+                }
                 let envelope = read_exact_bounded_file(
                     path,
                     object.ciphertext_length(),
@@ -572,17 +635,24 @@ pub fn prepare_disk_backed_backup_set(
                     .map_err(|_| BackupPackagingError::CorruptOrTampered)?;
                 plaintext.zeroize();
                 generic_artifacts.push((object, path));
+                object.ciphertext_length()
             }
             _ => return Err(BackupPackagingError::CorruptOrTampered),
+        };
+        expected_object_count = expected_object_count
+            .checked_add(checked_chunk_count(payload_length)?)
+            .ok_or(BackupPackagingError::ResourceLimit)?;
+        if expected_object_count > BACKUP_DATA_OBJECT_COUNT_MAX {
+            return Err(BackupPackagingError::ResourceLimit);
         }
     }
 
-    let (structured_object, structured_path) =
+    let (structured_object, structured_path, structured_length, structured_sha256) =
         structured_store.ok_or(BackupPackagingError::CorruptOrTampered)?;
     verify_structured_store(
         structured_path,
-        structured_object.ciphertext_length(),
-        structured_object.ciphertext_sha256(),
+        structured_length,
+        structured_sha256,
         active_vrk,
         manifest.vault_id(),
         active_generation,
@@ -623,8 +693,8 @@ pub fn prepare_disk_backed_backup_set(
     let mut structured_reader = regular_file(structured_path)?;
     payloads.push(package_payload(
         &mut structured_reader,
-        structured_object.ciphertext_length(),
-        structured_object.ciphertext_sha256(),
+        structured_length,
+        structured_sha256,
         BackupIndexPayloadKind::StructuredStore,
         [0_u8; 16],
         structured_object.storage_id(),
@@ -694,7 +764,7 @@ pub fn prepare_disk_backed_backup_set(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vault::{FreshnessEpoch, ManifestHash, VaultId};
+    use crate::vault::{FreshnessEpoch, ManifestHash, VaultId, VaultLeaseIdentity};
     use crate::vault_backup::parse_set_descriptor;
     use crate::vault_manifest::{
         GenerationState, ManifestContext, ManifestGeneration, ManifestObject, ManifestPlaintext,
@@ -702,7 +772,11 @@ mod tests {
     };
     use crate::vault_nonce::NonceReservationLedger;
     use crate::vault_recovery::encrypt_recovery_envelope;
+    use crate::vault_sqlcipher::{
+        BackupSnapshotQuiescenceGuard, snapshot_quiesced_sqlcipher_database,
+    };
     use rusqlite::Connection;
+    use std::convert::Infallible;
     use std::fmt::Write as _;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -773,6 +847,138 @@ mod tests {
         )
         .unwrap()
         .1
+    }
+
+    struct QuiescedSnapshotGuard;
+
+    impl BackupSnapshotQuiescenceGuard for QuiescedSnapshotGuard {
+        type Error = Infallible;
+
+        fn assert_normal_writes_quiesced(&mut self) -> Result<(), Self::Error> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn wal_checkpoint_snapshot_is_bound_to_precheckpoint_manifest_identity() {
+        let key = OwnedKeyMaterial::from_bytes([0x32; 32]);
+        let source = unused_path("wal-binding-source.sqlite3");
+        let snapshot_path = unused_path("wal-binding-snapshot.sqlite3");
+        let staging = unused_path("wal-binding-staging");
+        let storage_id = [0x71; 16];
+
+        let connection = Connection::open(&source).unwrap();
+        connection.execute_batch(&raw_key_pragma(&key)).unwrap();
+        connection
+            .execute_batch("CREATE TABLE wal_binding_probe (value INTEGER NOT NULL);")
+            .unwrap();
+        let mode = connection
+            .query_row("PRAGMA journal_mode = WAL;", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .unwrap();
+        assert_eq!(mode, "wal");
+        connection
+            .execute_batch("PRAGMA wal_autocheckpoint = 0; PRAGMA wal_checkpoint(TRUNCATE);")
+            .unwrap();
+        let precheckpoint_identity = file_identity(&source).unwrap();
+        let manifest = fixture_manifest(
+            &key,
+            vec![ManifestObject::new(
+                [0_u8; 16],
+                storage_id,
+                generation(),
+                precheckpoint_identity.0,
+                precheckpoint_identity.1,
+                ManifestAuthMetadata::StructuredStore,
+            )],
+        );
+        connection
+            .execute_batch("BEGIN IMMEDIATE; INSERT INTO wal_binding_probe VALUES (42); COMMIT;")
+            .unwrap();
+        let wal = PathBuf::from(format!("{}-wal", source.display()));
+        assert!(std::fs::metadata(&wal).unwrap().len() > 0);
+
+        let lease = VaultLease::new(VaultLeaseIdentity::new(vault_id(), generation()));
+        let context =
+            KeyDerivationContext::new(vault_id(), generation(), KeyPurpose::StructuredStore);
+        let mut guard = QuiescedSnapshotGuard;
+        let snapshot = snapshot_quiesced_sqlcipher_database(
+            &mut guard,
+            &source,
+            &snapshot_path,
+            lease.keyed_handle_lease(),
+            context,
+            &key,
+        )
+        .unwrap();
+        assert_eq!(
+            (
+                snapshot.source_precheckpoint_byte_length(),
+                snapshot.source_precheckpoint_sha256(),
+            ),
+            precheckpoint_identity,
+        );
+        assert_ne!(
+            (snapshot.byte_length(), snapshot.sha256()),
+            precheckpoint_identity,
+        );
+
+        let recovery = encrypt_recovery_envelope(
+            &key,
+            RecoveryContext::new(vault_id(), generation()),
+            "correct horse battery staple",
+        )
+        .unwrap();
+        let mut wrong_precheckpoint_sha = precheckpoint_identity.1;
+        wrong_precheckpoint_sha[0] ^= 1;
+        let wrong_manifest = fixture_manifest(
+            &key,
+            vec![ManifestObject::new(
+                [0_u8; 16],
+                storage_id,
+                generation(),
+                precheckpoint_identity.0,
+                wrong_precheckpoint_sha,
+                ManifestAuthMetadata::StructuredStore,
+            )],
+        );
+        let rejected_staging = unused_path("wal-binding-rejected-staging");
+        assert!(matches!(
+            prepare_disk_backed_backup_set(
+                &key,
+                &recovery,
+                "correct horse battery staple",
+                &wrong_manifest,
+                &[BackupSourceFile::from_sqlcipher_snapshot(
+                    storage_id, &snapshot,
+                )],
+                &rejected_staging,
+            ),
+            Err(BackupPackagingError::SourceIdentityMismatch)
+        ));
+        assert!(!rejected_staging.exists());
+
+        let mut prepared = prepare_disk_backed_backup_set(
+            &key,
+            &recovery,
+            "correct horse battery staple",
+            &manifest,
+            &[BackupSourceFile::from_sqlcipher_snapshot(
+                storage_id, &snapshot,
+            )],
+            &staging,
+        )
+        .unwrap();
+        parse_set_descriptor(prepared.descriptor_bytes()).unwrap();
+        for index in 0..prepared.object_count() {
+            assert!(!prepared.read_object(index).unwrap().is_empty());
+        }
+
+        drop(connection);
+        std::fs::remove_dir_all(staging).unwrap();
+        let _ = std::fs::remove_file(source);
+        let _ = std::fs::remove_file(snapshot_path);
     }
 
     #[test]

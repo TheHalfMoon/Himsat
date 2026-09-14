@@ -182,6 +182,8 @@ pub trait BackupSnapshotQuiescenceGuard {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SqlCipherBackupSnapshot {
     path: PathBuf,
+    source_precheckpoint_byte_length: u64,
+    source_precheckpoint_sha256: [u8; 32],
     byte_length: u64,
     sha256: [u8; 32],
 }
@@ -190,6 +192,16 @@ impl SqlCipherBackupSnapshot {
     #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    #[must_use]
+    pub const fn source_precheckpoint_byte_length(&self) -> u64 {
+        self.source_precheckpoint_byte_length
+    }
+
+    #[must_use]
+    pub const fn source_precheckpoint_sha256(&self) -> [u8; 32] {
+        self.source_precheckpoint_sha256
     }
 
     #[must_use]
@@ -561,6 +573,11 @@ where
         source_handle
             .verify_integrity()
             .map_err(SqlCipherBackupSnapshotError::SourceIntegrity)?;
+        let source_precheckpoint_identity = backup_snapshot_file_identity(&source)
+            .map_err(|_| SqlCipherBackupSnapshotError::SourceRead)?;
+        guard
+            .assert_normal_writes_quiesced()
+            .map_err(SqlCipherBackupSnapshotError::Quiescence)?;
         source_handle
             .checkpoint_truncate_backup_wal()
             .map_err(SqlCipherBackupSnapshotError::Checkpoint)?;
@@ -638,6 +655,8 @@ where
         }
         Ok(SqlCipherBackupSnapshot {
             path: target.clone(),
+            source_precheckpoint_byte_length: source_precheckpoint_identity.0,
+            source_precheckpoint_sha256: source_precheckpoint_identity.1,
             byte_length: source_identity.0,
             sha256: source_identity.1,
         })
@@ -1190,6 +1209,14 @@ mod tests {
             fs::canonicalize(&target).unwrap().as_path()
         );
         assert_eq!(snapshot.byte_length(), fs::metadata(&target).unwrap().len());
+        assert_ne!(
+            (
+                snapshot.source_precheckpoint_byte_length(),
+                snapshot.source_precheckpoint_sha256(),
+            ),
+            (snapshot.byte_length(), snapshot.sha256()),
+            "committed WAL pages must change the stable main-database identity after checkpoint",
+        );
         assert!(guard.checks >= 5);
         assert!(fs::metadata(&wal).map(|m| m.len()).unwrap_or(0) == 0);
 
@@ -1292,7 +1319,7 @@ mod tests {
         let mut guard = SnapshotGuard {
             checks: 0,
             fail_at: None,
-            mutate_at: Some((4, source.clone())),
+            mutate_at: Some((5, source.clone())),
         };
         assert!(matches!(
             snapshot_quiesced_sqlcipher_database(
