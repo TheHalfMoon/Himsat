@@ -361,6 +361,11 @@ where
 mod tests {
     use super::*;
     use crate::vault::{FreshnessEpoch, ManifestHash, VaultId, VaultLeaseIdentity};
+    use crate::vault_backup::{
+        BackupObjectContext, BackupObjectId, descriptor_provider_key, parse_set_descriptor,
+        validate_backup_object_binding, validate_descriptor_provider_key,
+        validate_object_provider_key,
+    };
     use crate::vault_blob::{BoundedBlobContext, encrypt_bounded_blob};
     use crate::vault_lease::VaultLease;
     use crate::vault_manifest::{
@@ -378,6 +383,16 @@ mod tests {
     static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(1);
 
     const PASSPHRASE: &str = "correct horse battery staple";
+    const ARTIFACT_A: [u8; 16] = [0x51; 16];
+    const ARTIFACT_B: [u8; 16] = [0x61; 16];
+    const STORAGE_A: [u8; 16] = [0x52; 16];
+    const STORAGE_B: [u8; 16] = [0x62; 16];
+    const STRUCTURED_STORAGE: [u8; 16] = [0x54; 16];
+    const USER_FILENAME_MARKER: &str = "secret-interview-final-2042.wav";
+    const TITLE_MARKER: &str = "Private Research Interview Omega";
+    const TIMESTAMP_MARKER: &str = "2042-11-03T04:05:06.789Z";
+    const EVIDENCE_MARKER: &str = "evidence-range=91337..91499";
+    const SEMANTIC_MARKER: &str = "semantic-kind=ultra-private-meeting-memory";
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     enum ProviderError {
@@ -385,7 +400,7 @@ mod tests {
         Exists,
     }
 
-    #[derive(Default)]
+    #[derive(Clone, Default)]
     struct MemoryProvider {
         objects: HashMap<String, Vec<u8>>,
         writes: usize,
@@ -453,11 +468,12 @@ mod tests {
         key: OwnedKeyMaterial,
         source_db: PathBuf,
         open_source: Connection,
-        blob_path: PathBuf,
+        blob_paths: Vec<PathBuf>,
+        blob_envelopes: Vec<Vec<u8>>,
         manifest: Vec<u8>,
         recovery: Vec<u8>,
         anchor: FreshnessAnchor,
-        blob_source: BackupSourceFile,
+        blob_sources: Vec<BackupSourceFile>,
         precheckpoint_db_identity: (u64, [u8; 32]),
     }
 
@@ -473,25 +489,35 @@ mod tests {
             .unwrap();
         assert_eq!(mode, "wal");
         open_source.execute_batch(
-            "PRAGMA wal_autocheckpoint = 0; CREATE TABLE backup_e2e (value INTEGER NOT NULL); BEGIN IMMEDIATE; INSERT INTO backup_e2e VALUES (41); COMMIT;",
+            "PRAGMA wal_autocheckpoint = 0; CREATE TABLE backup_e2e (value TEXT NOT NULL); BEGIN IMMEDIATE; INSERT INTO backup_e2e VALUES ('semantic-kind=ultra-private-meeting-memory'); COMMIT;",
         ).unwrap();
         let wal = PathBuf::from(format!("{}-wal", source_db.display()));
         assert!(std::fs::metadata(&wal).unwrap().len() > 0);
         let (db_len, db_sha) = regular_file_identity(&source_db).unwrap();
 
-        let blob_id = [0x51; 16];
-        let blob_storage = [0x52; 16];
-        let blob_nonce = [0x53; 24];
-        let blob = encrypt_bounded_blob(
+        let marker_payload = format!(
+            "{USER_FILENAME_MARKER}|{TITLE_MARKER}|{TIMESTAMP_MARKER}|{EVIDENCE_MARKER}|{SEMANTIC_MARKER}"
+        );
+        let blob_a = encrypt_bounded_blob(
             &key,
-            BoundedBlobContext::new(vault_id(), blob_id, generation()),
-            blob_nonce,
-            b"B505O authenticated blob",
+            BoundedBlobContext::new(vault_id(), ARTIFACT_A, generation()),
+            [0x53; 24],
+            marker_payload.as_bytes(),
         )
         .unwrap();
-        let blob_path = unused_path("blob.bin");
-        std::fs::write(&blob_path, &blob).unwrap();
-        let blob_sha: [u8; 32] = Sha256::digest(&blob).into();
+        let blob_b = encrypt_bounded_blob(
+            &key,
+            BoundedBlobContext::new(vault_id(), ARTIFACT_B, generation()),
+            [0x63; 24],
+            b"second-private-artifact-marker",
+        )
+        .unwrap();
+        let blob_a_path = unused_path("blob-a.bin");
+        let blob_b_path = unused_path("blob-b.bin");
+        std::fs::write(&blob_a_path, &blob_a).unwrap();
+        std::fs::write(&blob_b_path, &blob_b).unwrap();
+        let blob_a_sha: [u8; 32] = Sha256::digest(&blob_a).into();
+        let blob_b_sha: [u8; 32] = Sha256::digest(&blob_b).into();
 
         let epoch = FreshnessEpoch::new(9).unwrap();
         let plaintext = ManifestPlaintext::new(
@@ -506,16 +532,24 @@ mod tests {
             )],
             vec![
                 ManifestObject::new(
-                    blob_id,
-                    blob_storage,
+                    ARTIFACT_A,
+                    STORAGE_A,
                     generation(),
-                    blob.len() as u64,
-                    blob_sha,
-                    ManifestAuthMetadata::GenericArtifactBlob { nonce: blob_nonce },
+                    blob_a.len() as u64,
+                    blob_a_sha,
+                    ManifestAuthMetadata::GenericArtifactBlob { nonce: [0x53; 24] },
+                ),
+                ManifestObject::new(
+                    ARTIFACT_B,
+                    STORAGE_B,
+                    generation(),
+                    blob_b.len() as u64,
+                    blob_b_sha,
+                    ManifestAuthMetadata::GenericArtifactBlob { nonce: [0x63; 24] },
                 ),
                 ManifestObject::new(
                     [0; 16],
-                    [0x54; 16],
+                    STRUCTURED_STORAGE,
                     generation(),
                     db_len,
                     db_sha,
@@ -543,19 +577,167 @@ mod tests {
             key,
             source_db,
             open_source,
-            blob_path: blob_path.clone(),
+            blob_paths: vec![blob_a_path.clone(), blob_b_path.clone()],
+            blob_envelopes: vec![blob_a, blob_b],
             manifest,
             recovery,
             anchor,
-            blob_source: BackupSourceFile::new(blob_storage, blob_path),
+            blob_sources: vec![
+                BackupSourceFile::new(STORAGE_A, blob_a_path),
+                BackupSourceFile::new(STORAGE_B, blob_b_path),
+            ],
             precheckpoint_db_identity: (db_len, db_sha),
         }
+    }
+
+    fn hex_text(bytes: &[u8]) -> String {
+        let mut output = String::with_capacity(bytes.len() * 2);
+        for byte in bytes {
+            write!(&mut output, "{byte:02x}").unwrap();
+        }
+        output
+    }
+
+    fn decode_hex_id(input: &str) -> Result<[u8; 16], &'static str> {
+        if input.len() != 32
+            || input
+                .bytes()
+                .any(|byte| !matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+        {
+            return Err("provider key is not canonical lowercase hex");
+        }
+        let mut output = [0_u8; 16];
+        for (index, byte) in output.iter_mut().enumerate() {
+            let start = index * 2;
+            let text = &input[start..start + 2];
+            *byte = u8::from_str_radix(text, 16).map_err(|_| "provider key hex is invalid")?;
+        }
+        Ok(output)
+    }
+
+    fn provider_contains(provider: &MemoryProvider, needle: &[u8]) -> bool {
+        !needle.is_empty()
+            && provider.objects.iter().any(|(key, value)| {
+                key.as_bytes()
+                    .windows(needle.len())
+                    .any(|window| window == needle)
+                    || value.windows(needle.len()).any(|window| window == needle)
+            })
+    }
+
+    fn qualify_provider_view(
+        provider: &MemoryProvider,
+        accepted: AcceptedPortableBackup,
+        fixture: &Fixture,
+    ) -> Result<(), &'static str> {
+        let descriptor_key = descriptor_provider_key(accepted.set_id());
+        let descriptor_bytes = provider
+            .objects
+            .get(&descriptor_key)
+            .ok_or("descriptor leaf is missing")?;
+        validate_descriptor_provider_key(&descriptor_key, accepted.set_id())
+            .map_err(|_| "descriptor key is invalid")?;
+        let descriptor = parse_set_descriptor(descriptor_bytes)
+            .map_err(|_| "descriptor bytes are not canonical")?;
+        if descriptor.set_id() != accepted.set_id()
+            || descriptor.key_generation() != accepted.key_generation()
+            || descriptor.data_object_count() != accepted.data_object_count()
+        {
+            return Err("descriptor public fields do not match accepted proof");
+        }
+
+        let expected_set_hex = hex_text(accepted.set_id().as_bytes());
+        let mut data_objects = 0_u32;
+        for (key, value) in &provider.objects {
+            if key == &descriptor_key {
+                continue;
+            }
+            if key.len() != 65 || key.as_bytes()[32] != b'/' || key[..32] != expected_set_hex {
+                return Err("data-object provider key is outside the v1 grammar");
+            }
+            let object_id = BackupObjectId::from_bytes(decode_hex_id(&key[33..])?)
+                .map_err(|_| "data-object ID is reserved or invalid")?;
+            validate_object_provider_key(key, accepted.set_id(), object_id)
+                .map_err(|_| "data-object key binding failed")?;
+            validate_backup_object_binding(
+                key,
+                BackupObjectContext {
+                    set_id: accepted.set_id(),
+                    object_id,
+                    key_generation: accepted.key_generation(),
+                },
+                value,
+            )
+            .map_err(|_| "provider object is not a canonical outer envelope")?;
+            data_objects = data_objects.checked_add(1).ok_or("object count overflow")?;
+        }
+        if data_objects != accepted.data_object_count() {
+            return Err("provider object count differs from descriptor");
+        }
+
+        let fixture_vault_id = vault_id();
+        let raw_forbidden: [&[u8]; 6] = [
+            fixture_vault_id.as_bytes(),
+            &ARTIFACT_A,
+            &ARTIFACT_B,
+            &STORAGE_A,
+            &STORAGE_B,
+            &STRUCTURED_STORAGE,
+        ];
+        for raw in raw_forbidden {
+            if provider_contains(provider, raw) {
+                return Err("provider view exposes a raw semantic identifier");
+            }
+            let lower = hex_text(raw);
+            let upper = lower.to_ascii_uppercase();
+            if provider_contains(provider, lower.as_bytes())
+                || provider_contains(provider, upper.as_bytes())
+            {
+                return Err("provider view exposes a hex semantic identifier");
+            }
+        }
+        let epoch = accepted.source_freshness_epoch().get().to_be_bytes();
+        if provider_contains(provider, &epoch) {
+            return Err("provider view exposes the freshness epoch");
+        }
+        for marker in [
+            USER_FILENAME_MARKER,
+            TITLE_MARKER,
+            TIMESTAMP_MARKER,
+            EVIDENCE_MARKER,
+            SEMANTIC_MARKER,
+            "second-private-artifact-marker",
+        ] {
+            if provider_contains(provider, marker.as_bytes()) {
+                return Err("provider view exposes semantic fixture text");
+            }
+        }
+
+        let source_db =
+            std::fs::read(&fixture.source_db).map_err(|_| "source SQLCipher read failed")?;
+        let mut raw_inner = vec![
+            fixture.manifest.as_slice(),
+            fixture.recovery.as_slice(),
+            source_db.as_slice(),
+        ];
+        raw_inner.extend(fixture.blob_envelopes.iter().map(Vec::as_slice));
+        if raw_inner.iter().any(|inner| {
+            provider
+                .objects
+                .values()
+                .any(|value| value.as_slice() == *inner)
+        }) {
+            return Err("provider view contains a raw canonical inner object");
+        }
+        Ok(())
     }
 
     fn cleanup(fixture: Fixture) {
         drop(fixture.open_source);
         remove_database_candidate(&fixture.source_db);
-        let _ = std::fs::remove_file(fixture.blob_path);
+        for path in fixture.blob_paths {
+            let _ = std::fs::remove_file(path);
+        }
     }
 
     #[test]
@@ -577,7 +759,7 @@ mod tests {
             PASSPHRASE,
             &fixture.manifest,
             &fixture.source_db,
-            std::slice::from_ref(&fixture.blob_source),
+            &fixture.blob_sources,
             &snapshot,
             &package,
             &verify,
@@ -594,13 +776,82 @@ mod tests {
             fixture.anchor.manifest_hash()
         );
         assert!(accepted.data_object_count() >= 3);
-        assert!(provider.writes >= 4);
+        assert!(provider.writes >= 5);
         assert!(guard.checks >= 6);
+        qualify_provider_view(&provider, accepted, &fixture).unwrap();
         assert_ne!(
             regular_file_identity(&fixture.source_db).unwrap(),
             fixture.precheckpoint_db_identity
         );
         assert!(!snapshot.exists() && !package.exists() && !verify.exists());
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn provider_view_qualifier_rejects_semantic_keys_and_raw_inner_uploads() {
+        let fixture = fixture();
+        let snapshot = unused_path("privacy-snapshot.sqlite3");
+        let package = unused_path("privacy-package");
+        let verify = unused_path("privacy-verify.sqlite3");
+        let lease = VaultLease::new(VaultLeaseIdentity::new(vault_id(), generation()));
+        let mut provider = MemoryProvider::default();
+        let mut guard = Guard::default();
+        let accepted = create_publish_and_verify_portable_backup(
+            &mut guard,
+            &mut provider,
+            fixture.anchor,
+            lease.keyed_handle_lease(),
+            &fixture.key,
+            &fixture.recovery,
+            PASSPHRASE,
+            &fixture.manifest,
+            &fixture.source_db,
+            &fixture.blob_sources,
+            &snapshot,
+            &package,
+            &verify,
+        )
+        .unwrap();
+        qualify_provider_view(&provider, accepted, &fixture).unwrap();
+
+        let semantic_keys = [
+            format!("{}/{}", hex_text(vault_id().as_bytes()), "00".repeat(16)),
+            format!("{}/{}", hex_text(&ARTIFACT_A), "00".repeat(16)),
+            format!("{}/{}", hex_text(&STORAGE_A), "00".repeat(16)),
+            USER_FILENAME_MARKER.to_owned(),
+            TITLE_MARKER.to_owned(),
+            TIMESTAMP_MARKER.to_owned(),
+            EVIDENCE_MARKER.to_owned(),
+            SEMANTIC_MARKER.to_owned(),
+        ];
+        for key in semantic_keys {
+            let mut poisoned = provider.clone();
+            poisoned
+                .objects
+                .insert(key, fixture.blob_envelopes[0].clone());
+            assert!(qualify_provider_view(&poisoned, accepted, &fixture).is_err());
+        }
+
+        let descriptor_key = descriptor_provider_key(accepted.set_id());
+        let data_key = provider
+            .objects
+            .keys()
+            .find(|key| *key != &descriptor_key)
+            .unwrap()
+            .clone();
+        let raw_sqlcipher = std::fs::read(&fixture.source_db).unwrap();
+        let raw_inners = [
+            fixture.manifest.as_slice(),
+            fixture.recovery.as_slice(),
+            fixture.blob_envelopes[0].as_slice(),
+            fixture.blob_envelopes[1].as_slice(),
+            raw_sqlcipher.as_slice(),
+        ];
+        for raw in raw_inners {
+            let mut poisoned = provider.clone();
+            poisoned.objects.insert(data_key.clone(), raw.to_vec());
+            assert!(qualify_provider_view(&poisoned, accepted, &fixture).is_err());
+        }
         cleanup(fixture);
     }
 
@@ -628,7 +879,7 @@ mod tests {
             PASSPHRASE,
             &fixture.manifest,
             &fixture.source_db,
-            std::slice::from_ref(&fixture.blob_source),
+            &fixture.blob_sources,
             &snapshot,
             &package,
             &verify,
@@ -659,7 +910,7 @@ mod tests {
             PASSPHRASE,
             &fixture.manifest,
             &fixture.source_db,
-            std::slice::from_ref(&fixture.blob_source),
+            &fixture.blob_sources,
             &snapshot,
             &package,
             &verify,
