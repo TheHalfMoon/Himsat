@@ -37,6 +37,9 @@ pub mod vault_linux_secret_service;
 /// B202 versioned bounded-blob XChaCha20-Poly1305 envelope execution/parsing.
 pub mod vault_blob;
 
+/// B505 opaque portable-backup provider codec/key foundation.
+pub mod vault_backup;
+
 /// B105 lease-gated database/blob read/write wrappers and stale-handle proof.
 pub mod vault_io;
 
