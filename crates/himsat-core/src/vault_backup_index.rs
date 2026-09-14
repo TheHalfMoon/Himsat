@@ -256,8 +256,8 @@ pub fn encode_backup_index_plaintext(
     index: &BackupIndexPlaintext,
 ) -> Result<Vec<u8>, BackupCodecError> {
     let data_object_count = index.validate()?;
-    let payload_count = u32::try_from(index.payloads.len())
-        .map_err(|_| BackupCodecError::CorruptOrTampered)?;
+    let payload_count =
+        u32::try_from(index.payloads.len()).map_err(|_| BackupCodecError::CorruptOrTampered)?;
     let payload_bytes = index
         .payloads
         .len()
@@ -372,10 +372,10 @@ pub fn decode_backup_index_plaintext(
         return Err(BackupCodecError::CorruptOrTampered);
     }
     let vault_id = VaultId::from_bytes(cursor.array()?);
-    let key_generation = KeyGeneration::new(cursor.u64()?)
-        .map_err(|_| BackupCodecError::CorruptOrTampered)?;
-    let source_freshness_epoch = FreshnessEpoch::new(cursor.u64()?)
-        .map_err(|_| BackupCodecError::CorruptOrTampered)?;
+    let key_generation =
+        KeyGeneration::new(cursor.u64()?).map_err(|_| BackupCodecError::CorruptOrTampered)?;
+    let source_freshness_epoch =
+        FreshnessEpoch::new(cursor.u64()?).map_err(|_| BackupCodecError::CorruptOrTampered)?;
     let source_manifest_hash = ManifestHash::from_bytes(cursor.array()?);
     let payload_count = cursor.u32()?;
     if !(BACKUP_INDEX_PAYLOAD_COUNT_MIN..=BACKUP_INDEX_PAYLOAD_COUNT_MAX).contains(&payload_count) {
@@ -648,8 +648,15 @@ mod tests {
             .iter()
             .map(|chunk| u64::from(chunk.plaintext_chunk_length()))
             .sum();
-        BackupIndexPayload::new(kind, logical_id, storage_id, length, [hash_byte; 32], chunks)
-            .unwrap()
+        BackupIndexPayload::new(
+            kind,
+            logical_id,
+            storage_id,
+            length,
+            [hash_byte; 32],
+            chunks,
+        )
+        .unwrap()
     }
     fn fixture_index() -> BackupIndexPlaintext {
         BackupIndexPlaintext::new(
@@ -658,7 +665,13 @@ mod tests {
             FreshnessEpoch::new(9).unwrap(),
             ManifestHash::from_bytes([4; 32]),
             vec![
-                payload(BackupIndexPayloadKind::Manifest, [0; 16], [0; 16], 10, &[(20, 5)]),
+                payload(
+                    BackupIndexPayloadKind::Manifest,
+                    [0; 16],
+                    [0; 16],
+                    10,
+                    &[(20, 5)],
+                ),
                 payload(
                     BackupIndexPayloadKind::StructuredStore,
                     [0; 16],
@@ -699,8 +712,7 @@ mod tests {
         bad[INDEX_HEADER_BYTES + 3] = 1;
         assert!(decode_backup_index_plaintext(&bad, 4).is_err());
         let mut bad = encoded.clone();
-        bad[INDEX_HEADER_BYTES + 4..INDEX_HEADER_BYTES + 6]
-            .copy_from_slice(&9_u16.to_be_bytes());
+        bad[INDEX_HEADER_BYTES + 4..INDEX_HEADER_BYTES + 6].copy_from_slice(&9_u16.to_be_bytes());
         assert!(decode_backup_index_plaintext(&bad, 4).is_err());
         let mut bad = encoded.clone();
         let object_offset = INDEX_HEADER_BYTES + INDEX_PAYLOAD_FIXED_BYTES + 4;
@@ -732,14 +744,16 @@ mod tests {
             vec![BackupIndexChunk::new(duplicate, 1).unwrap()],
         )
         .unwrap();
-        assert!(BackupIndexPlaintext::new(
-            VaultId::from_bytes([1; 16]),
-            KeyGeneration::new(1).unwrap(),
-            FreshnessEpoch::new(1).unwrap(),
-            ManifestHash::from_bytes([1; 32]),
-            vec![manifest, store],
-        )
-        .is_err());
+        assert!(
+            BackupIndexPlaintext::new(
+                VaultId::from_bytes([1; 16]),
+                KeyGeneration::new(1).unwrap(),
+                FreshnessEpoch::new(1).unwrap(),
+                ManifestHash::from_bytes([1; 32]),
+                vec![manifest, store],
+            )
+            .is_err()
+        );
         let mut payloads = fixture_index().payloads().to_vec();
         payloads.push(payload(
             BackupIndexPayloadKind::GenericArtifactBlob,
@@ -748,23 +762,27 @@ mod tests {
             13,
             &[(32, 1)],
         ));
-        assert!(BackupIndexPlaintext::new(
-            VaultId::from_bytes([1; 16]),
-            KeyGeneration::new(3).unwrap(),
-            FreshnessEpoch::new(9).unwrap(),
-            ManifestHash::from_bytes([4; 32]),
-            payloads,
-        )
-        .is_err());
-        assert!(BackupIndexPayload::new(
-            BackupIndexPayloadKind::Manifest,
-            [0; 16],
-            [0; 16],
-            2,
-            [0; 32],
-            vec![BackupIndexChunk::new(object_id(40), 1).unwrap()],
-        )
-        .is_err());
+        assert!(
+            BackupIndexPlaintext::new(
+                VaultId::from_bytes([1; 16]),
+                KeyGeneration::new(3).unwrap(),
+                FreshnessEpoch::new(9).unwrap(),
+                ManifestHash::from_bytes([4; 32]),
+                payloads,
+            )
+            .is_err()
+        );
+        assert!(
+            BackupIndexPayload::new(
+                BackupIndexPayloadKind::Manifest,
+                [0; 16],
+                [0; 16],
+                2,
+                [0; 32],
+                vec![BackupIndexChunk::new(object_id(40), 1).unwrap()],
+            )
+            .is_err()
+        );
     }
     #[test]
     fn encrypted_index_authenticates_context_bootstrap_and_ciphertext() {
@@ -799,7 +817,9 @@ mod tests {
         assert!(decrypt_backup_index(&vrk, vault_id, wrong_set, &bootstrap, &encrypted).is_err());
         let mut wrong_bootstrap = bootstrap;
         wrong_bootstrap[0] ^= 1;
-        assert!(decrypt_backup_index(&vrk, vault_id, context, &wrong_bootstrap, &encrypted).is_err());
+        assert!(
+            decrypt_backup_index(&vrk, vault_id, context, &wrong_bootstrap, &encrypted).is_err()
+        );
     }
     #[test]
     fn encryption_rejects_vault_generation_and_count_transplants() {
@@ -807,40 +827,42 @@ mod tests {
         let vrk = OwnedKeyMaterial::from_bytes([7; 32]);
         let bootstrap = [8_u8; BACKUP_BOOTSTRAP_SLOT_BYTES];
         let context = context();
-        assert!(encrypt_backup_index_with_nonce(
-            &vrk,
-            VaultId::from_bytes([99; 16]),
-            context,
-            &bootstrap,
-            [9; BACKUP_NONCE_BYTES],
-            &index,
-        )
-        .is_err());
-        let wrong_generation = BackupIndexContext::new(
-            context.set_id(),
-            KeyGeneration::new(4).unwrap(),
-            4,
-        )
-        .unwrap();
-        assert!(encrypt_backup_index_with_nonce(
-            &vrk,
-            VaultId::from_bytes([1; 16]),
-            wrong_generation,
-            &bootstrap,
-            [9; BACKUP_NONCE_BYTES],
-            &index,
-        )
-        .is_err());
-        let wrong_count = BackupIndexContext::new(context.set_id(), context.key_generation(), 3)
-            .unwrap();
-        assert!(encrypt_backup_index_with_nonce(
-            &vrk,
-            VaultId::from_bytes([1; 16]),
-            wrong_count,
-            &bootstrap,
-            [9; BACKUP_NONCE_BYTES],
-            &index,
-        )
-        .is_err());
+        assert!(
+            encrypt_backup_index_with_nonce(
+                &vrk,
+                VaultId::from_bytes([99; 16]),
+                context,
+                &bootstrap,
+                [9; BACKUP_NONCE_BYTES],
+                &index,
+            )
+            .is_err()
+        );
+        let wrong_generation =
+            BackupIndexContext::new(context.set_id(), KeyGeneration::new(4).unwrap(), 4).unwrap();
+        assert!(
+            encrypt_backup_index_with_nonce(
+                &vrk,
+                VaultId::from_bytes([1; 16]),
+                wrong_generation,
+                &bootstrap,
+                [9; BACKUP_NONCE_BYTES],
+                &index,
+            )
+            .is_err()
+        );
+        let wrong_count =
+            BackupIndexContext::new(context.set_id(), context.key_generation(), 3).unwrap();
+        assert!(
+            encrypt_backup_index_with_nonce(
+                &vrk,
+                VaultId::from_bytes([1; 16]),
+                wrong_count,
+                &bootstrap,
+                [9; BACKUP_NONCE_BYTES],
+                &index,
+            )
+            .is_err()
+        );
     }
 }
