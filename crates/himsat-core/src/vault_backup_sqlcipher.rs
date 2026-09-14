@@ -124,6 +124,30 @@ fn verify_sqlcipher_file(
     require_file_identity(path, expected_length, expected_sha256)
 }
 
+/// Re-proves the external structured-store staging file represented by an
+/// already-authenticated B505 backup set immediately before local publication.
+/// This closes the mutable-file gap between initial SQLCipher qualification and
+/// the later copy-verify-publish coordinator without exposing VRK bytes.
+pub fn reverify_staged_sqlcipher_backup<P: AsRef<Path>>(
+    staged_path: P,
+    verified: &SqlCipherVerifiedBackupSet,
+) -> Result<(), BackupSqlCipherVerificationError> {
+    let path = staged_path.as_ref();
+    let pre_sqlcipher = verified.pre_sqlcipher();
+    let expected_length = pre_sqlcipher.structured_store_exact_length();
+    let expected_sha256 = pre_sqlcipher.structured_store_exact_sha256();
+    pre_sqlcipher.with_structured_store_verification_key(|vrk, vault_id, key_generation| {
+        verify_sqlcipher_file(
+            path,
+            expected_length,
+            expected_sha256,
+            vrk,
+            vault_id,
+            key_generation,
+        )
+    })
+}
+
 pub fn verify_staged_sqlcipher_backup<P: AsRef<Path>>(
     staged_path: P,
     pre_sqlcipher: PreSqlCipherVerifiedBackupSet,
