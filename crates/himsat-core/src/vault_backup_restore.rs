@@ -1,36 +1,30 @@
-//! B505 portable-backup fresh-device restore preparation.
+//! B505 portable-backup fresh-device restore material verification.
 //!
 //! Provider authentication, payload reconstruction, inner-format verification,
-//! and SQLCipher integrity all complete before B502 inspects protected genesis
-//! state. This leaf does not publish local canonical objects or mutate a
-//! protected freshness anchor.
+//! and SQLCipher integrity complete before any protector creation, VRK storage,
+//! protected genesis decision, local canonical publication, or anchor mutation.
 
-use crate::vault::{ProtectedFreshnessState, VaultId};
+use crate::vault::VaultId;
 use crate::vault_backup_provider::PortableBackupProvider;
 use crate::vault_backup_sqlcipher::{
     BackupSqlCipherVerificationError, SqlCipherVerifiedBackupSet, verify_staged_sqlcipher_backup,
 };
 use crate::vault_backup_verify::{BackupSemanticError, verify_backup_semantics_before_sqlcipher};
-use crate::vault_restore::{
-    FreshDeviceNewestnessRiskAccepted, FreshDeviceRestoreGenesis, RestoreError,
-    prepare_fresh_device_restore_genesis,
-};
 use std::error::Error;
 use std::fmt;
 use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
-pub enum FreshDeviceBackupRestoreError<E> {
+pub enum FreshDeviceBackupMaterialError<E> {
     StagingCreateFailed,
     StagingSyncFailed,
     Semantic(BackupSemanticError<E>),
     SqlCipher(BackupSqlCipherVerificationError),
-    Restore(RestoreError),
     CorruptOrTampered,
 }
 
-impl<E: fmt::Display> fmt::Display for FreshDeviceBackupRestoreError<E> {
+impl<E: fmt::Display> fmt::Display for FreshDeviceBackupMaterialError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::StagingCreateFailed => {
@@ -43,30 +37,23 @@ impl<E: fmt::Display> fmt::Display for FreshDeviceBackupRestoreError<E> {
             Self::SqlCipher(error) => {
                 write!(f, "portable backup SQLCipher verification failed: {error}")
             }
-            Self::Restore(error) => write!(f, "fresh-device restore genesis failed: {error}"),
             Self::CorruptOrTampered => {
-                f.write_str("fresh-device restore candidate is corrupt or tampered")
+                f.write_str("fresh-device restore material is corrupt or tampered")
             }
         }
     }
 }
 
-impl<E: Error + 'static> Error for FreshDeviceBackupRestoreError<E> {}
+impl<E: Error + 'static> Error for FreshDeviceBackupMaterialError<E> {}
 
-pub struct FreshDeviceRestoreCandidate {
+pub struct FreshDeviceVerifiedBackup {
     verified_backup: SqlCipherVerifiedBackupSet,
-    genesis: FreshDeviceRestoreGenesis,
 }
 
-impl FreshDeviceRestoreCandidate {
+impl FreshDeviceVerifiedBackup {
     #[must_use]
     pub fn verified_backup(&self) -> &SqlCipherVerifiedBackupSet {
         &self.verified_backup
-    }
-
-    #[must_use]
-    pub const fn genesis(&self) -> &FreshDeviceRestoreGenesis {
-        &self.genesis
     }
 
     #[must_use]
@@ -82,16 +69,13 @@ fn remove_database_candidate(path: &Path) {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn prepare_fresh_device_backup_restore<P: PortableBackupProvider>(
+pub fn verify_fresh_device_backup_restore_material<P: PortableBackupProvider>(
     provider: &mut P,
     descriptor_bytes: &[u8],
     passphrase: &str,
     expected_vault_id: VaultId,
-    protected_state: ProtectedFreshnessState,
     structured_store_staging_path: &Path,
-    risk_acceptance: FreshDeviceNewestnessRiskAccepted,
-) -> Result<FreshDeviceRestoreCandidate, FreshDeviceBackupRestoreError<P::Error>> {
+) -> Result<FreshDeviceVerifiedBackup, FreshDeviceBackupMaterialError<P::Error>> {
     let mut staging_owned = false;
     let result = (|| {
         let mut staging = OpenOptions::new()
@@ -99,7 +83,7 @@ pub fn prepare_fresh_device_backup_restore<P: PortableBackupProvider>(
             .write(true)
             .create_new(true)
             .open(structured_store_staging_path)
-            .map_err(|_| FreshDeviceBackupRestoreError::StagingCreateFailed)?;
+            .map_err(|_| FreshDeviceBackupMaterialError::StagingCreateFailed)?;
         staging_owned = true;
 
         let pre_sqlcipher = verify_backup_semantics_before_sqlcipher(
@@ -108,39 +92,19 @@ pub fn prepare_fresh_device_backup_restore<P: PortableBackupProvider>(
             passphrase,
             &mut staging,
         )
-        .map_err(FreshDeviceBackupRestoreError::Semantic)?;
+        .map_err(FreshDeviceBackupMaterialError::Semantic)?;
         staging
             .sync_all()
-            .map_err(|_| FreshDeviceBackupRestoreError::StagingSyncFailed)?;
+            .map_err(|_| FreshDeviceBackupMaterialError::StagingSyncFailed)?;
         drop(staging);
 
         let verified = verify_staged_sqlcipher_backup(structured_store_staging_path, pre_sqlcipher)
-            .map_err(FreshDeviceBackupRestoreError::SqlCipher)?;
-        let pre = verified.pre_sqlcipher();
-        let genesis = pre
-            .with_structured_store_verification_key(|vrk, _, _| {
-                prepare_fresh_device_restore_genesis(
-                    vrk,
-                    expected_vault_id,
-                    protected_state,
-                    pre.source_manifest_envelope(),
-                    risk_acceptance,
-                )
-            })
-            .map_err(FreshDeviceBackupRestoreError::Restore)?;
-
-        if genesis.manifest() != pre.manifest()
-            || genesis.accepted_anchor().vault_id() != pre.vault_id()
-            || genesis.accepted_anchor().highest_epoch() != pre.source_freshness_epoch()
-            || genesis.accepted_anchor().manifest_hash() != pre.source_manifest_hash()
-            || genesis.global_newestness_proven()
-        {
-            return Err(FreshDeviceBackupRestoreError::CorruptOrTampered);
+            .map_err(FreshDeviceBackupMaterialError::SqlCipher)?;
+        if verified.pre_sqlcipher().vault_id() != expected_vault_id {
+            return Err(FreshDeviceBackupMaterialError::CorruptOrTampered);
         }
-
-        Ok(FreshDeviceRestoreCandidate {
+        Ok(FreshDeviceVerifiedBackup {
             verified_backup: verified,
-            genesis,
         })
     })();
 
@@ -253,16 +217,12 @@ mod tests {
         let bytes = std::fs::read(path).unwrap();
         (bytes.len() as u64, Sha256::digest(bytes).into())
     }
-    fn remove_database(path: &Path) {
-        remove_database_candidate(path);
-    }
 
     struct Fixture {
         provider: MemoryProvider,
         descriptor: Vec<u8>,
         source_db: PathBuf,
         open_source: Connection,
-        anchor: FreshnessAnchor,
     }
 
     fn fixture() -> Fixture {
@@ -318,7 +278,6 @@ mod tests {
             PASSPHRASE,
         )
         .unwrap();
-
         let snapshot = unused_path("creation-snapshot.sqlite3");
         let package = unused_path("creation-package");
         let verify = unused_path("creation-verify.sqlite3");
@@ -350,82 +309,71 @@ mod tests {
             descriptor,
             source_db,
             open_source,
-            anchor,
         }
     }
 
     fn cleanup(fixture: Fixture) {
         drop(fixture.open_source);
-        remove_database(&fixture.source_db);
+        remove_database_candidate(&fixture.source_db);
     }
 
     #[test]
-    fn authenticated_backup_prepares_fresh_device_genesis_without_claiming_newestness() {
+    fn authenticated_backup_yields_verified_fresh_device_material() {
         let mut fixture = fixture();
         let staging = unused_path("restore.sqlite3");
-        let candidate = prepare_fresh_device_backup_restore(
+        let material = verify_fresh_device_backup_restore_material(
             &mut fixture.provider,
             &fixture.descriptor,
             PASSPHRASE,
             vault_id(),
-            ProtectedFreshnessState::Uninitialized,
             &staging,
-            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
         )
         .unwrap();
-        assert_eq!(candidate.genesis().accepted_anchor(), fixture.anchor);
-        assert!(!candidate.genesis().global_newestness_proven());
         assert_eq!(
-            candidate.verified_backup().pre_sqlcipher().vault_id(),
+            material.verified_backup().pre_sqlcipher().vault_id(),
             vault_id()
         );
         assert!(staging.is_file());
-        remove_database(&staging);
+        remove_database_candidate(&staging);
         cleanup(fixture);
     }
 
     #[test]
-    fn present_genesis_state_is_rejected_after_full_backup_verification() {
+    fn provider_authentication_failure_removes_unaccepted_staging() {
         let mut fixture = fixture();
-        let staging = unused_path("present.sqlite3");
-        let result = prepare_fresh_device_backup_restore(
+        let mut descriptor = fixture.descriptor.clone();
+        let last = descriptor.len() - 1;
+        descriptor[last] ^= 1;
+        let staging = unused_path("tampered.sqlite3");
+        let result = verify_fresh_device_backup_restore_material(
             &mut fixture.provider,
-            &fixture.descriptor,
+            &descriptor,
             PASSPHRASE,
             vault_id(),
-            ProtectedFreshnessState::Present(fixture.anchor),
             &staging,
-            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
         );
         assert!(matches!(
             result,
-            Err(FreshDeviceBackupRestoreError::Restore(
-                RestoreError::AnchorAlreadyInitialized
-            ))
+            Err(FreshDeviceBackupMaterialError::Semantic(_))
         ));
         assert!(!staging.exists());
         cleanup(fixture);
     }
 
     #[test]
-    fn provider_authentication_precedes_present_state_decision() {
+    fn wrong_expected_vault_is_rejected_after_complete_backup_verification() {
         let mut fixture = fixture();
-        let mut descriptor = fixture.descriptor.clone();
-        let last = descriptor.len() - 1;
-        descriptor[last] ^= 1;
-        let staging = unused_path("tampered.sqlite3");
-        let result = prepare_fresh_device_backup_restore(
+        let staging = unused_path("wrong-vault.sqlite3");
+        let result = verify_fresh_device_backup_restore_material(
             &mut fixture.provider,
-            &descriptor,
+            &fixture.descriptor,
             PASSPHRASE,
-            vault_id(),
-            ProtectedFreshnessState::Present(fixture.anchor),
+            VaultId::from_bytes([0x99; 16]),
             &staging,
-            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
         );
         assert!(matches!(
             result,
-            Err(FreshDeviceBackupRestoreError::Semantic(_))
+            Err(FreshDeviceBackupMaterialError::CorruptOrTampered)
         ));
         assert!(!staging.exists());
         cleanup(fixture);
