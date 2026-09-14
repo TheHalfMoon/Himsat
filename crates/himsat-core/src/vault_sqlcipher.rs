@@ -22,9 +22,11 @@ use crate::vault_io::{KeyedIoError, LeaseBoundDatabaseHandle};
 use crate::vault_keys::{KEY_MATERIAL_BYTES, KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
 use crate::vault_lease::{KeyedHandleError, KeyedHandleLease};
 use rusqlite::{Connection, OpenFlags};
+use sha2::{Digest, Sha256};
 use std::error::Error;
 use std::fmt;
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, ErrorKind, Read};
 use std::path::{Path, PathBuf};
 use zeroize::Zeroize;
 
@@ -164,6 +166,104 @@ impl Error for SqlCipherIntegrityError {
     }
 }
 
+/// Caller-owned proof that ordinary vault writes remain excluded for a backup snapshot call.
+///
+/// Implementations must hold the underlying coordination exclusion for the complete
+/// `snapshot_quiesced_sqlcipher_database` call. A point-in-time observation that no writer is
+/// currently active is insufficient. The snapshot boundary rechecks this proof around the
+/// checkpoint, copy, and verification stages, but the guard owns the exclusion itself.
+pub trait BackupSnapshotQuiescenceGuard {
+    type Error;
+
+    fn assert_normal_writes_quiesced(&mut self) -> Result<(), Self::Error>;
+}
+
+/// Exact identity of one separately staged, integrity-verified SQLCipher backup snapshot.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SqlCipherBackupSnapshot {
+    path: PathBuf,
+    byte_length: u64,
+    sha256: [u8; 32],
+}
+
+impl SqlCipherBackupSnapshot {
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    #[must_use]
+    pub const fn byte_length(&self) -> u64 {
+        self.byte_length
+    }
+
+    #[must_use]
+    pub const fn sha256(&self) -> [u8; 32] {
+        self.sha256
+    }
+}
+
+/// Fail-closed WAL checkpoint outcomes at the lease-gated SQLCipher boundary.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SqlCipherBackupCheckpointError {
+    Access(KeyedHandleError),
+    Query,
+    Busy,
+    Incomplete,
+}
+
+/// Fail-closed errors for the B505 quiesced SQLCipher snapshot primitive.
+#[derive(Debug)]
+pub enum SqlCipherBackupSnapshotError<E> {
+    Quiescence(E),
+    Path,
+    SamePath,
+    TargetAlreadyExists,
+    SourceOpen(SqlCipherOpenError),
+    SourceIntegrity(SqlCipherIntegrityError),
+    Checkpoint(SqlCipherBackupCheckpointError),
+    WalNotTruncated,
+    SourceRead,
+    SourceChanged,
+    Copy,
+    Durability,
+    TargetIdentityMismatch,
+    TargetOpen(SqlCipherOpenError),
+    TargetIntegrity(SqlCipherIntegrityError),
+}
+
+impl<E: fmt::Display> fmt::Display for SqlCipherBackupSnapshotError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Quiescence(error) => write!(f, "backup snapshot quiescence failed: {error}"),
+            Self::Path => f.write_str("backup snapshot path validation failed"),
+            Self::SamePath => f.write_str("backup snapshot source and target paths alias"),
+            Self::TargetAlreadyExists => f.write_str("backup snapshot target already exists"),
+            Self::SourceOpen(error) => write!(f, "backup snapshot source open failed: {error}"),
+            Self::SourceIntegrity(error) => {
+                write!(f, "backup snapshot source integrity failed: {error}")
+            }
+            Self::Checkpoint(error) => {
+                write!(f, "backup snapshot WAL checkpoint failed: {error:?}")
+            }
+            Self::WalNotTruncated => f.write_str("backup snapshot WAL was not fully truncated"),
+            Self::SourceRead => f.write_str("backup snapshot source identity could not be read"),
+            Self::SourceChanged => f.write_str("backup snapshot source changed while quiesced"),
+            Self::Copy => f.write_str("backup snapshot copy failed"),
+            Self::Durability => f.write_str("backup snapshot staged copy durability failed"),
+            Self::TargetIdentityMismatch => {
+                f.write_str("backup snapshot staged bytes do not match the stable source")
+            }
+            Self::TargetOpen(error) => write!(f, "backup snapshot target open failed: {error}"),
+            Self::TargetIntegrity(error) => {
+                write!(f, "backup snapshot target integrity failed: {error}")
+            }
+        }
+    }
+}
+
+impl<E: Error + 'static> Error for SqlCipherBackupSnapshotError<E> {}
+
 /// Fail-closed errors for B503 cross-generation SQLCipher staging.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SqlCipherGenerationMigrationError {
@@ -270,6 +370,34 @@ impl SqlCipherDatabaseHandle {
     }
 }
 
+impl SqlCipherDatabaseHandle {
+    fn checkpoint_truncate_backup_wal(&mut self) -> Result<(), SqlCipherBackupCheckpointError> {
+        match self.inner.write(|backend| {
+            let (busy, log_frames, checkpointed_frames) = backend
+                ._connection
+                .query_row("PRAGMA wal_checkpoint(TRUNCATE);", [], |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
+                })
+                .map_err(|_| SqlCipherBackupCheckpointError::Query)?;
+            if busy != 0 {
+                return Err(SqlCipherBackupCheckpointError::Busy);
+            }
+            if log_frames != checkpointed_frames {
+                return Err(SqlCipherBackupCheckpointError::Incomplete);
+            }
+            Ok(())
+        }) {
+            Ok(()) => Ok(()),
+            Err(KeyedIoError::Access(error)) => Err(SqlCipherBackupCheckpointError::Access(error)),
+            Err(KeyedIoError::Backend(error)) => Err(error),
+        }
+    }
+}
+
 impl fmt::Debug for SqlCipherDatabaseHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SqlCipherDatabaseHandle")
@@ -331,6 +459,193 @@ fn open_reviewed_connection(
     verify_encryption_active(&connection)?;
     enforce_b303_provider_and_temp_posture(&connection)?;
     Ok(connection)
+}
+
+const BACKUP_SNAPSHOT_HASH_BUFFER_BYTES: usize = 1024 * 1024;
+
+fn backup_snapshot_file_identity(path: &Path) -> Result<(u64, [u8; 32]), ()> {
+    let metadata = fs::symlink_metadata(path).map_err(|_| ())?;
+    if !metadata.file_type().is_file() {
+        return Err(());
+    }
+    let mut file = File::open(path).map_err(|_| ())?;
+    let mut buffer = vec![0_u8; BACKUP_SNAPSHOT_HASH_BUFFER_BYTES];
+    let mut total = 0_u64;
+    let mut hasher = Sha256::new();
+    loop {
+        let read = file.read(&mut buffer).map_err(|_| ())?;
+        if read == 0 {
+            break;
+        }
+        total = total
+            .checked_add(u64::try_from(read).map_err(|_| ())?)
+            .ok_or(())?;
+        hasher.update(&buffer[..read]);
+    }
+    Ok((total, hasher.finalize().into()))
+}
+
+fn backup_snapshot_wal_is_empty(source: &Path) -> Result<bool, ()> {
+    let wal = PathBuf::from(format!("{}-wal", source.display()));
+    match fs::symlink_metadata(wal) {
+        Ok(metadata) => Ok(metadata.file_type().is_file() && metadata.len() == 0),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(true),
+        Err(_) => Err(()),
+    }
+}
+
+fn resolve_backup_snapshot_paths<E>(
+    source: &Path,
+    target: &Path,
+) -> Result<(PathBuf, PathBuf), SqlCipherBackupSnapshotError<E>> {
+    if !fs::symlink_metadata(source)
+        .map_err(|_| SqlCipherBackupSnapshotError::Path)?
+        .file_type()
+        .is_file()
+    {
+        return Err(SqlCipherBackupSnapshotError::Path);
+    }
+    let source = fs::canonicalize(source).map_err(|_| SqlCipherBackupSnapshotError::Path)?;
+    let parent = fs::canonicalize(target.parent().unwrap_or_else(|| Path::new(".")))
+        .map_err(|_| SqlCipherBackupSnapshotError::Path)?;
+    let name = target
+        .file_name()
+        .ok_or(SqlCipherBackupSnapshotError::Path)?;
+    let target = parent.join(name);
+    if target.exists() {
+        let existing = fs::canonicalize(&target).map_err(|_| SqlCipherBackupSnapshotError::Path)?;
+        if existing == source {
+            return Err(SqlCipherBackupSnapshotError::SamePath);
+        }
+        return Err(SqlCipherBackupSnapshotError::TargetAlreadyExists);
+    }
+    if target == source {
+        return Err(SqlCipherBackupSnapshotError::SamePath);
+    }
+    Ok((source, target))
+}
+
+/// Creates one stable separately named SQLCipher snapshot while a caller-owned write exclusion is
+/// held for the complete operation.
+///
+/// The source is opened through the reviewed B301-B303 path, integrity-checked, checkpointed with
+/// `wal_checkpoint(TRUNCATE)` under the B105 lease gate, and integrity-checked again. The source
+/// handle is then closed, the WAL must be absent or zero bytes, and the exact main-database bytes
+/// are hashed, copied, fsynced, and re-hashed. The source identity is rechecked after the copy so a
+/// broken quiescence implementation cannot silently authorize a mixed-state snapshot. Finally the
+/// staged copy must match the source byte-for-byte and pass the canonical SQLCipher integrity path.
+///
+/// This primitive does not publish a backup, advance freshness, or release the caller's quiescence
+/// boundary. Failed targets are best-effort removed without making a physical secure-erasure claim.
+pub fn snapshot_quiesced_sqlcipher_database<G, P, Q>(
+    guard: &mut G,
+    source: P,
+    target: Q,
+    lease: KeyedHandleLease,
+    context: KeyDerivationContext,
+    vrk: &OwnedKeyMaterial,
+) -> Result<SqlCipherBackupSnapshot, SqlCipherBackupSnapshotError<G::Error>>
+where
+    G: BackupSnapshotQuiescenceGuard,
+    P: AsRef<Path>,
+    Q: AsRef<Path>,
+{
+    guard
+        .assert_normal_writes_quiesced()
+        .map_err(SqlCipherBackupSnapshotError::Quiescence)?;
+    let (source, target) = resolve_backup_snapshot_paths(source.as_ref(), target.as_ref())?;
+    let mut target_created = false;
+    let result = (|| {
+        let mut source_handle = open_sqlcipher_database(&source, lease.clone(), context, vrk)
+            .map_err(SqlCipherBackupSnapshotError::SourceOpen)?;
+        source_handle
+            .verify_integrity()
+            .map_err(SqlCipherBackupSnapshotError::SourceIntegrity)?;
+        source_handle
+            .checkpoint_truncate_backup_wal()
+            .map_err(SqlCipherBackupSnapshotError::Checkpoint)?;
+        source_handle
+            .verify_integrity()
+            .map_err(SqlCipherBackupSnapshotError::SourceIntegrity)?;
+        guard
+            .assert_normal_writes_quiesced()
+            .map_err(SqlCipherBackupSnapshotError::Quiescence)?;
+        drop(source_handle);
+        if !backup_snapshot_wal_is_empty(&source)
+            .map_err(|_| SqlCipherBackupSnapshotError::SourceRead)?
+        {
+            return Err(SqlCipherBackupSnapshotError::WalNotTruncated);
+        }
+        let source_identity = backup_snapshot_file_identity(&source)
+            .map_err(|_| SqlCipherBackupSnapshotError::SourceRead)?;
+        guard
+            .assert_normal_writes_quiesced()
+            .map_err(SqlCipherBackupSnapshotError::Quiescence)?;
+        let mut source_file =
+            File::open(&source).map_err(|_| SqlCipherBackupSnapshotError::Copy)?;
+        let mut target_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&target)
+            .map_err(|_| SqlCipherBackupSnapshotError::Copy)?;
+        target_created = true;
+        let copied = io::copy(&mut source_file, &mut target_file)
+            .map_err(|_| SqlCipherBackupSnapshotError::Copy)?;
+        if copied != source_identity.0 {
+            return Err(SqlCipherBackupSnapshotError::TargetIdentityMismatch);
+        }
+        target_file
+            .sync_all()
+            .map_err(|_| SqlCipherBackupSnapshotError::Durability)?;
+        drop(target_file);
+        guard
+            .assert_normal_writes_quiesced()
+            .map_err(SqlCipherBackupSnapshotError::Quiescence)?;
+        let source_after = backup_snapshot_file_identity(&source)
+            .map_err(|_| SqlCipherBackupSnapshotError::SourceRead)?;
+        if source_after != source_identity {
+            return Err(SqlCipherBackupSnapshotError::SourceChanged);
+        }
+        let target_identity = backup_snapshot_file_identity(&target)
+            .map_err(|_| SqlCipherBackupSnapshotError::TargetIdentityMismatch)?;
+        if target_identity != source_identity {
+            return Err(SqlCipherBackupSnapshotError::TargetIdentityMismatch);
+        }
+        let target_handle = open_sqlcipher_database(&target, lease, context, vrk)
+            .map_err(SqlCipherBackupSnapshotError::TargetOpen)?;
+        target_handle
+            .verify_integrity()
+            .map_err(SqlCipherBackupSnapshotError::TargetIntegrity)?;
+        drop(target_handle);
+        let target_after = backup_snapshot_file_identity(&target)
+            .map_err(|_| SqlCipherBackupSnapshotError::TargetIdentityMismatch)?;
+        if target_after != source_identity {
+            return Err(SqlCipherBackupSnapshotError::TargetIdentityMismatch);
+        }
+        guard
+            .assert_normal_writes_quiesced()
+            .map_err(SqlCipherBackupSnapshotError::Quiescence)?;
+        let final_source_identity = backup_snapshot_file_identity(&source)
+            .map_err(|_| SqlCipherBackupSnapshotError::SourceRead)?;
+        if final_source_identity != source_identity {
+            return Err(SqlCipherBackupSnapshotError::SourceChanged);
+        }
+        if !backup_snapshot_wal_is_empty(&source)
+            .map_err(|_| SqlCipherBackupSnapshotError::SourceRead)?
+        {
+            return Err(SqlCipherBackupSnapshotError::WalNotTruncated);
+        }
+        Ok(SqlCipherBackupSnapshot {
+            path: target.clone(),
+            byte_length: source_identity.0,
+            sha256: source_identity.1,
+        })
+    })();
+    if result.is_err() && target_created {
+        remove_database_files_best_effort(&target);
+    }
+    result
 }
 
 /// One source or target endpoint for B503 SQLCipher generation staging.
@@ -726,15 +1041,17 @@ fn raw_key_pragma(key: &[u8; KEY_MATERIAL_BYTES]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        EXPECTED_OPENSSL_RUNTIME_VERSION, EXPECTED_SQLCIPHER_CRYPTO_PROVIDER,
-        EXPECTED_SQLCIPHER_RUNTIME_VERSION, EXPECTED_SQLITE_RUNTIME_VERSION,
-        SqlCipherGenerationEndpoint, SqlCipherIntegrityError, SqlCipherOpenError, apply_raw_key,
+        BackupSnapshotQuiescenceGuard, EXPECTED_OPENSSL_RUNTIME_VERSION,
+        EXPECTED_SQLCIPHER_CRYPTO_PROVIDER, EXPECTED_SQLCIPHER_RUNTIME_VERSION,
+        EXPECTED_SQLITE_RUNTIME_VERSION, SqlCipherBackupSnapshotError, SqlCipherGenerationEndpoint,
+        SqlCipherIntegrityError, SqlCipherOpenError, apply_raw_key,
         enforce_b303_provider_and_temp_posture, key_opens_healthy_database,
         open_reviewed_connection, open_sqlcipher_database, provider_open_flags, raw_key_pragma,
         require_crypto_provider, require_crypto_provider_version, require_encryption_active,
         require_sqlcipher_runtime_version, require_sqlite_runtime_version,
-        stage_sqlcipher_generation, verify_b304_integrity, verify_cipher_integrity,
-        verify_encryption_active, verify_runtime_identity, verify_sqlite_integrity,
+        snapshot_quiesced_sqlcipher_database, stage_sqlcipher_generation, verify_b304_integrity,
+        verify_cipher_integrity, verify_encryption_active, verify_runtime_identity,
+        verify_sqlite_integrity,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
     use crate::vault_keys::{
@@ -743,6 +1060,7 @@ mod tests {
     use crate::vault_lease::{KeyedHandleError, VaultLease};
     use rusqlite::{Connection, Error as RusqliteError, OpenFlags};
     use std::fs;
+    use std::io::Write as _;
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -792,6 +1110,203 @@ mod tests {
         enforce_b303_provider_and_temp_posture(&connection)
             .expect("reviewed B303 provider/temp posture must be enforced");
         connection
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum SnapshotGuardError {
+        NotQuiesced,
+        MutationFailed,
+    }
+
+    struct SnapshotGuard {
+        checks: usize,
+        fail_at: Option<usize>,
+        mutate_at: Option<(usize, PathBuf)>,
+    }
+
+    impl SnapshotGuard {
+        fn stable() -> Self {
+            Self {
+                checks: 0,
+                fail_at: None,
+                mutate_at: None,
+            }
+        }
+    }
+
+    impl BackupSnapshotQuiescenceGuard for SnapshotGuard {
+        type Error = SnapshotGuardError;
+
+        fn assert_normal_writes_quiesced(&mut self) -> Result<(), Self::Error> {
+            self.checks += 1;
+            if let Some((ordinal, path)) = &self.mutate_at
+                && self.checks == *ordinal
+            {
+                std::fs::OpenOptions::new()
+                    .append(true)
+                    .open(path)
+                    .and_then(|mut file| file.write_all(&[0xA5]))
+                    .map_err(|_| SnapshotGuardError::MutationFailed)?;
+            }
+            if self.fail_at == Some(self.checks) {
+                return Err(SnapshotGuardError::NotQuiesced);
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn b505m_quiesced_wal_snapshot_is_exact_and_integrity_verified() {
+        let source = unused_path("b505m-source");
+        let target = unused_path("b505m-target");
+        let connection = keyed_test_connection(&source);
+        let mode = connection
+            .query_row("PRAGMA journal_mode = WAL;", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .expect("WAL mode query succeeds");
+        assert_eq!(mode, "wal");
+        connection
+            .execute_batch(
+                "PRAGMA wal_autocheckpoint = 0; CREATE TABLE backup_snapshot_probe (value INTEGER NOT NULL); BEGIN IMMEDIATE; INSERT INTO backup_snapshot_probe VALUES (41); COMMIT;",
+            )
+            .expect("committed WAL state exists");
+        let wal = PathBuf::from(format!("{}-wal", source.display()));
+        assert!(fs::metadata(&wal).expect("WAL exists").len() > 0);
+
+        let lease = VaultLease::new(identity());
+        let mut guard = SnapshotGuard::stable();
+        let snapshot = snapshot_quiesced_sqlcipher_database(
+            &mut guard,
+            &source,
+            &target,
+            lease.keyed_handle_lease(),
+            context(KeyPurpose::StructuredStore),
+            &vrk(),
+        )
+        .expect("quiesced SQLCipher snapshot succeeds");
+        assert_eq!(
+            snapshot.path(),
+            fs::canonicalize(&target).unwrap().as_path()
+        );
+        assert_eq!(snapshot.byte_length(), fs::metadata(&target).unwrap().len());
+        assert!(guard.checks >= 5);
+        assert!(fs::metadata(&wal).map(|m| m.len()).unwrap_or(0) == 0);
+
+        let token = lease.keyed_handle_lease();
+        let copied = open_reviewed_connection(
+            &target,
+            &token,
+            context(KeyPurpose::StructuredStore),
+            &vrk(),
+        )
+        .expect("snapshot reopens through reviewed provider");
+        let count = copied
+            .query_row("SELECT COUNT(*) FROM backup_snapshot_probe;", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .expect("snapshot contains committed WAL row");
+        assert_eq!(count, 1);
+        drop(copied);
+        drop(connection);
+        remove_database_files(&source);
+        remove_database_files(&target);
+    }
+
+    #[test]
+    fn b505m_quiescence_failure_creates_no_target() {
+        let target = unused_path("b505m-quiescence-target");
+        let mut guard = SnapshotGuard {
+            checks: 0,
+            fail_at: Some(1),
+            mutate_at: None,
+        };
+        let lease = VaultLease::new(identity());
+        let result = snapshot_quiesced_sqlcipher_database(
+            &mut guard,
+            unused_path("b505m-unused-source"),
+            &target,
+            lease.keyed_handle_lease(),
+            context(KeyPurpose::StructuredStore),
+            &vrk(),
+        );
+        assert!(matches!(
+            result,
+            Err(SqlCipherBackupSnapshotError::Quiescence(_))
+        ));
+        assert!(!target.exists());
+    }
+
+    #[test]
+    fn b505m_existing_target_and_revoked_lease_fail_before_acceptance() {
+        let source = unused_path("b505m-existing-source");
+        let target = unused_path("b505m-existing-target");
+        drop(keyed_test_connection(&source));
+        fs::write(&target, b"existing target").unwrap();
+        let lease = VaultLease::new(identity());
+        let mut guard = SnapshotGuard::stable();
+        assert!(matches!(
+            snapshot_quiesced_sqlcipher_database(
+                &mut guard,
+                &source,
+                &target,
+                lease.keyed_handle_lease(),
+                context(KeyPurpose::StructuredStore),
+                &vrk(),
+            ),
+            Err(SqlCipherBackupSnapshotError::TargetAlreadyExists)
+        ));
+        assert_eq!(fs::read(&target).unwrap(), b"existing target");
+        fs::remove_file(&target).unwrap();
+
+        assert!(lease.revoke());
+        let rejected_target = unused_path("b505m-revoked-target");
+        assert!(matches!(
+            snapshot_quiesced_sqlcipher_database(
+                &mut guard,
+                &source,
+                &rejected_target,
+                lease.keyed_handle_lease(),
+                context(KeyPurpose::StructuredStore),
+                &vrk(),
+            ),
+            Err(SqlCipherBackupSnapshotError::SourceOpen(
+                SqlCipherOpenError::Access(KeyedHandleError::Revoked)
+            ))
+        ));
+        assert!(!rejected_target.exists());
+        remove_database_files(&source);
+    }
+
+    #[test]
+    fn b505m_source_drift_after_copy_is_rejected_and_candidate_removed() {
+        let source = unused_path("b505m-drift-source");
+        let target = unused_path("b505m-drift-target");
+        {
+            let connection = keyed_test_connection(&source);
+            connection
+                .execute_batch("CREATE TABLE drift_probe (value INTEGER NOT NULL); INSERT INTO drift_probe VALUES (1);")
+                .unwrap();
+        }
+        let lease = VaultLease::new(identity());
+        let mut guard = SnapshotGuard {
+            checks: 0,
+            fail_at: None,
+            mutate_at: Some((4, source.clone())),
+        };
+        assert!(matches!(
+            snapshot_quiesced_sqlcipher_database(
+                &mut guard,
+                &source,
+                &target,
+                lease.keyed_handle_lease(),
+                context(KeyPurpose::StructuredStore),
+                &vrk(),
+            ),
+            Err(SqlCipherBackupSnapshotError::SourceChanged)
+        ));
+        assert!(!target.exists());
+        remove_database_files(&source);
     }
 
     #[test]
