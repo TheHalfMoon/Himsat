@@ -43,6 +43,9 @@ pub mod vault_backup;
 /// B505 encrypted portable-backup index codec and authenticated binding.
 pub mod vault_backup_index;
 
+/// B505 immutable provider publication and reread-acceptance boundary.
+pub mod vault_backup_provider;
+
 /// B105 lease-gated database/blob read/write wrappers and stale-handle proof.
 pub mod vault_io;
 

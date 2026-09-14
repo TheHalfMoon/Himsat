@@ -426,6 +426,23 @@ fn parse_backup_object(envelope: &[u8]) -> Result<ParsedBackupObject<'_>, Backup
         ciphertext: &envelope[BACKUP_OBJECT_HEADER_BYTES..],
     })
 }
+pub fn validate_backup_object_binding(
+    provider_key: &str,
+    expected_context: BackupObjectContext,
+    envelope: &[u8],
+) -> Result<(), BackupCodecError> {
+    validate_object_provider_key(
+        provider_key,
+        expected_context.set_id,
+        expected_context.object_id,
+    )?;
+    let parsed = parse_backup_object(envelope)?;
+    if parsed.context != expected_context {
+        return Err(BackupCodecError::CorruptOrTampered);
+    }
+    Ok(())
+}
+
 pub fn decrypt_backup_object(
     vrk: &OwnedKeyMaterial,
     vault_id: VaultId,
