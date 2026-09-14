@@ -40,6 +40,9 @@ pub mod vault_blob;
 /// B505 opaque portable-backup provider codec/key foundation.
 pub mod vault_backup;
 
+/// B505 recovery-bootstrap outer privacy/authentication boundary.
+pub mod vault_backup_bootstrap;
+
 /// B505 encrypted portable-backup index codec and authenticated binding.
 pub mod vault_backup_index;
 
