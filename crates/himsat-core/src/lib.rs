@@ -49,6 +49,9 @@ pub mod vault_backup_index;
 /// B505 immutable provider publication and reread-acceptance boundary.
 pub mod vault_backup_provider;
 
+/// B505 provider reconstruction and pre-SQLCipher semantic verification.
+pub mod vault_backup_verify;
+
 /// B105 lease-gated database/blob read/write wrappers and stale-handle proof.
 pub mod vault_io;
 
