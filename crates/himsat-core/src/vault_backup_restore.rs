@@ -4,12 +4,17 @@
 //! and SQLCipher integrity complete before any protector creation, VRK storage,
 //! protected genesis decision, local canonical publication, or anchor mutation.
 
-use crate::vault::VaultId;
+use crate::vault::{ProtectedFreshnessState, ProtectorError, SecretProtector, VaultId};
 use crate::vault_backup_provider::PortableBackupProvider;
 use crate::vault_backup_sqlcipher::{
     BackupSqlCipherVerificationError, SqlCipherVerifiedBackupSet, verify_staged_sqlcipher_backup,
 };
 use crate::vault_backup_verify::{BackupSemanticError, verify_backup_semantics_before_sqlcipher};
+use crate::vault_keys::OwnedKeyMaterial;
+use crate::vault_restore::{
+    FreshDeviceNewestnessRiskAccepted, FreshDeviceRestoreGenesis, RestoreError,
+    prepare_fresh_device_restore_genesis,
+};
 use std::error::Error;
 use std::fmt;
 use std::fs::OpenOptions;
@@ -60,6 +65,147 @@ impl FreshDeviceVerifiedBackup {
     pub fn into_verified_backup(self) -> SqlCipherVerifiedBackupSet {
         self.verified_backup
     }
+}
+
+#[derive(Debug)]
+pub enum FreshDeviceGenesisGateError {
+    Protector(ProtectorError),
+    Restore(RestoreError),
+    RecoveredKeyMismatch,
+    ProtectedStateChanged,
+}
+
+impl fmt::Display for FreshDeviceGenesisGateError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Protector(error) => write!(f, "fresh-device protector operation failed: {error}"),
+            Self::Restore(error) => write!(f, "fresh-device genesis preparation failed: {error}"),
+            Self::RecoveredKeyMismatch => {
+                f.write_str("fresh-device protected VRK does not match recovered VRK")
+            }
+            Self::ProtectedStateChanged => {
+                f.write_str("fresh-device protected state changed during genesis preparation")
+            }
+        }
+    }
+}
+
+impl Error for FreshDeviceGenesisGateError {}
+
+pub struct FreshDevicePreparedGenesis {
+    verified_backup: FreshDeviceVerifiedBackup,
+    genesis: FreshDeviceRestoreGenesis,
+}
+
+impl FreshDevicePreparedGenesis {
+    #[must_use]
+    pub fn verified_backup(&self) -> &FreshDeviceVerifiedBackup {
+        &self.verified_backup
+    }
+
+    #[must_use]
+    pub const fn genesis(&self) -> &FreshDeviceRestoreGenesis {
+        &self.genesis
+    }
+
+    #[must_use]
+    pub fn into_parts(self) -> (FreshDeviceVerifiedBackup, FreshDeviceRestoreGenesis) {
+        (self.verified_backup, self.genesis)
+    }
+}
+
+fn key_material_equal(left: &OwnedKeyMaterial, right: &OwnedKeyMaterial) -> bool {
+    left.with_bytes(|left_bytes| {
+        right.with_bytes(|right_bytes| {
+            left_bytes
+                .iter()
+                .zip(right_bytes.iter())
+                .fold(0_u8, |difference, (left, right)| {
+                    difference | (left ^ right)
+                })
+                == 0
+        })
+    })
+}
+
+/// Consumes completely authenticated B505Q material and prepares only the
+/// canonical B502 fresh-device genesis decision. It does not publish local
+/// storage or install the protected freshness anchor.
+///
+/// Existing protected state is never overwritten. A present anchor rejects
+/// fresh-device genesis. An explicit `UNINITIALIZED` record must unlock the
+/// exact recovered generation and match the recovered VRK. Only a typed
+/// `ItemMissing` result may create the recovered VRK record, which is then
+/// reread and required to expose explicit `UNINITIALIZED` freshness.
+pub fn prepare_verified_fresh_device_genesis<P>(
+    protector: &mut P,
+    verified_backup: FreshDeviceVerifiedBackup,
+    risk_acceptance: FreshDeviceNewestnessRiskAccepted,
+) -> Result<FreshDevicePreparedGenesis, FreshDeviceGenesisGateError>
+where
+    P: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+{
+    let genesis = verified_backup
+        .verified_backup()
+        .pre_sqlcipher()
+        .with_structured_store_verification_key(|recovered_vrk, vault_id, generation| {
+            let protected_state = match protector.read_freshness_anchor(vault_id) {
+                Ok(ProtectedFreshnessState::Present(_)) => {
+                    return Err(FreshDeviceGenesisGateError::Restore(
+                        RestoreError::AnchorAlreadyInitialized,
+                    ));
+                }
+                Ok(ProtectedFreshnessState::Uninitialized) => {
+                    let existing = protector
+                        .unlock_vrk(vault_id, generation)
+                        .map_err(FreshDeviceGenesisGateError::Protector)?;
+                    if !key_material_equal(recovered_vrk, &existing) {
+                        return Err(FreshDeviceGenesisGateError::RecoveredKeyMismatch);
+                    }
+                    ProtectedFreshnessState::Uninitialized
+                }
+                Err(ProtectorError::ItemMissing) => {
+                    protector
+                        .protect_or_store_vrk(vault_id, generation, recovered_vrk)
+                        .map_err(FreshDeviceGenesisGateError::Protector)?;
+                    let stored = protector
+                        .unlock_vrk(vault_id, generation)
+                        .map_err(FreshDeviceGenesisGateError::Protector)?;
+                    if !key_material_equal(recovered_vrk, &stored) {
+                        return Err(FreshDeviceGenesisGateError::RecoveredKeyMismatch);
+                    }
+                    match protector
+                        .read_freshness_anchor(vault_id)
+                        .map_err(FreshDeviceGenesisGateError::Protector)?
+                    {
+                        ProtectedFreshnessState::Uninitialized => {
+                            ProtectedFreshnessState::Uninitialized
+                        }
+                        ProtectedFreshnessState::Present(_) => {
+                            return Err(FreshDeviceGenesisGateError::ProtectedStateChanged);
+                        }
+                    }
+                }
+                Err(error) => return Err(FreshDeviceGenesisGateError::Protector(error)),
+            };
+
+            prepare_fresh_device_restore_genesis(
+                recovered_vrk,
+                vault_id,
+                protected_state,
+                verified_backup
+                    .verified_backup()
+                    .pre_sqlcipher()
+                    .source_manifest_envelope(),
+                risk_acceptance,
+            )
+            .map_err(FreshDeviceGenesisGateError::Restore)
+        })?;
+
+    Ok(FreshDevicePreparedGenesis {
+        verified_backup,
+        genesis,
+    })
 }
 
 fn remove_database_candidate(path: &Path) {
@@ -118,7 +264,8 @@ pub fn verify_fresh_device_backup_restore_material<P: PortableBackupProvider>(
 mod tests {
     use super::*;
     use crate::vault::{
-        FreshnessAnchor, FreshnessEpoch, KeyGeneration, ManifestHash, VaultLeaseIdentity,
+        AccessScope, FreshnessAnchor, FreshnessEpoch, HardwareBacking, KeyGeneration, ManifestHash,
+        UserPresencePolicy, VaultLeaseIdentity,
     };
     use crate::vault_backup::descriptor_provider_key;
     use crate::vault_backup_creation::create_publish_and_verify_portable_backup;
@@ -186,6 +333,124 @@ mod tests {
         type Error = ();
         fn assert_normal_writes_quiesced(&mut self) -> Result<(), Self::Error> {
             Ok(())
+        }
+    }
+
+    struct TestProtector {
+        record: Option<([u8; 32], ProtectedFreshnessState)>,
+        protect_calls: usize,
+        unlock_calls: usize,
+    }
+
+    impl TestProtector {
+        fn missing() -> Self {
+            Self {
+                record: None,
+                protect_calls: 0,
+                unlock_calls: 0,
+            }
+        }
+
+        fn uninitialized(key: [u8; 32]) -> Self {
+            Self {
+                record: Some((key, ProtectedFreshnessState::Uninitialized)),
+                protect_calls: 0,
+                unlock_calls: 0,
+            }
+        }
+
+        fn present(key: [u8; 32], anchor: FreshnessAnchor) -> Self {
+            Self {
+                record: Some((key, ProtectedFreshnessState::Present(anchor))),
+                protect_calls: 0,
+                unlock_calls: 0,
+            }
+        }
+    }
+
+    impl SecretProtector for TestProtector {
+        type VaultRootKey = OwnedKeyMaterial;
+
+        fn create_protector(
+            &mut self,
+            _requested_scope: AccessScope,
+            _user_presence_policy: UserPresencePolicy,
+        ) -> Result<(), ProtectorError> {
+            Ok(())
+        }
+
+        fn protect_or_store_vrk(
+            &mut self,
+            _vault_id: VaultId,
+            _key_generation: KeyGeneration,
+            vrk: &Self::VaultRootKey,
+        ) -> Result<(), ProtectorError> {
+            self.protect_calls += 1;
+            if self.record.is_some() {
+                return Err(ProtectorError::CorruptOrTampered);
+            }
+            let bytes = vrk.with_bytes(|bytes| *bytes);
+            self.record = Some((bytes, ProtectedFreshnessState::Uninitialized));
+            Ok(())
+        }
+
+        fn unlock_vrk(
+            &mut self,
+            _vault_id: VaultId,
+            _key_generation: KeyGeneration,
+        ) -> Result<Self::VaultRootKey, ProtectorError> {
+            self.unlock_calls += 1;
+            let (key, _) = self.record.ok_or(ProtectorError::ItemMissing)?;
+            Ok(OwnedKeyMaterial::from_bytes(key))
+        }
+
+        fn read_freshness_anchor(
+            &self,
+            _vault_id: VaultId,
+        ) -> Result<ProtectedFreshnessState, ProtectorError> {
+            self.record
+                .as_ref()
+                .map(|(_, state)| *state)
+                .ok_or(ProtectorError::ItemMissing)
+        }
+
+        fn install_genesis_freshness_anchor(
+            &mut self,
+            _vault_id: VaultId,
+            _expected_state: ProtectedFreshnessState,
+            _new_anchor: FreshnessAnchor,
+        ) -> Result<(), ProtectorError> {
+            Err(ProtectorError::UnsupportedPolicy)
+        }
+
+        fn advance_freshness_anchor(
+            &mut self,
+            _vault_id: VaultId,
+            _expected_old: FreshnessAnchor,
+            _new_anchor: FreshnessAnchor,
+        ) -> Result<(), ProtectorError> {
+            Err(ProtectorError::UnsupportedPolicy)
+        }
+
+        fn replace_protector(&mut self, _vault_id: VaultId) -> Result<(), ProtectorError> {
+            Err(ProtectorError::UnsupportedPolicy)
+        }
+
+        fn remove_protector(&mut self, _vault_id: VaultId) -> Result<(), ProtectorError> {
+            self.record = None;
+            Ok(())
+        }
+
+        fn actual_access_scope(&self) -> AccessScope {
+            AccessScope::SameUserAccount
+        }
+
+        fn requires_user_presence(&self) -> bool {
+            false
+        }
+
+        fn hardware_backed_state(&self) -> HardwareBacking {
+            HardwareBacking::Unknown
         }
     }
 
@@ -317,6 +582,22 @@ mod tests {
         remove_database_candidate(&fixture.source_db);
     }
 
+    fn verified_material(
+        fixture: &mut Fixture,
+        label: &str,
+    ) -> (FreshDeviceVerifiedBackup, PathBuf) {
+        let staging = unused_path(label);
+        let material = verify_fresh_device_backup_restore_material(
+            &mut fixture.provider,
+            &fixture.descriptor,
+            PASSPHRASE,
+            vault_id(),
+            &staging,
+        )
+        .unwrap();
+        (material, staging)
+    }
+
     #[test]
     fn authenticated_backup_yields_verified_fresh_device_material() {
         let mut fixture = fixture();
@@ -376,6 +657,93 @@ mod tests {
             Err(FreshDeviceBackupMaterialError::CorruptOrTampered)
         ));
         assert!(!staging.exists());
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_uninitialized_matching_vrk_prepares_genesis_without_replacement() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "genesis-existing.sqlite3");
+        let mut protector = TestProtector::uninitialized([0x31; 32]);
+        let prepared = prepare_verified_fresh_device_genesis(
+            &mut protector,
+            material,
+            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
+        )
+        .unwrap();
+        assert_eq!(protector.protect_calls, 0);
+        assert_eq!(protector.unlock_calls, 1);
+        assert!(!prepared.genesis().global_newestness_proven());
+        assert_eq!(prepared.genesis().manifest().vault_id(), vault_id());
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_uninitialized_mismatched_vrk_fails_without_replacement() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "genesis-mismatch.sqlite3");
+        let mut protector = TestProtector::uninitialized([0x99; 32]);
+        let result = prepare_verified_fresh_device_genesis(
+            &mut protector,
+            material,
+            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
+        );
+        assert!(matches!(
+            result,
+            Err(FreshDeviceGenesisGateError::RecoveredKeyMismatch)
+        ));
+        assert_eq!(protector.protect_calls, 0);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn present_anchor_rejects_fresh_device_genesis_without_vrk_mutation() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "genesis-present.sqlite3");
+        let anchor = FreshnessAnchor::new(
+            vault_id(),
+            FreshnessEpoch::new(12).unwrap(),
+            ManifestHash::from_bytes([0x55; 32]),
+        );
+        let mut protector = TestProtector::present([0x31; 32], anchor);
+        let result = prepare_verified_fresh_device_genesis(
+            &mut protector,
+            material,
+            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
+        );
+        assert!(matches!(
+            result,
+            Err(FreshDeviceGenesisGateError::Restore(
+                RestoreError::AnchorAlreadyInitialized
+            ))
+        ));
+        assert_eq!(protector.protect_calls, 0);
+        assert_eq!(protector.unlock_calls, 0);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn item_missing_is_the_only_path_that_stores_recovered_vrk() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "genesis-missing.sqlite3");
+        let mut protector = TestProtector::missing();
+        let prepared = prepare_verified_fresh_device_genesis(
+            &mut protector,
+            material,
+            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
+        )
+        .unwrap();
+        assert_eq!(protector.protect_calls, 1);
+        assert_eq!(protector.unlock_calls, 1);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Uninitialized
+        );
+        assert!(!prepared.genesis().global_newestness_proven());
+        remove_database_candidate(&staging);
         cleanup(fixture);
     }
 }
