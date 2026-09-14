@@ -3,6 +3,7 @@ use crate::vault_backup::{
     descriptor_provider_key, encode_set_descriptor, object_provider_key, parse_set_descriptor,
     validate_backup_object_binding, validate_descriptor_binding,
 };
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 
 /// Provider operations required by the B505 immutable publication boundary.
@@ -200,6 +201,200 @@ pub fn publish_and_reread_prepared_backup_set<P: PortableBackupProvider>(
     })
 }
 
+/// Multi-pass source for a prepared backup whose object envelopes may live outside RAM.
+///
+/// Implementations must expose a stable ordered object sequence for the duration of
+/// one publication attempt. The publication boundary independently fingerprints and
+/// revalidates every object before any provider-visible descriptor can be accepted.
+pub trait PreparedBackupObjectSource {
+    type Error;
+
+    fn object_count(&self) -> usize;
+    fn object_id(&mut self, index: usize) -> Result<BackupObjectId, Self::Error>;
+    fn read_object(&mut self, index: usize) -> Result<Vec<u8>, Self::Error>;
+}
+
+#[derive(Debug)]
+pub enum StreamingBackupPublicationError<ProviderError, SourceError> {
+    CorruptOrTampered,
+    ResourceLimit,
+    Provider(ProviderError),
+    Source(SourceError),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct PreparedObjectFingerprint {
+    object_id: BackupObjectId,
+    byte_length: u64,
+    sha256: [u8; 32],
+}
+
+fn object_fingerprint(object_id: BackupObjectId, envelope: &[u8]) -> PreparedObjectFingerprint {
+    PreparedObjectFingerprint {
+        object_id,
+        byte_length: u64::try_from(envelope.len())
+            .expect("usize always fits in u64 on supported targets"),
+        sha256: Sha256::digest(envelope).into(),
+    }
+}
+
+fn matches_fingerprint(
+    fingerprint: PreparedObjectFingerprint,
+    object_id: BackupObjectId,
+    envelope: &[u8],
+) -> bool {
+    fingerprint.object_id == object_id
+        && fingerprint.byte_length == u64::try_from(envelope.len()).unwrap_or(u64::MAX)
+        && fingerprint.sha256 == <[u8; 32]>::from(Sha256::digest(envelope))
+}
+
+fn validate_streamed_object<ProviderError, SourceError>(
+    descriptor: &BackupSetDescriptor,
+    object_id: BackupObjectId,
+    envelope: &[u8],
+) -> Result<(), StreamingBackupPublicationError<ProviderError, SourceError>> {
+    let context = BackupObjectContext {
+        set_id: descriptor.set_id(),
+        object_id,
+        key_generation: descriptor.key_generation(),
+    };
+    let key = object_provider_key(descriptor.set_id(), object_id);
+    validate_backup_object_binding(&key, context, envelope)
+        .map_err(|_| StreamingBackupPublicationError::CorruptOrTampered)
+}
+
+/// Publishes an immutable backup from a stable multi-pass object source without
+/// retaining every encrypted object envelope in memory at once.
+///
+/// The complete source is validated before the first provider write. Each object
+/// is fingerprinted during that preflight, then reloaded and revalidated before
+/// upload. The reserved descriptor leaf is written last. After descriptor
+/// publication every object is loaded a third time, checked against its frozen
+/// preflight fingerprint, compared byte-for-byte with the provider reread, and
+/// binding-validated again. Any source instability, partial write, ambiguous
+/// acknowledgement, or reread mismatch leaves the set without acceptance proof.
+pub fn publish_and_reread_backup_source<P, S>(
+    provider: &mut P,
+    descriptor_bytes: &[u8],
+    source: &mut S,
+) -> Result<RereadVerifiedBackupPublication, StreamingBackupPublicationError<P::Error, S::Error>>
+where
+    P: PortableBackupProvider,
+    S: PreparedBackupObjectSource,
+{
+    let descriptor = parse_set_descriptor(descriptor_bytes)
+        .map_err(|_| StreamingBackupPublicationError::CorruptOrTampered)?;
+    let descriptor_key = descriptor_provider_key(descriptor.set_id());
+    validate_descriptor_binding(&descriptor_key, &descriptor)
+        .map_err(|_| StreamingBackupPublicationError::CorruptOrTampered)?;
+    if encode_set_descriptor(&descriptor)
+        .map_err(|_| StreamingBackupPublicationError::CorruptOrTampered)?
+        != descriptor_bytes
+    {
+        return Err(StreamingBackupPublicationError::CorruptOrTampered);
+    }
+
+    let expected_count = usize::try_from(descriptor.data_object_count())
+        .map_err(|_| StreamingBackupPublicationError::CorruptOrTampered)?;
+    if source.object_count() != expected_count {
+        return Err(StreamingBackupPublicationError::CorruptOrTampered);
+    }
+
+    // Complete preflight before the first provider-visible write.
+    let mut seen = HashSet::new();
+    seen.try_reserve(expected_count)
+        .map_err(|_| StreamingBackupPublicationError::ResourceLimit)?;
+    let mut fingerprints = Vec::new();
+    fingerprints
+        .try_reserve_exact(expected_count)
+        .map_err(|_| StreamingBackupPublicationError::ResourceLimit)?;
+    for index in 0..expected_count {
+        let object_id = source
+            .object_id(index)
+            .map_err(StreamingBackupPublicationError::Source)?;
+        if !seen.insert(object_id) {
+            return Err(StreamingBackupPublicationError::CorruptOrTampered);
+        }
+        let envelope = source
+            .read_object(index)
+            .map_err(StreamingBackupPublicationError::Source)?;
+        validate_streamed_object::<P::Error, S::Error>(&descriptor, object_id, &envelope)?;
+        fingerprints.push(object_fingerprint(object_id, &envelope));
+    }
+
+    // Re-read each frozen source object immediately before upload. A source that
+    // changed after preflight fails before that changed object can be written.
+    for (index, fingerprint) in fingerprints.iter().copied().enumerate() {
+        let object_id = source
+            .object_id(index)
+            .map_err(StreamingBackupPublicationError::Source)?;
+        let envelope = source
+            .read_object(index)
+            .map_err(StreamingBackupPublicationError::Source)?;
+        if !matches_fingerprint(fingerprint, object_id, &envelope) {
+            return Err(StreamingBackupPublicationError::CorruptOrTampered);
+        }
+        validate_streamed_object::<P::Error, S::Error>(&descriptor, object_id, &envelope)?;
+        let key = object_provider_key(descriptor.set_id(), object_id);
+        provider
+            .put_if_absent(&key, &envelope)
+            .map_err(StreamingBackupPublicationError::Provider)?;
+    }
+
+    // Cardinality is part of the frozen source contract as well as descriptor
+    // binding. Detect insertions/removals that occurred after preflight before
+    // the reserved descriptor leaf becomes provider-visible.
+    if source.object_count() != expected_count {
+        return Err(StreamingBackupPublicationError::CorruptOrTampered);
+    }
+
+    provider
+        .put_if_absent(&descriptor_key, descriptor_bytes)
+        .map_err(StreamingBackupPublicationError::Provider)?;
+
+    // Descriptor-last publication is not sufficient: prove exact provider bytes
+    // against the same frozen source after every provider-visible write completed.
+    for (index, fingerprint) in fingerprints.iter().copied().enumerate() {
+        let object_id = source
+            .object_id(index)
+            .map_err(StreamingBackupPublicationError::Source)?;
+        let envelope = source
+            .read_object(index)
+            .map_err(StreamingBackupPublicationError::Source)?;
+        if !matches_fingerprint(fingerprint, object_id, &envelope) {
+            return Err(StreamingBackupPublicationError::CorruptOrTampered);
+        }
+        validate_streamed_object::<P::Error, S::Error>(&descriptor, object_id, &envelope)?;
+        let key = object_provider_key(descriptor.set_id(), object_id);
+        let reread = provider
+            .read(&key)
+            .map_err(StreamingBackupPublicationError::Provider)?;
+        if reread != envelope {
+            return Err(StreamingBackupPublicationError::CorruptOrTampered);
+        }
+        validate_streamed_object::<P::Error, S::Error>(&descriptor, object_id, &reread)?;
+    }
+
+    let descriptor_reread = provider
+        .read(&descriptor_key)
+        .map_err(StreamingBackupPublicationError::Provider)?;
+    if descriptor_reread != descriptor_bytes {
+        return Err(StreamingBackupPublicationError::CorruptOrTampered);
+    }
+    let parsed = parse_set_descriptor(&descriptor_reread)
+        .map_err(|_| StreamingBackupPublicationError::CorruptOrTampered)?;
+    validate_descriptor_binding(&descriptor_key, &parsed)
+        .map_err(|_| StreamingBackupPublicationError::CorruptOrTampered)?;
+    if parsed != descriptor {
+        return Err(StreamingBackupPublicationError::CorruptOrTampered);
+    }
+
+    Ok(RereadVerifiedBackupPublication {
+        set_id: descriptor.set_id(),
+        data_object_count: descriptor.data_object_count(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,6 +497,152 @@ mod tests {
 
     fn fixture() -> PreparedBackupSet {
         fixture_for_set([9; 16])
+    }
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    enum SourceError {
+        Failed,
+    }
+
+    struct StreamingSource {
+        objects: Vec<PreparedBackupObject>,
+        reads: Vec<usize>,
+        fail_read: Option<(usize, usize)>,
+        mutate_read: Option<(usize, usize)>,
+        reported_count_after_reads: Option<(usize, usize)>,
+    }
+
+    impl StreamingSource {
+        fn from_candidate(candidate: &PreparedBackupSet) -> Self {
+            Self {
+                objects: candidate.objects.clone(),
+                reads: Vec::new(),
+                fail_read: None,
+                mutate_read: None,
+                reported_count_after_reads: None,
+            }
+        }
+    }
+
+    impl PreparedBackupObjectSource for StreamingSource {
+        type Error = SourceError;
+
+        fn object_count(&self) -> usize {
+            self.reported_count_after_reads
+                .filter(|(reads, _)| self.reads.len() >= *reads)
+                .map_or(self.objects.len(), |(_, count)| count)
+        }
+
+        fn object_id(&mut self, index: usize) -> Result<BackupObjectId, Self::Error> {
+            self.objects
+                .get(index)
+                .map(|object| object.object_id())
+                .ok_or(SourceError::Failed)
+        }
+
+        fn read_object(&mut self, index: usize) -> Result<Vec<u8>, Self::Error> {
+            let ordinal = self.reads.iter().filter(|seen| **seen == index).count() + 1;
+            self.reads.push(index);
+            if self.fail_read == Some((index, ordinal)) {
+                return Err(SourceError::Failed);
+            }
+            let mut envelope = self
+                .objects
+                .get(index)
+                .map(|object| object.envelope().to_vec())
+                .ok_or(SourceError::Failed)?;
+            if self.mutate_read == Some((index, ordinal)) {
+                envelope[0] ^= 1;
+            }
+            Ok(envelope)
+        }
+    }
+
+    #[test]
+    fn streaming_publication_preflights_all_objects_before_provider_write() {
+        let candidate = fixture();
+        let mut source = StreamingSource::from_candidate(&candidate);
+        source.fail_read = Some((1, 1));
+        let mut provider = MemoryProvider::default();
+        assert!(matches!(
+            publish_and_reread_backup_source(
+                &mut provider,
+                candidate.descriptor_bytes(),
+                &mut source
+            ),
+            Err(StreamingBackupPublicationError::Source(SourceError::Failed))
+        ));
+        assert!(provider.operations.is_empty());
+        assert!(provider.bytes.is_empty());
+    }
+
+    #[test]
+    fn streaming_publication_detects_source_change_before_descriptor() {
+        let candidate = fixture();
+        let descriptor_key = descriptor_provider_key(candidate.set_id());
+        let mut source = StreamingSource::from_candidate(&candidate);
+        source.mutate_read = Some((1, 2));
+        let mut provider = MemoryProvider::default();
+        assert!(matches!(
+            publish_and_reread_backup_source(
+                &mut provider,
+                candidate.descriptor_bytes(),
+                &mut source
+            ),
+            Err(StreamingBackupPublicationError::CorruptOrTampered)
+        ));
+        assert!(!provider.bytes.contains_key(&descriptor_key));
+    }
+
+    #[test]
+    fn streaming_publication_detects_cardinality_drift_before_descriptor() {
+        let candidate = fixture();
+        let descriptor_key = descriptor_provider_key(candidate.set_id());
+        let mut source = StreamingSource::from_candidate(&candidate);
+        source.reported_count_after_reads = Some((4, 3));
+        let mut provider = MemoryProvider::default();
+        assert!(matches!(
+            publish_and_reread_backup_source(
+                &mut provider,
+                candidate.descriptor_bytes(),
+                &mut source
+            ),
+            Err(StreamingBackupPublicationError::CorruptOrTampered)
+        ));
+        assert!(!provider.bytes.contains_key(&descriptor_key));
+    }
+
+    #[test]
+    fn streaming_publication_is_descriptor_last_and_three_pass_verified() {
+        let candidate = fixture();
+        let descriptor_key = descriptor_provider_key(candidate.set_id());
+        let object_keys: Vec<_> = candidate
+            .objects()
+            .iter()
+            .map(|object| object_provider_key(candidate.set_id(), object.object_id()))
+            .collect();
+        let mut source = StreamingSource::from_candidate(&candidate);
+        let mut provider = MemoryProvider::default();
+        let proof = publish_and_reread_backup_source(
+            &mut provider,
+            candidate.descriptor_bytes(),
+            &mut source,
+        )
+        .unwrap();
+        assert_eq!(proof.set_id(), candidate.set_id());
+        assert_eq!(proof.data_object_count(), 2);
+        assert_eq!(source.reads, vec![0, 1, 0, 1, 0, 1]);
+        assert_eq!(
+            provider.operations,
+            vec![
+                format!("put:{}", object_keys[0]),
+                format!("put:{}", object_keys[1]),
+                format!("put:{descriptor_key}"),
+                format!("read:{}", object_keys[0]),
+                format!("read:{}", object_keys[1]),
+                format!("read:{descriptor_key}"),
+            ]
+        );
     }
 
     #[test]
