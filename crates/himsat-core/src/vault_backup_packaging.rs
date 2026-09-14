@@ -83,6 +83,16 @@ impl BackupSourceFile {
     }
 
     #[must_use]
+    pub const fn storage_id(&self) -> [u8; 16] {
+        self.storage_id
+    }
+
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    #[must_use]
     pub fn from_sqlcipher_snapshot(
         storage_id: [u8; 16],
         snapshot: &SqlCipherBackupSnapshot,
