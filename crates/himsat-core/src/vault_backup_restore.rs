@@ -114,7 +114,7 @@ impl FreshDevicePreparedGenesis {
     }
 }
 
-fn key_material_equal(left: &OwnedKeyMaterial, right: &OwnedKeyMaterial) -> bool {
+pub(crate) fn key_material_equal(left: &OwnedKeyMaterial, right: &OwnedKeyMaterial) -> bool {
     left.with_bytes(|left_bytes| {
         right.with_bytes(|right_bytes| {
             left_bytes
@@ -270,12 +270,18 @@ mod tests {
     use crate::vault_backup::descriptor_provider_key;
     use crate::vault_backup_creation::create_publish_and_verify_portable_backup;
     use crate::vault_backup_packaging::BackupSourceFile;
+    use crate::vault_backup_restore_publication::{
+        FreshDevicePublicationOperationError, FreshDeviceRestoreBackend,
+        publish_prepared_fresh_device_restore,
+    };
+    use crate::vault_backup_verify::PreSqlCipherVerifiedBackupSet;
     use crate::vault_keys::{KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
     use crate::vault_lease::VaultLease;
     use crate::vault_manifest::{
         GenerationState, ManifestAuthMetadata, ManifestContext, ManifestGeneration, ManifestObject,
         ManifestPlaintext, RotationPhase, encrypt_fresh_manifest, manifest_hash,
     };
+    use crate::vault_migration::CopyVerifyPublishStage;
     use crate::vault_nonce::NonceReservationLedger;
     use crate::vault_recovery::{RecoveryContext, encrypt_recovery_envelope};
     use crate::vault_sqlcipher::BackupSnapshotQuiescenceGuard;
@@ -284,6 +290,7 @@ mod tests {
     use std::collections::HashMap;
     use std::error::Error as StdError;
     use std::fmt::Write as _;
+    use std::io::{Seek, SeekFrom, Write};
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -340,6 +347,8 @@ mod tests {
         record: Option<([u8; 32], ProtectedFreshnessState)>,
         protect_calls: usize,
         unlock_calls: usize,
+        genesis_calls: usize,
+        replacement_key_on_genesis: Option<[u8; 32]>,
     }
 
     impl TestProtector {
@@ -348,6 +357,8 @@ mod tests {
                 record: None,
                 protect_calls: 0,
                 unlock_calls: 0,
+                genesis_calls: 0,
+                replacement_key_on_genesis: None,
             }
         }
 
@@ -356,6 +367,8 @@ mod tests {
                 record: Some((key, ProtectedFreshnessState::Uninitialized)),
                 protect_calls: 0,
                 unlock_calls: 0,
+                genesis_calls: 0,
+                replacement_key_on_genesis: None,
             }
         }
 
@@ -364,6 +377,8 @@ mod tests {
                 record: Some((key, ProtectedFreshnessState::Present(anchor))),
                 protect_calls: 0,
                 unlock_calls: 0,
+                genesis_calls: 0,
+                replacement_key_on_genesis: None,
             }
         }
     }
@@ -417,10 +432,21 @@ mod tests {
         fn install_genesis_freshness_anchor(
             &mut self,
             _vault_id: VaultId,
-            _expected_state: ProtectedFreshnessState,
-            _new_anchor: FreshnessAnchor,
+            expected_state: ProtectedFreshnessState,
+            new_anchor: FreshnessAnchor,
         ) -> Result<(), ProtectorError> {
-            Err(ProtectorError::UnsupportedPolicy)
+            self.genesis_calls += 1;
+            let replacement_key = self.replacement_key_on_genesis;
+            let (key, state) = self.record.as_mut().ok_or(ProtectorError::ItemMissing)?;
+            if *state != expected_state || expected_state != ProtectedFreshnessState::Uninitialized
+            {
+                return Err(ProtectorError::CorruptOrTampered);
+            }
+            if let Some(replacement_key) = replacement_key {
+                *key = replacement_key;
+            }
+            *state = ProtectedFreshnessState::Present(new_anchor);
+            Ok(())
         }
 
         fn advance_freshness_anchor(
@@ -598,6 +624,186 @@ mod tests {
         (material, staging)
     }
 
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum PublicationBackendStep {
+        Stage,
+        VerifyStaged,
+        Publish,
+        Reopen,
+        VerifyReopened,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum PublicationBackendError {
+        Injected(PublicationBackendStep),
+        InvalidState,
+    }
+
+    impl fmt::Display for PublicationBackendError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Self::Injected(step) => write!(f, "injected publication failure at {step:?}"),
+                Self::InvalidState => f.write_str("publication backend state is invalid"),
+            }
+        }
+    }
+
+    impl StdError for PublicationBackendError {}
+
+    struct TestPublicationBackend {
+        fail_at: Option<PublicationBackendStep>,
+        calls: Vec<PublicationBackendStep>,
+        staged_sqlcipher: Option<Vec<u8>>,
+        staged_blobs: Vec<([u8; 16], [u8; 16], Vec<u8>)>,
+        published_manifest: Option<Vec<u8>>,
+        tamper_published_read: bool,
+        reopened: bool,
+    }
+
+    impl TestPublicationBackend {
+        fn new() -> Self {
+            Self {
+                fail_at: None,
+                calls: Vec::new(),
+                staged_sqlcipher: None,
+                staged_blobs: Vec::new(),
+                published_manifest: None,
+                tamper_published_read: false,
+                reopened: false,
+            }
+        }
+
+        fn record(&mut self, step: PublicationBackendStep) -> Result<(), PublicationBackendError> {
+            self.calls.push(step);
+            if self.fail_at == Some(step) {
+                return Err(PublicationBackendError::Injected(step));
+            }
+            Ok(())
+        }
+    }
+
+    impl FreshDeviceRestoreBackend for TestPublicationBackend {
+        type Error = PublicationBackendError;
+
+        fn stage_verified_backup(
+            &mut self,
+            structured_store_source: &Path,
+            verified: &PreSqlCipherVerifiedBackupSet,
+        ) -> Result<(), Self::Error> {
+            self.record(PublicationBackendStep::Stage)?;
+            self.staged_sqlcipher = Some(
+                std::fs::read(structured_store_source)
+                    .map_err(|_| PublicationBackendError::InvalidState)?,
+            );
+            self.staged_blobs = verified
+                .generic_artifacts()
+                .iter()
+                .map(|blob| {
+                    (
+                        blob.logical_id(),
+                        blob.source_storage_id(),
+                        blob.envelope().to_vec(),
+                    )
+                })
+                .collect();
+            Ok(())
+        }
+
+        fn verify_staged_backup(
+            &mut self,
+            _vrk: &OwnedKeyMaterial,
+            verified: &PreSqlCipherVerifiedBackupSet,
+        ) -> Result<(), Self::Error> {
+            self.record(PublicationBackendStep::VerifyStaged)?;
+            let bytes = self
+                .staged_sqlcipher
+                .as_ref()
+                .ok_or(PublicationBackendError::InvalidState)?;
+            let length =
+                u64::try_from(bytes.len()).map_err(|_| PublicationBackendError::InvalidState)?;
+            let sha256: [u8; 32] = Sha256::digest(bytes).into();
+            if length != verified.structured_store_exact_length()
+                || sha256 != verified.structured_store_exact_sha256()
+                || self.staged_blobs.len() != verified.generic_artifacts().len()
+            {
+                return Err(PublicationBackendError::InvalidState);
+            }
+            for (actual, expected) in self
+                .staged_blobs
+                .iter()
+                .zip(verified.generic_artifacts().iter())
+            {
+                if actual.0 != expected.logical_id()
+                    || actual.1 != expected.source_storage_id()
+                    || actual.2.as_slice() != expected.envelope()
+                {
+                    return Err(PublicationBackendError::InvalidState);
+                }
+            }
+            Ok(())
+        }
+
+        fn publish_manifest(&mut self, envelope: &[u8]) -> Result<(), Self::Error> {
+            self.record(PublicationBackendStep::Publish)?;
+            self.published_manifest = Some(envelope.to_vec());
+            Ok(())
+        }
+
+        fn read_published_manifest(&self) -> Result<Vec<u8>, Self::Error> {
+            let mut manifest = self
+                .published_manifest
+                .clone()
+                .ok_or(PublicationBackendError::InvalidState)?;
+            if self.tamper_published_read {
+                let last = manifest
+                    .last_mut()
+                    .ok_or(PublicationBackendError::InvalidState)?;
+                *last ^= 1;
+            }
+            Ok(manifest)
+        }
+
+        fn reopen_published(
+            &mut self,
+            _vrk: &OwnedKeyMaterial,
+            manifest: &ManifestPlaintext,
+        ) -> Result<(), Self::Error> {
+            self.record(PublicationBackendStep::Reopen)?;
+            if self.published_manifest.is_none() || manifest.vault_id() != vault_id() {
+                return Err(PublicationBackendError::InvalidState);
+            }
+            self.reopened = true;
+            Ok(())
+        }
+
+        fn verify_reopened(
+            &mut self,
+            _vrk: &OwnedKeyMaterial,
+            manifest: &ManifestPlaintext,
+        ) -> Result<(), Self::Error> {
+            self.record(PublicationBackendStep::VerifyReopened)?;
+            if !self.reopened || manifest.vault_id() != vault_id() {
+                return Err(PublicationBackendError::InvalidState);
+            }
+            Ok(())
+        }
+    }
+
+    fn prepared_material(
+        fixture: &mut Fixture,
+        label: &str,
+    ) -> (FreshDevicePreparedGenesis, PathBuf, TestProtector) {
+        let (material, staging) = verified_material(fixture, label);
+        let mut protector = TestProtector::uninitialized([0x31; 32]);
+        let prepared = prepare_verified_fresh_device_genesis(
+            &mut protector,
+            material,
+            FreshDeviceNewestnessRiskAccepted::ACCEPTED,
+        )
+        .unwrap();
+        (prepared, staging, protector)
+    }
+
     #[test]
     fn authenticated_backup_yields_verified_fresh_device_material() {
         let mut fixture = fixture();
@@ -743,6 +949,208 @@ mod tests {
             ProtectedFreshnessState::Uninitialized
         );
         assert!(!prepared.genesis().global_newestness_proven());
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+    #[test]
+    fn prepared_backup_is_published_anchored_and_reopened_in_b307_order() {
+        let mut fixture = fixture();
+        let (prepared, staging, mut protector) =
+            prepared_material(&mut fixture, "publication-success.sqlite3");
+        let accepted_anchor = prepared.genesis().accepted_anchor();
+        let mut backend = TestPublicationBackend::new();
+
+        let complete =
+            publish_prepared_fresh_device_restore(&mut protector, &mut backend, &staging, prepared)
+                .unwrap();
+
+        assert_eq!(complete.accepted_anchor(), accepted_anchor);
+        assert!(!complete.global_newestness_proven());
+        assert_eq!(protector.genesis_calls, 1);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(accepted_anchor)
+        );
+        assert_eq!(
+            backend.calls,
+            vec![
+                PublicationBackendStep::Stage,
+                PublicationBackendStep::VerifyStaged,
+                PublicationBackendStep::Publish,
+                PublicationBackendStep::Reopen,
+                PublicationBackendStep::VerifyReopened,
+            ]
+        );
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn staging_mutation_after_b505q_fails_before_local_copy_or_anchor() {
+        let mut fixture = fixture();
+        let (prepared, staging, mut protector) =
+            prepared_material(&mut fixture, "publication-source-mutation.sqlite3");
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&staging)
+            .unwrap();
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file.write_all(&[0xff]).unwrap();
+        file.sync_all().unwrap();
+        drop(file);
+        let mut backend = TestPublicationBackend::new();
+
+        let error =
+            publish_prepared_fresh_device_restore(&mut protector, &mut backend, &staging, prepared)
+                .unwrap_err();
+
+        assert_eq!(error.stage(), CopyVerifyPublishStage::SourceVerification);
+        assert!(matches!(
+            error.source_error(),
+            FreshDevicePublicationOperationError::SourceSqlCipher(
+                BackupSqlCipherVerificationError::FileIdentityMismatch
+            )
+        ));
+        assert!(backend.calls.is_empty());
+        assert_eq!(protector.genesis_calls, 0);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Uninitialized
+        );
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn tampered_published_manifest_fails_before_genesis_anchor() {
+        let mut fixture = fixture();
+        let (prepared, staging, mut protector) =
+            prepared_material(&mut fixture, "publication-manifest-tamper.sqlite3");
+        let mut backend = TestPublicationBackend::new();
+        backend.tamper_published_read = true;
+
+        let error =
+            publish_prepared_fresh_device_restore(&mut protector, &mut backend, &staging, prepared)
+                .unwrap_err();
+
+        assert_eq!(error.stage(), CopyVerifyPublishStage::Publication);
+        assert!(matches!(
+            error.source_error(),
+            FreshDevicePublicationOperationError::PublishedManifestMismatch
+        ));
+        assert_eq!(protector.genesis_calls, 0);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Uninitialized
+        );
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn protected_state_drift_is_rejected_without_overwrite() {
+        let mut fixture = fixture();
+        let (prepared, staging, mut protector) =
+            prepared_material(&mut fixture, "publication-protector-drift.sqlite3");
+        let competing_anchor = FreshnessAnchor::new(
+            vault_id(),
+            FreshnessEpoch::new(12).unwrap(),
+            ManifestHash::from_bytes([0x99; 32]),
+        );
+        protector.record.as_mut().unwrap().1 = ProtectedFreshnessState::Present(competing_anchor);
+        let mut backend = TestPublicationBackend::new();
+
+        let error =
+            publish_prepared_fresh_device_restore(&mut protector, &mut backend, &staging, prepared)
+                .unwrap_err();
+
+        assert_eq!(error.stage(), CopyVerifyPublishStage::Anchor);
+        assert!(matches!(
+            error.source_error(),
+            FreshDevicePublicationOperationError::ProtectedStateChanged
+        ));
+        assert_eq!(protector.genesis_calls, 0);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(competing_anchor)
+        );
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn post_anchor_reopen_failure_preserves_installed_anchor_for_roll_forward() {
+        let mut fixture = fixture();
+        let (prepared, staging, mut protector) =
+            prepared_material(&mut fixture, "publication-reopen-failure.sqlite3");
+        let accepted_anchor = prepared.genesis().accepted_anchor();
+        let mut backend = TestPublicationBackend::new();
+        backend.fail_at = Some(PublicationBackendStep::Reopen);
+
+        let error =
+            publish_prepared_fresh_device_restore(&mut protector, &mut backend, &staging, prepared)
+                .unwrap_err();
+
+        assert_eq!(error.stage(), CopyVerifyPublishStage::Reopen);
+        assert_eq!(protector.genesis_calls, 1);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(accepted_anchor)
+        );
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+    #[test]
+    fn protected_vrk_drift_before_anchor_is_rejected_without_genesis() {
+        let mut fixture = fixture();
+        let (prepared, staging, mut protector) =
+            prepared_material(&mut fixture, "publication-vrk-drift.sqlite3");
+        protector.record.as_mut().unwrap().0 = [0x88; 32];
+        let mut backend = TestPublicationBackend::new();
+
+        let error =
+            publish_prepared_fresh_device_restore(&mut protector, &mut backend, &staging, prepared)
+                .unwrap_err();
+
+        assert_eq!(error.stage(), CopyVerifyPublishStage::Anchor);
+        assert!(matches!(
+            error.source_error(),
+            FreshDevicePublicationOperationError::ProtectedStateChanged
+        ));
+        assert_eq!(protector.genesis_calls, 0);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Uninitialized
+        );
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn protected_vrk_drift_during_genesis_is_detected_before_backend_reopen() {
+        let mut fixture = fixture();
+        let (prepared, staging, mut protector) =
+            prepared_material(&mut fixture, "publication-vrk-genesis-drift.sqlite3");
+        let accepted_anchor = prepared.genesis().accepted_anchor();
+        protector.replacement_key_on_genesis = Some([0x88; 32]);
+        let mut backend = TestPublicationBackend::new();
+
+        let error =
+            publish_prepared_fresh_device_restore(&mut protector, &mut backend, &staging, prepared)
+                .unwrap_err();
+
+        assert_eq!(error.stage(), CopyVerifyPublishStage::Reopen);
+        assert!(matches!(
+            error.source_error(),
+            FreshDevicePublicationOperationError::ProtectedStateChanged
+        ));
+        assert_eq!(protector.genesis_calls, 1);
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(accepted_anchor)
+        );
+        assert!(!backend.calls.contains(&PublicationBackendStep::Reopen));
         remove_database_candidate(&staging);
         cleanup(fixture);
     }

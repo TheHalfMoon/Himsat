@@ -53,6 +53,9 @@ pub mod vault_backup_provider;
 /// Portable-backup fresh-device restore preparation.
 pub mod vault_backup_restore;
 
+/// B505 fresh-device durable local publication and protected-genesis commit.
+pub mod vault_backup_restore_publication;
+
 pub mod vault_backup_packaging;
 
 /// Canonical staged SQLCipher verification for authenticated portable backups.
