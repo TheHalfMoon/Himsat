@@ -229,13 +229,13 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 ## B505D owner governance amendment
 
 - [x] B505D001 Record the owner directive that independent human crypto/security review is not a mandatory Specification 004 authority or closeout gate. Preserve all historical review findings and never reclassify missing/failed review as PASS.
-- [ ] B505D002 Exact-byte qualify this governance amendment with diff/control-byte checks, provenance/generated/dependency closure, fmt, clippy, full workspace tests, and Linux provenance self-test; preserve any genuine failure as NOT PASS.
-- [ ] B505D003 Obtain original-attempt PR CI/R3 on the exact amendment head and reconcile all actionable findings without weakening technical gates.
-- [ ] B505D004 Merge only with explicit expected-head protection, verify exact parent/tree/signature, and require original-attempt post-merge CI/R3 SUCCESS on the canonical amendment SHA.
-- [ ] B505D005 After B505D004 is proven, resolve authority directly to `B505_ONLY` and begin the bounded B505 implementation without a human-review prerequisite.
+- [x] B505D002 Governance amendment exact-byte qualified with diff/control-byte checks, provenance/generated/dependency closure, fmt, clippy, full workspace tests, and Linux provenance self-test; canonical PR #133 merged as `f848390a907f32ed41c176ce47b0d3157f0a3abd`.
+- [x] B505D003 PR #133 obtained exact-head CI/R3 and reconciled actionable findings without weakening technical gates.
+- [x] B505D004 PR #133 merged with explicit expected-head protection; parents `ae614bf6b4c5231ddf228ab058ab4caf265e98d9` + `fed1d72c09639731df297f86c5d06c910796c21b`, tree `78ddaa84ff486f4c9dd3f5daa1723278fbeddbc7`; post-merge CI `34782291693` / R3 `34782291681` SUCCESS on exact merge SHA.
+- [x] B505D005 Authority resolved to `B505_ONLY`; bounded B505E-W implementation proceeded under that authority without a human-review prerequisite.
 
-- [ ] B505 Implement only the final canonical Round 5 opaque portable backup/restore packaging, B503-integrated cross-generation restore rebase, and exact provider-visible metadata allowlist/adversarial qualification.
-- [ ] B506 Implement active-vault deletion across canonical/derived/temp/wrap surfaces while preserving detached-backup and physical-erasure limitations.
+- [x] B505 Implemented canonical Round 5 opaque portable backup/restore packaging, B503-integrated cross-generation restore rebase, and exact provider-visible metadata allowlist/adversarial qualification through B505E-W (PRs #134-#152, final canonical merge `4fb5ba900760b84edce5989cedbcaebf26a06f07`). Aggregate disposition becomes `CANONICAL_CLOSED` only when this B505 aggregate reconciliation unit itself is exact-head qualified, guarded expected-head merged, and post-merge CI/R3 qualified on its exact merge SHA.
+- [ ] B506 Implement active-vault deletion across canonical/derived/temp/wrap surfaces while preserving detached-backup and physical-erasure limitations. BLOCKED until the B505 aggregate reconciliation above is canonically qualified.
 
 ## R3 qualification
 
