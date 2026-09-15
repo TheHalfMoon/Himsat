@@ -10,6 +10,9 @@ use crate::vault_backup_sqlcipher::{
     BackupSqlCipherVerificationError, SqlCipherVerifiedBackupSet, verify_staged_sqlcipher_backup,
 };
 use crate::vault_backup_verify::{BackupSemanticError, verify_backup_semantics_before_sqlcipher};
+use crate::vault_freshness::{
+    AuthenticatedFreshnessManifest, FreshnessDecision, FreshnessError, authenticate_for_open,
+};
 use crate::vault_keys::OwnedKeyMaterial;
 use crate::vault_restore::{
     FreshDeviceNewestnessRiskAccepted, FreshDeviceRestoreGenesis, RestoreError,
@@ -205,6 +208,246 @@ where
     Ok(FreshDevicePreparedGenesis {
         verified_backup,
         genesis,
+    })
+}
+
+/// Caller-owned coordination proof for the B505 existing-device restore gate.
+///
+/// The caller must keep ordinary vault writes excluded while this gate runs.
+/// Later mutation/staging grains must acquire or reassert their own live
+/// exclusion; this read-only gate does not claim quiescence survives its return.
+pub trait ExistingDeviceRestoreGateBackend {
+    type Error;
+
+    fn assert_normal_writes_quiesced(&mut self) -> Result<(), Self::Error>;
+
+    fn verify_current_inventory(
+        &mut self,
+        current_vrk: &OwnedKeyMaterial,
+        manifest: &crate::vault_manifest::ManifestPlaintext,
+    ) -> Result<(), Self::Error>;
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ExistingDeviceRestoreRoute {
+    SameGeneration,
+    CrossGeneration,
+}
+
+#[derive(Debug)]
+pub enum ExistingDeviceRestoreGateError<E> {
+    Backend(E),
+    Protector(ProtectorError),
+    Freshness(FreshnessError),
+    RestoreStateNotStable,
+    SourceVaultMismatch,
+    SourceNotOlder,
+    RestoreGenerationAhead,
+    KeyGenerationIdentityMismatch,
+}
+
+impl<E: fmt::Display> fmt::Display for ExistingDeviceRestoreGateError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Backend(error) => {
+                write!(f, "existing-device restore gate backend failed: {error}")
+            }
+            Self::Protector(error) => {
+                write!(f, "existing-device restore protector failed: {error}")
+            }
+            Self::Freshness(error) => {
+                write!(f, "existing-device restore freshness failed: {error}")
+            }
+            Self::RestoreStateNotStable => {
+                f.write_str("existing-device restore current state is not stable")
+            }
+            Self::SourceVaultMismatch => {
+                f.write_str("existing-device restore source vault does not match current vault")
+            }
+            Self::SourceNotOlder => {
+                f.write_str("existing-device restore source is not older than the trusted anchor")
+            }
+            Self::RestoreGenerationAhead => {
+                f.write_str("existing-device restore source generation is ahead of current state")
+            }
+            Self::KeyGenerationIdentityMismatch => {
+                f.write_str("existing-device restore same generation has different key material")
+            }
+        }
+    }
+}
+
+impl<E: Error + 'static> Error for ExistingDeviceRestoreGateError<E> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Backend(error) => Some(error),
+            Self::Protector(error) => Some(error),
+            Self::Freshness(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
+/// Read-only, authenticated decision produced before any existing-device
+/// restore staging or canonical mutation.
+pub struct ExistingDeviceRestoreGate {
+    verified_backup: FreshDeviceVerifiedBackup,
+    authenticated_current: AuthenticatedFreshnessManifest,
+    current_vrk: OwnedKeyMaterial,
+    current_identity: crate::vault::VaultLeaseIdentity,
+    trusted_anchor: crate::vault::FreshnessAnchor,
+    route: ExistingDeviceRestoreRoute,
+}
+
+impl ExistingDeviceRestoreGate {
+    #[must_use]
+    pub const fn route(&self) -> ExistingDeviceRestoreRoute {
+        self.route
+    }
+
+    #[must_use]
+    pub const fn current_identity(&self) -> crate::vault::VaultLeaseIdentity {
+        self.current_identity
+    }
+
+    #[must_use]
+    pub const fn trusted_anchor(&self) -> crate::vault::FreshnessAnchor {
+        self.trusted_anchor
+    }
+
+    #[must_use]
+    pub const fn current_manifest(&self) -> &AuthenticatedFreshnessManifest {
+        &self.authenticated_current
+    }
+
+    #[must_use]
+    pub fn verified_backup(&self) -> &FreshDeviceVerifiedBackup {
+        &self.verified_backup
+    }
+
+    pub fn with_current_vrk<T>(&self, operation: impl FnOnce(&OwnedKeyMaterial) -> T) -> T {
+        operation(&self.current_vrk)
+    }
+}
+
+fn current_manifest_is_stable(
+    manifest: &crate::vault_manifest::ManifestPlaintext,
+    identity: crate::vault::VaultLeaseIdentity,
+) -> bool {
+    let current_generation = identity.key_generation();
+    manifest.vault_id() == identity.vault_id()
+        && manifest.active_key_generation() == current_generation
+        && manifest.rotation_phase() == crate::vault_manifest::RotationPhase::None
+        && manifest.rotation_target_generation().is_none()
+        && manifest.generations().iter().all(|entry| {
+            if entry.generation() == current_generation {
+                entry.state() == crate::vault_manifest::GenerationState::Active
+            } else {
+                entry.generation() < current_generation
+                    && entry.state() == crate::vault_manifest::GenerationState::Retained
+            }
+        })
+        && manifest
+            .objects()
+            .iter()
+            .all(|object| object.key_generation() == current_generation)
+}
+
+/// Authenticates and freezes the B505 existing-device restore decision without
+/// creating target objects, re-encrypting data, publishing a manifest, or
+/// advancing protected freshness.
+///
+/// This gate accepts only a stable current manifest exactly equal to the
+/// protected anchor. Interrupted publication, active/retained rotation state,
+/// generation-table drift, inventory-generation drift, and protector drift all
+/// fail closed. A same-generation source must also prove recovered/current VRK
+/// identity; an older source generation is routed to the later cross-generation
+/// rebase path, while a generation ahead of current state is rejected.
+pub fn prepare_existing_device_restore_gate<B, P>(
+    backend: &mut B,
+    protector: &mut P,
+    current_identity: crate::vault::VaultLeaseIdentity,
+    current_manifest_envelope: &[u8],
+    verified_backup: FreshDeviceVerifiedBackup,
+) -> Result<ExistingDeviceRestoreGate, ExistingDeviceRestoreGateError<B::Error>>
+where
+    B: ExistingDeviceRestoreGateBackend,
+    P: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+{
+    backend
+        .assert_normal_writes_quiesced()
+        .map_err(ExistingDeviceRestoreGateError::Backend)?;
+
+    let vault_id = current_identity.vault_id();
+    let current_generation = current_identity.key_generation();
+    let trusted_anchor = match protector.read_freshness_anchor(vault_id) {
+        Ok(ProtectedFreshnessState::Present(anchor)) if anchor.vault_id() == vault_id => anchor,
+        Ok(ProtectedFreshnessState::Present(_)) | Ok(ProtectedFreshnessState::Uninitialized) => {
+            return Err(ExistingDeviceRestoreGateError::RestoreStateNotStable);
+        }
+        Err(error) => return Err(ExistingDeviceRestoreGateError::Protector(error)),
+    };
+
+    let current_vrk = protector
+        .unlock_vrk(vault_id, current_generation)
+        .map_err(ExistingDeviceRestoreGateError::Protector)?;
+    let authenticated_current =
+        authenticate_for_open(&current_vrk, trusted_anchor, current_manifest_envelope)
+            .map_err(ExistingDeviceRestoreGateError::Freshness)?;
+    if authenticated_current.decision() != FreshnessDecision::Current
+        || !current_manifest_is_stable(authenticated_current.manifest(), current_identity)
+    {
+        return Err(ExistingDeviceRestoreGateError::RestoreStateNotStable);
+    }
+    backend
+        .verify_current_inventory(&current_vrk, authenticated_current.manifest())
+        .map_err(ExistingDeviceRestoreGateError::Backend)?;
+
+    let source = verified_backup.verified_backup().pre_sqlcipher();
+    if source.vault_id() != vault_id {
+        return Err(ExistingDeviceRestoreGateError::SourceVaultMismatch);
+    }
+    if source.source_freshness_epoch() >= trusted_anchor.highest_epoch() {
+        return Err(ExistingDeviceRestoreGateError::SourceNotOlder);
+    }
+    if source.key_generation() > current_generation {
+        return Err(ExistingDeviceRestoreGateError::RestoreGenerationAhead);
+    }
+
+    let route = if source.key_generation() == current_generation {
+        let same_key = source.with_structured_store_verification_key(|source_vrk, _, _| {
+            key_material_equal(source_vrk, &current_vrk)
+        });
+        if !same_key {
+            return Err(ExistingDeviceRestoreGateError::KeyGenerationIdentityMismatch);
+        }
+        ExistingDeviceRestoreRoute::SameGeneration
+    } else {
+        ExistingDeviceRestoreRoute::CrossGeneration
+    };
+
+    backend
+        .assert_normal_writes_quiesced()
+        .map_err(ExistingDeviceRestoreGateError::Backend)?;
+    match protector.read_freshness_anchor(vault_id) {
+        Ok(ProtectedFreshnessState::Present(anchor)) if anchor == trusted_anchor => {}
+        Ok(_) => return Err(ExistingDeviceRestoreGateError::RestoreStateNotStable),
+        Err(error) => return Err(ExistingDeviceRestoreGateError::Protector(error)),
+    }
+    let reread_current_vrk = protector
+        .unlock_vrk(vault_id, current_generation)
+        .map_err(ExistingDeviceRestoreGateError::Protector)?;
+    if !key_material_equal(&current_vrk, &reread_current_vrk) {
+        return Err(ExistingDeviceRestoreGateError::RestoreStateNotStable);
+    }
+
+    Ok(ExistingDeviceRestoreGate {
+        verified_backup,
+        authenticated_current,
+        current_vrk,
+        current_identity,
+        trusted_anchor,
+        route,
     })
 }
 
@@ -1151,6 +1394,475 @@ mod tests {
             ProtectedFreshnessState::Present(accepted_anchor)
         );
         assert!(!backend.calls.contains(&PublicationBackendStep::Reopen));
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum ExistingGateBackendError {
+        Quiescence,
+        InvalidInventory,
+    }
+
+    impl fmt::Display for ExistingGateBackendError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str(match self {
+                Self::Quiescence => "restore writes are not quiesced",
+                Self::InvalidInventory => "current inventory verification failed",
+            })
+        }
+    }
+
+    impl StdError for ExistingGateBackendError {}
+
+    struct TestExistingGateBackend {
+        expected_key: [u8; 32],
+        expected_generation: KeyGeneration,
+        assert_calls: usize,
+        inventory_calls: usize,
+        fail_quiescence: bool,
+        fail_inventory: bool,
+    }
+
+    impl TestExistingGateBackend {
+        fn new(expected_key: [u8; 32], expected_generation: KeyGeneration) -> Self {
+            Self {
+                expected_key,
+                expected_generation,
+                assert_calls: 0,
+                inventory_calls: 0,
+                fail_quiescence: false,
+                fail_inventory: false,
+            }
+        }
+    }
+
+    impl ExistingDeviceRestoreGateBackend for TestExistingGateBackend {
+        type Error = ExistingGateBackendError;
+
+        fn assert_normal_writes_quiesced(&mut self) -> Result<(), Self::Error> {
+            self.assert_calls += 1;
+            if self.fail_quiescence {
+                Err(ExistingGateBackendError::Quiescence)
+            } else {
+                Ok(())
+            }
+        }
+
+        fn verify_current_inventory(
+            &mut self,
+            current_vrk: &OwnedKeyMaterial,
+            manifest: &ManifestPlaintext,
+        ) -> Result<(), Self::Error> {
+            self.inventory_calls += 1;
+            let key_matches = current_vrk.with_bytes(|bytes| *bytes == self.expected_key);
+            let inventory_matches = manifest
+                .objects()
+                .iter()
+                .all(|object| object.key_generation() == self.expected_generation);
+            if self.fail_inventory || !key_matches || !inventory_matches {
+                Err(ExistingGateBackendError::InvalidInventory)
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    fn current_state(
+        key: &OwnedKeyMaterial,
+        current_generation: KeyGeneration,
+        epoch_value: u64,
+        previous_hash: ManifestHash,
+        generations: Vec<ManifestGeneration>,
+        objects: Vec<ManifestObject>,
+        rotation: (RotationPhase, Option<KeyGeneration>),
+    ) -> (Vec<u8>, FreshnessAnchor) {
+        let epoch = FreshnessEpoch::new(epoch_value).unwrap();
+        let manifest = ManifestPlaintext::new(
+            vault_id(),
+            epoch,
+            previous_hash,
+            current_generation,
+            rotation,
+            generations,
+            objects,
+        )
+        .unwrap();
+        let context = ManifestContext::new(vault_id(), current_generation, epoch);
+        let mut ledger = NonceReservationLedger::new(vault_id());
+        let (_, envelope) = encrypt_fresh_manifest(&mut ledger, key, context, &manifest).unwrap();
+        let anchor = FreshnessAnchor::new(vault_id(), epoch, manifest_hash(&envelope));
+        (envelope, anchor)
+    }
+
+    fn stable_current_state(
+        key: &OwnedKeyMaterial,
+        current_generation: KeyGeneration,
+        epoch_value: u64,
+    ) -> (Vec<u8>, FreshnessAnchor) {
+        current_state(
+            key,
+            current_generation,
+            epoch_value,
+            ManifestHash::from_bytes([0xa5; 32]),
+            vec![ManifestGeneration::new(
+                current_generation,
+                GenerationState::Active,
+            )],
+            vec![ManifestObject::new(
+                [0; 16],
+                [0x91; 16],
+                current_generation,
+                4096,
+                [0x92; 32],
+                ManifestAuthMetadata::StructuredStore,
+            )],
+            (RotationPhase::None, None),
+        )
+    }
+
+    #[test]
+    fn existing_device_restore_gate_accepts_stable_same_generation_identity() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "existing-gate-same.sqlite3");
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x31; 32], generation());
+
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+
+        assert_eq!(gate.route(), ExistingDeviceRestoreRoute::SameGeneration);
+        assert_eq!(gate.trusted_anchor(), current_anchor);
+        assert_eq!(
+            gate.current_manifest().decision(),
+            FreshnessDecision::Current
+        );
+        assert!(gate.with_current_vrk(|key| key_material_equal(key, &current_key)));
+        assert_eq!(backend.assert_calls, 2);
+        assert_eq!(backend.inventory_calls, 1);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_routes_older_generation_to_rebase() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "existing-gate-cross.sqlite3");
+        let current_generation = KeyGeneration::new(8).unwrap();
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, current_generation, 10);
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x44; 32], current_generation);
+
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), current_generation),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+
+        assert_eq!(gate.route(), ExistingDeviceRestoreRoute::CrossGeneration);
+        assert_eq!(gate.current_identity().key_generation(), current_generation);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_rejects_generation_ahead() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "existing-gate-ahead.sqlite3");
+        let current_generation = KeyGeneration::new(6).unwrap();
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, current_generation, 10);
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x44; 32], current_generation);
+
+        let error = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), current_generation),
+            &current_envelope,
+            material,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreGateError::RestoreGenerationAhead
+        ));
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_rejects_same_generation_key_mismatch() {
+        let mut fixture = fixture();
+        let (material, staging) =
+            verified_material(&mut fixture, "existing-gate-key-mismatch.sqlite3");
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x44; 32], generation());
+
+        let error = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreGateError::KeyGenerationIdentityMismatch
+        ));
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_rejects_interrupted_publication() {
+        let mut fixture = fixture();
+        let (material, staging) =
+            verified_material(&mut fixture, "existing-gate-interrupted.sqlite3");
+        let current_key = vrk();
+        let (old_envelope, old_anchor) = stable_current_state(&current_key, generation(), 10);
+        assert_eq!(manifest_hash(&old_envelope), old_anchor.manifest_hash());
+        let (candidate_envelope, _) = current_state(
+            &current_key,
+            generation(),
+            11,
+            old_anchor.manifest_hash(),
+            vec![ManifestGeneration::new(
+                generation(),
+                GenerationState::Active,
+            )],
+            vec![ManifestObject::new(
+                [0; 16],
+                [0x91; 16],
+                generation(),
+                4096,
+                [0x92; 32],
+                ManifestAuthMetadata::StructuredStore,
+            )],
+            (RotationPhase::None, None),
+        );
+        let mut protector = TestProtector::present([0x31; 32], old_anchor);
+        let mut backend = TestExistingGateBackend::new([0x31; 32], generation());
+
+        let error = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &candidate_envelope,
+            material,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreGateError::RestoreStateNotStable
+        ));
+        assert_eq!(backend.inventory_calls, 0);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_accepts_stable_retained_history() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "existing-gate-retained.sqlite3");
+        let current_generation = KeyGeneration::new(8).unwrap();
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) = current_state(
+            &current_key,
+            current_generation,
+            10,
+            ManifestHash::from_bytes([0xa5; 32]),
+            vec![
+                ManifestGeneration::new(generation(), GenerationState::Retained),
+                ManifestGeneration::new(current_generation, GenerationState::Active),
+            ],
+            vec![ManifestObject::new(
+                [0; 16],
+                [0x91; 16],
+                current_generation,
+                4096,
+                [0x92; 32],
+                ManifestAuthMetadata::StructuredStore,
+            )],
+            (RotationPhase::None, None),
+        );
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x44; 32], current_generation);
+
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), current_generation),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+
+        assert_eq!(gate.route(), ExistingDeviceRestoreRoute::CrossGeneration);
+        assert_eq!(gate.current_manifest().manifest().generations().len(), 2);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_rejects_staged_generation_without_rotation() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "existing-gate-staged.sqlite3");
+        let current_generation = KeyGeneration::new(8).unwrap();
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) = current_state(
+            &current_key,
+            current_generation,
+            10,
+            ManifestHash::from_bytes([0xa5; 32]),
+            vec![
+                ManifestGeneration::new(generation(), GenerationState::Staged),
+                ManifestGeneration::new(current_generation, GenerationState::Active),
+            ],
+            vec![ManifestObject::new(
+                [0; 16],
+                [0x91; 16],
+                current_generation,
+                4096,
+                [0x92; 32],
+                ManifestAuthMetadata::StructuredStore,
+            )],
+            (RotationPhase::None, None),
+        );
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x44; 32], current_generation);
+
+        let error = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), current_generation),
+            &current_envelope,
+            material,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreGateError::RestoreStateNotStable
+        ));
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_rejects_non_older_source() {
+        let mut fixture = fixture();
+        let (material, staging) =
+            verified_material(&mut fixture, "existing-gate-not-older.sqlite3");
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 9);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x31; 32], generation());
+
+        let error = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreGateError::SourceNotOlder
+        ));
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_requires_quiescence_and_inventory_proof() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "existing-gate-backend.sqlite3");
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x31; 32], generation());
+        backend.fail_inventory = true;
+
+        let error = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreGateError::Backend(ExistingGateBackendError::InvalidInventory)
+        ));
+        assert_eq!(backend.assert_calls, 1);
+        assert_eq!(backend.inventory_calls, 1);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_rejects_missing_quiescence_before_state_read() {
+        let mut fixture = fixture();
+        let (material, staging) =
+            verified_material(&mut fixture, "existing-gate-no-quiescence.sqlite3");
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x31; 32], generation());
+        backend.fail_quiescence = true;
+
+        let error = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreGateError::Backend(ExistingGateBackendError::Quiescence)
+        ));
+        assert_eq!(protector.unlock_calls, 0);
+        assert_eq!(backend.inventory_calls, 0);
         remove_database_candidate(&staging);
         cleanup(fixture);
     }
