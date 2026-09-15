@@ -339,9 +339,14 @@ fn current_manifest_is_stable(
         && manifest.active_key_generation() == current_generation
         && manifest.rotation_phase() == crate::vault_manifest::RotationPhase::None
         && manifest.rotation_target_generation().is_none()
-        && manifest.generations().len() == 1
-        && manifest.generations()[0].generation() == current_generation
-        && manifest.generations()[0].state() == crate::vault_manifest::GenerationState::Active
+        && manifest.generations().iter().all(|entry| {
+            if entry.generation() == current_generation {
+                entry.state() == crate::vault_manifest::GenerationState::Active
+            } else {
+                entry.generation() < current_generation
+                    && entry.state() == crate::vault_manifest::GenerationState::Retained
+            }
+        })
         && manifest
             .objects()
             .iter()
@@ -1682,7 +1687,7 @@ mod tests {
     }
 
     #[test]
-    fn existing_device_restore_gate_rejects_retained_transition_state() {
+    fn existing_device_restore_gate_accepts_stable_retained_history() {
         let mut fixture = fixture();
         let (material, staging) = verified_material(&mut fixture, "existing-gate-retained.sqlite3");
         let current_generation = KeyGeneration::new(8).unwrap();
@@ -1694,6 +1699,49 @@ mod tests {
             ManifestHash::from_bytes([0xa5; 32]),
             vec![
                 ManifestGeneration::new(generation(), GenerationState::Retained),
+                ManifestGeneration::new(current_generation, GenerationState::Active),
+            ],
+            vec![ManifestObject::new(
+                [0; 16],
+                [0x91; 16],
+                current_generation,
+                4096,
+                [0x92; 32],
+                ManifestAuthMetadata::StructuredStore,
+            )],
+            (RotationPhase::None, None),
+        );
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingGateBackend::new([0x44; 32], current_generation);
+
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), current_generation),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+
+        assert_eq!(gate.route(), ExistingDeviceRestoreRoute::CrossGeneration);
+        assert_eq!(gate.current_manifest().manifest().generations().len(), 2);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_gate_rejects_staged_generation_without_rotation() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "existing-gate-staged.sqlite3");
+        let current_generation = KeyGeneration::new(8).unwrap();
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) = current_state(
+            &current_key,
+            current_generation,
+            10,
+            ManifestHash::from_bytes([0xa5; 32]),
+            vec![
+                ManifestGeneration::new(generation(), GenerationState::Staged),
                 ManifestGeneration::new(current_generation, GenerationState::Active),
             ],
             vec![ManifestObject::new(
