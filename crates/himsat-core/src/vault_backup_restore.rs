@@ -19,14 +19,20 @@ use crate::vault_freshness::{
 };
 use crate::vault_keys::{KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
 use crate::vault_lease::VaultLease;
-use crate::vault_manifest::{ManifestAuthMetadata, ManifestObject};
+use crate::vault_manifest::{
+    FreshManifestError, ManifestAuthMetadata, ManifestContext, ManifestError, ManifestObject,
+    ManifestPlaintext, RotationPhase, decrypt_manifest, encrypt_fresh_manifest,
+    encrypt_fresh_manifest_avoiding_reservation, manifest_context, manifest_hash,
+    manifest_nonce_reservation,
+};
 use crate::vault_nonce::{
     FreshBoundedBlobError, NonceLifecycleError, NoncePurpose, NonceReservation,
     NonceReservationLedger,
 };
 use crate::vault_restore::{
-    FreshDeviceNewestnessRiskAccepted, FreshDeviceRestoreGenesis, RestoreError,
-    prepare_fresh_device_restore_genesis,
+    FreshDeviceNewestnessRiskAccepted, FreshDeviceRestoreGenesis, OlderBackupRestoreConfirmed,
+    OlderBackupRestorePublication, RestoreError, prepare_fresh_device_restore_genesis,
+    prepare_older_backup_restore,
 };
 use crate::vault_sqlcipher::{
     SqlCipherGenerationEndpoint, SqlCipherGenerationMigrationError, open_sqlcipher_database,
@@ -978,6 +984,274 @@ where
     Ok(ExistingDeviceStagedRestore {
         gate,
         staged_objects,
+    })
+}
+
+#[derive(Debug)]
+pub enum ExistingDeviceRestorePreparationError<E> {
+    Staging(ExistingDeviceRestoreStagingError<E>),
+    Manifest(ManifestError),
+    FreshManifest(FreshManifestError),
+    Restore(RestoreError),
+    Nonce(NonceLifecycleError),
+    RetainedManifestContextMismatch,
+    RetainedManifestHistoryIncomplete,
+    RetainedManifestCurrentMismatch,
+    StagingManifestMismatch,
+}
+
+impl<E: fmt::Display> fmt::Display for ExistingDeviceRestorePreparationError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Staging(error) => write!(f, "existing-device restore state changed: {error}"),
+            Self::Manifest(error) => write!(f, "existing-device restore manifest failed: {error}"),
+            Self::FreshManifest(error) => {
+                write!(f, "existing-device restore staging manifest failed: {error}")
+            }
+            Self::Restore(error) => write!(f, "existing-device B502 preparation failed: {error}"),
+            Self::Nonce(error) => write!(f, "existing-device retained nonce history failed: {error}"),
+            Self::RetainedManifestContextMismatch => f.write_str(
+                "existing-device retained manifest belongs to a different vault or generation",
+            ),
+            Self::RetainedManifestHistoryIncomplete => f.write_str(
+                "existing-device retained manifest history does not contain the current anchor",
+            ),
+            Self::RetainedManifestCurrentMismatch => f.write_str(
+                "existing-device retained current manifest does not match authenticated current state",
+            ),
+            Self::StagingManifestMismatch => f.write_str(
+                "existing-device synthetic staging manifest or B502 publication mismatched",
+            ),
+        }
+    }
+}
+
+impl<E: Error + 'static> Error for ExistingDeviceRestorePreparationError<E> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Staging(error) => Some(error),
+            Self::Manifest(error) => Some(error),
+            Self::FreshManifest(error) => Some(error),
+            Self::Restore(error) => Some(error),
+            Self::Nonce(error) => Some(error),
+            Self::RetainedManifestContextMismatch
+            | Self::RetainedManifestHistoryIncomplete
+            | Self::RetainedManifestCurrentMismatch
+            | Self::StagingManifestMismatch => None,
+        }
+    }
+}
+
+/// Pure B505 preparation result for an existing-device restore. The synthetic
+/// staging manifest is authenticated but never published or anchored. The B502
+/// publication is a final candidate only; durable publication and protected
+/// compare-and-advance remain a later bounded unit.
+pub struct ExistingDevicePreparedRestore {
+    staged_restore: ExistingDeviceStagedRestore,
+    staging_manifest_reservation: NonceReservation,
+    staging_manifest_envelope: Vec<u8>,
+    publication: OlderBackupRestorePublication,
+}
+
+impl ExistingDevicePreparedRestore {
+    #[must_use]
+    pub fn staged_restore(&self) -> &ExistingDeviceStagedRestore {
+        &self.staged_restore
+    }
+
+    #[must_use]
+    pub const fn staging_manifest_reservation(&self) -> NonceReservation {
+        self.staging_manifest_reservation
+    }
+
+    #[must_use]
+    pub fn staging_manifest_envelope(&self) -> &[u8] {
+        &self.staging_manifest_envelope
+    }
+
+    #[must_use]
+    pub const fn publication(&self) -> &OlderBackupRestorePublication {
+        &self.publication
+    }
+
+    #[must_use]
+    pub fn into_parts(
+        self,
+    ) -> (
+        ExistingDeviceStagedRestore,
+        NonceReservation,
+        Vec<u8>,
+        OlderBackupRestorePublication,
+    ) {
+        (
+            self.staged_restore,
+            self.staging_manifest_reservation,
+            self.staging_manifest_envelope,
+            self.publication,
+        )
+    }
+}
+
+fn retained_manifest_ledgers<E>(
+    gate: &ExistingDeviceRestoreGate,
+    retained_manifest_envelopes: &[&[u8]],
+) -> Result<
+    (NonceReservationLedger, NonceReservationLedger),
+    ExistingDeviceRestorePreparationError<E>,
+> {
+    let identity = gate.current_identity();
+    let reservations = gate.with_current_vrk(|current_vrk| {
+        let mut reservations = Vec::with_capacity(retained_manifest_envelopes.len());
+        let mut current_found = false;
+        for envelope in retained_manifest_envelopes {
+            let context = manifest_context(envelope)
+                .map_err(ExistingDeviceRestorePreparationError::Manifest)?;
+            if context.vault_id() != identity.vault_id()
+                || context.key_generation() != identity.key_generation()
+            {
+                return Err(ExistingDeviceRestorePreparationError::RetainedManifestContextMismatch);
+            }
+            let plaintext = decrypt_manifest(current_vrk, context, envelope)
+                .map_err(ExistingDeviceRestorePreparationError::Manifest)?;
+            if manifest_hash(envelope) == gate.current_manifest().hash() {
+                if plaintext != *gate.current_manifest().manifest() {
+                    return Err(
+                        ExistingDeviceRestorePreparationError::RetainedManifestCurrentMismatch,
+                    );
+                }
+                current_found = true;
+            }
+            reservations.push(
+                manifest_nonce_reservation(envelope)
+                    .map_err(ExistingDeviceRestorePreparationError::Manifest)?,
+            );
+        }
+        if !current_found {
+            return Err(ExistingDeviceRestorePreparationError::RetainedManifestHistoryIncomplete);
+        }
+        Ok(reservations)
+    })?;
+
+    let staging = NonceReservationLedger::from_authenticated_canonical_reservations(
+        identity.vault_id(),
+        reservations.iter().copied(),
+    )
+    .map_err(ExistingDeviceRestorePreparationError::Nonce)?;
+    let b502 = NonceReservationLedger::from_authenticated_canonical_reservations(
+        identity.vault_id(),
+        reservations,
+    )
+    .map_err(ExistingDeviceRestorePreparationError::Nonce)?;
+    Ok((staging, b502))
+}
+
+/// Constructs the non-canonical B501-format restore-staging manifest and asks
+/// canonical B502 to prepare the final `anchor + 1` publication candidate.
+///
+/// `retained_manifest_envelopes` must be the authenticated retained manifest
+/// history for the current generation `H`, including the exact currently anchored
+/// manifest. Himsat authenticates those envelopes under `H` before deriving two
+/// independent B203 ledgers from the same history. The staging ledger is used only
+/// for the synthetic manifest; the independently hydrated B502 ledger never sees
+/// that staging reservation. This function does not write or publish a manifest,
+/// mutate protected freshness, or retire any source/current object.
+pub fn prepare_existing_device_restore_publication<B, P>(
+    backend: &mut B,
+    protector: &mut P,
+    retained_manifest_envelopes: &[&[u8]],
+    confirmation: OlderBackupRestoreConfirmed,
+    staged_restore: ExistingDeviceStagedRestore,
+) -> Result<ExistingDevicePreparedRestore, ExistingDeviceRestorePreparationError<B::Error>>
+where
+    B: ExistingDeviceRestoreTargetBackend,
+    P: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+{
+    verify_protected_staging_state(backend, protector, staged_restore.gate())
+        .map_err(ExistingDeviceRestorePreparationError::Staging)?;
+
+    let gate = staged_restore.gate();
+    let identity = gate.current_identity();
+    let source = gate.verified_backup().verified_backup().pre_sqlcipher();
+    let (mut staging_ledger, mut b502_ledger) =
+        retained_manifest_ledgers(gate, retained_manifest_envelopes)?;
+    let staging_manifest = ManifestPlaintext::new(
+        identity.vault_id(),
+        source.source_freshness_epoch(),
+        source.manifest().previous_manifest_hash(),
+        identity.key_generation(),
+        (RotationPhase::None, None),
+        gate.current_manifest().manifest().generations().to_vec(),
+        staged_restore.staged_objects().to_vec(),
+    )
+    .map_err(ExistingDeviceRestorePreparationError::Manifest)?;
+    let staging_context = ManifestContext::new(
+        identity.vault_id(),
+        identity.key_generation(),
+        source.source_freshness_epoch(),
+    );
+    let source_manifest_reservation = if gate.route() == ExistingDeviceRestoreRoute::SameGeneration
+    {
+        Some(
+            manifest_nonce_reservation(source.source_manifest_envelope())
+                .map_err(ExistingDeviceRestorePreparationError::Manifest)?,
+        )
+    } else {
+        None
+    };
+    let (staging_manifest_reservation, staging_manifest_envelope) = gate
+        .with_current_vrk(|current_vrk| match source_manifest_reservation {
+            Some(forbidden) => encrypt_fresh_manifest_avoiding_reservation(
+                &mut staging_ledger,
+                current_vrk,
+                staging_context,
+                &staging_manifest,
+                forbidden,
+            ),
+            None => encrypt_fresh_manifest(
+                &mut staging_ledger,
+                current_vrk,
+                staging_context,
+                &staging_manifest,
+            ),
+        })
+        .map_err(ExistingDeviceRestorePreparationError::FreshManifest)?;
+
+    let authenticated_staging = gate
+        .with_current_vrk(|current_vrk| {
+            decrypt_manifest(current_vrk, staging_context, &staging_manifest_envelope)
+        })
+        .map_err(ExistingDeviceRestorePreparationError::Manifest)?;
+    if authenticated_staging != staging_manifest {
+        return Err(ExistingDeviceRestorePreparationError::StagingManifestMismatch);
+    }
+
+    let publication = gate
+        .with_current_vrk(|current_vrk| {
+            prepare_older_backup_restore(
+                &mut b502_ledger,
+                current_vrk,
+                gate.trusted_anchor(),
+                identity.key_generation(),
+                &staging_manifest_envelope,
+                confirmation,
+            )
+        })
+        .map_err(ExistingDeviceRestorePreparationError::Restore)?;
+    if publication.source_manifest() != &staging_manifest
+        || publication.expected_old_anchor() != gate.trusted_anchor()
+        || publication.target_manifest().active_key_generation() != identity.key_generation()
+        || publication.target_manifest().objects() != staged_restore.staged_objects()
+    {
+        return Err(ExistingDeviceRestorePreparationError::StagingManifestMismatch);
+    }
+
+    verify_protected_staging_state(backend, protector, gate)
+        .map_err(ExistingDeviceRestorePreparationError::Staging)?;
+    Ok(ExistingDevicePreparedRestore {
+        staged_restore,
+        staging_manifest_reservation,
+        staging_manifest_envelope,
+        publication,
     })
 }
 
@@ -2450,6 +2724,246 @@ mod tests {
             ExistingDeviceRestoreStagingError::TargetStorageIdExhausted
         ));
         assert_eq!(backend.availability_calls, TARGET_STORAGE_ID_ATTEMPTS);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_preparation_same_generation_builds_b502_candidate() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "prepare-same.sqlite3");
+        let source_manifest_envelope = material
+            .verified_backup()
+            .pre_sqlcipher()
+            .source_manifest_envelope()
+            .to_vec();
+        let source_previous_hash = material
+            .verified_backup()
+            .pre_sqlcipher()
+            .manifest()
+            .previous_manifest_hash();
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingTargetBackend::new([0x31; 32], generation());
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+        let mut blob_ledger = NonceReservationLedger::new(vault_id());
+        let staged = stage_existing_device_restore_targets(
+            &mut backend,
+            &mut protector,
+            &staging,
+            &mut blob_ledger,
+            gate,
+        )
+        .unwrap();
+        let source_reservation = manifest_nonce_reservation(&source_manifest_envelope).unwrap();
+        let prepared = prepare_existing_device_restore_publication(
+            &mut backend,
+            &mut protector,
+            &[current_envelope.as_slice()],
+            OlderBackupRestoreConfirmed::CONFIRMED,
+            staged,
+        )
+        .unwrap();
+
+        let staging_context = manifest_context(prepared.staging_manifest_envelope()).unwrap();
+        assert_eq!(staging_context.vault_id(), vault_id());
+        assert_eq!(staging_context.key_generation(), generation());
+        assert_eq!(staging_context.freshness_epoch().get(), 9);
+        assert_ne!(prepared.staging_manifest_reservation(), source_reservation);
+        assert_eq!(
+            prepared
+                .publication()
+                .source_manifest()
+                .freshness_epoch()
+                .get(),
+            9
+        );
+        assert_eq!(
+            prepared
+                .publication()
+                .source_manifest()
+                .previous_manifest_hash(),
+            source_previous_hash
+        );
+        assert_eq!(
+            prepared.publication().source_manifest().generations(),
+            prepared
+                .staged_restore()
+                .gate()
+                .current_manifest()
+                .manifest()
+                .generations()
+        );
+        assert_eq!(
+            prepared.publication().source_manifest().objects(),
+            prepared.staged_restore().staged_objects()
+        );
+        assert_eq!(prepared.publication().expected_old_anchor(), current_anchor);
+        assert_eq!(
+            prepared
+                .publication()
+                .target_manifest()
+                .freshness_epoch()
+                .get(),
+            11
+        );
+        assert_eq!(
+            prepared
+                .publication()
+                .target_manifest()
+                .previous_manifest_hash(),
+            current_anchor.manifest_hash()
+        );
+        assert_eq!(
+            prepared
+                .publication()
+                .target_manifest()
+                .active_key_generation(),
+            generation()
+        );
+        assert_ne!(
+            manifest_nonce_reservation(prepared.publication().envelope()).unwrap(),
+            prepared.staging_manifest_reservation()
+        );
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(current_anchor)
+        );
+        backend.cleanup();
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_preparation_cross_generation_rebases_manifest_to_current() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "prepare-cross.sqlite3");
+        let current_generation = KeyGeneration::new(8).unwrap();
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, current_generation, 10);
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingTargetBackend::new([0x44; 32], current_generation);
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), current_generation),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+        let mut blob_ledger = NonceReservationLedger::new(vault_id());
+        let staged = stage_existing_device_restore_targets(
+            &mut backend,
+            &mut protector,
+            &staging,
+            &mut blob_ledger,
+            gate,
+        )
+        .unwrap();
+        let prepared = prepare_existing_device_restore_publication(
+            &mut backend,
+            &mut protector,
+            &[current_envelope.as_slice()],
+            OlderBackupRestoreConfirmed::CONFIRMED,
+            staged,
+        )
+        .unwrap();
+
+        let staging_context = manifest_context(prepared.staging_manifest_envelope()).unwrap();
+        assert_eq!(staging_context.key_generation(), current_generation);
+        assert_eq!(staging_context.freshness_epoch().get(), 9);
+        assert_eq!(
+            prepared
+                .publication()
+                .source_manifest()
+                .active_key_generation(),
+            current_generation
+        );
+        assert!(
+            prepared
+                .publication()
+                .source_manifest()
+                .objects()
+                .iter()
+                .all(|object| object.key_generation() == current_generation)
+        );
+        assert_eq!(
+            prepared
+                .publication()
+                .target_manifest()
+                .freshness_epoch()
+                .get(),
+            11
+        );
+        assert_eq!(prepared.publication().expected_old_anchor(), current_anchor);
+        assert_eq!(
+            prepared.publication().new_anchor().highest_epoch().get(),
+            11
+        );
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(current_anchor)
+        );
+        backend.cleanup();
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_restore_preparation_requires_current_retained_manifest() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "prepare-history.sqlite3");
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingTargetBackend::new([0x31; 32], generation());
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+        let mut blob_ledger = NonceReservationLedger::new(vault_id());
+        let staged = stage_existing_device_restore_targets(
+            &mut backend,
+            &mut protector,
+            &staging,
+            &mut blob_ledger,
+            gate,
+        )
+        .unwrap();
+        let error = prepare_existing_device_restore_publication(
+            &mut backend,
+            &mut protector,
+            &[],
+            OlderBackupRestoreConfirmed::CONFIRMED,
+            staged,
+        )
+        .err()
+        .unwrap();
+
+        assert!(matches!(
+            error,
+            ExistingDeviceRestorePreparationError::RetainedManifestHistoryIncomplete
+        ));
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(current_anchor)
+        );
+        backend.cleanup();
         remove_database_candidate(&staging);
         cleanup(fixture);
     }
