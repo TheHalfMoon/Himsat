@@ -7,21 +7,39 @@
 use crate::vault::{ProtectedFreshnessState, ProtectorError, SecretProtector, VaultId};
 use crate::vault_backup_provider::PortableBackupProvider;
 use crate::vault_backup_sqlcipher::{
-    BackupSqlCipherVerificationError, SqlCipherVerifiedBackupSet, verify_staged_sqlcipher_backup,
+    BackupSqlCipherVerificationError, SqlCipherVerifiedBackupSet, reverify_staged_sqlcipher_backup,
+    verify_staged_sqlcipher_backup,
 };
 use crate::vault_backup_verify::{BackupSemanticError, verify_backup_semantics_before_sqlcipher};
+use crate::vault_blob::{
+    BoundedBlobContext, BoundedBlobError, bounded_blob_nonce, decrypt_bounded_blob,
+};
 use crate::vault_freshness::{
     AuthenticatedFreshnessManifest, FreshnessDecision, FreshnessError, authenticate_for_open,
 };
-use crate::vault_keys::OwnedKeyMaterial;
+use crate::vault_keys::{KeyDerivationContext, KeyPurpose, OwnedKeyMaterial};
+use crate::vault_lease::VaultLease;
+use crate::vault_manifest::{ManifestAuthMetadata, ManifestObject};
+use crate::vault_nonce::{
+    FreshBoundedBlobError, NonceLifecycleError, NoncePurpose, NonceReservation,
+    NonceReservationLedger,
+};
 use crate::vault_restore::{
     FreshDeviceNewestnessRiskAccepted, FreshDeviceRestoreGenesis, RestoreError,
     prepare_fresh_device_restore_genesis,
 };
+use crate::vault_sqlcipher::{
+    SqlCipherGenerationEndpoint, SqlCipherGenerationMigrationError, open_sqlcipher_database,
+    stage_sqlcipher_generation,
+};
+use sha2::{Digest as _, Sha256 as RestoreSha256};
+use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
+use std::io;
 use std::path::{Path, PathBuf};
+use zeroize::Zeroizing;
 
 #[derive(Debug)]
 pub enum FreshDeviceBackupMaterialError<E> {
@@ -451,6 +469,518 @@ where
     })
 }
 
+/// One authenticated retained B202 encryption instance used only to reconcile a
+/// same-generation restore nonce collision.
+#[derive(Clone)]
+pub struct ExistingDeviceRetainedBlob {
+    logical_id: [u8; 16],
+    envelope: Vec<u8>,
+}
+
+impl ExistingDeviceRetainedBlob {
+    #[must_use]
+    pub fn new(logical_id: [u8; 16], envelope: Vec<u8>) -> Self {
+        Self {
+            logical_id,
+            envelope,
+        }
+    }
+
+    #[must_use]
+    pub const fn logical_id(&self) -> [u8; 16] {
+        self.logical_id
+    }
+
+    #[must_use]
+    pub fn envelope(&self) -> &[u8] {
+        &self.envelope
+    }
+}
+
+/// B505 target-staging storage boundary. Implementations hold write exclusion,
+/// use create-if-absent durable staging, and return only authenticated retained
+/// B202 evidence from `retained_blob_for_reservation`.
+pub trait ExistingDeviceRestoreTargetBackend: ExistingDeviceRestoreGateBackend {
+    fn target_storage_available(&mut self, storage_id: [u8; 16]) -> Result<bool, Self::Error>;
+
+    fn sqlcipher_target_path(&mut self, storage_id: [u8; 16]) -> Result<PathBuf, Self::Error>;
+
+    fn stage_blob(&mut self, storage_id: [u8; 16], envelope: &[u8]) -> Result<(), Self::Error>;
+
+    fn read_staged_blob(&mut self, storage_id: [u8; 16]) -> Result<Vec<u8>, Self::Error>;
+
+    fn retained_blob_for_reservation(
+        &mut self,
+        reservation: NonceReservation,
+    ) -> Result<Option<ExistingDeviceRetainedBlob>, Self::Error>;
+}
+
+#[derive(Debug)]
+pub enum ExistingDeviceRestoreStagingError<E> {
+    Backend(E),
+    Protector(ProtectorError),
+    SourceSqlCipher(BackupSqlCipherVerificationError),
+    SqlCipher(SqlCipherGenerationMigrationError),
+    Blob(BoundedBlobError),
+    FreshBlob(FreshBoundedBlobError),
+    Nonce(NonceLifecycleError),
+    RandomnessUnavailable,
+    TargetStorageIdExhausted,
+    TargetPath,
+    Copy,
+    Durability,
+    SourceChanged,
+    TargetIdentityMismatch,
+    NonceReservationConflict,
+    StagedBlobMismatch,
+    ProtectedStateChanged,
+}
+
+impl<E: fmt::Display> fmt::Display for ExistingDeviceRestoreStagingError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Backend(error) => {
+                write!(f, "existing-device restore staging backend failed: {error}")
+            }
+            Self::Protector(error) => write!(
+                f,
+                "existing-device restore staging protector failed: {error}"
+            ),
+            Self::SourceSqlCipher(error) => write!(
+                f,
+                "existing-device restore source SQLCipher verification failed: {error}"
+            ),
+            Self::SqlCipher(error) => write!(
+                f,
+                "existing-device restore SQLCipher staging failed: {error}"
+            ),
+            Self::Blob(error) => write!(
+                f,
+                "existing-device restore blob verification failed: {error}"
+            ),
+            Self::FreshBlob(error) => write!(
+                f,
+                "existing-device restore blob re-encryption failed: {error}"
+            ),
+            Self::Nonce(error) => write!(
+                f,
+                "existing-device restore nonce reconciliation failed: {error}"
+            ),
+            Self::RandomnessUnavailable => {
+                f.write_str("existing-device restore target-id randomness is unavailable")
+            }
+            Self::TargetStorageIdExhausted => {
+                f.write_str("existing-device restore could not allocate a fresh target storage id")
+            }
+            Self::TargetPath => f.write_str("existing-device restore target path is invalid"),
+            Self::Copy => f.write_str("existing-device restore SQLCipher exact copy failed"),
+            Self::Durability => {
+                f.write_str("existing-device restore staged SQLCipher durability failed")
+            }
+            Self::SourceChanged => {
+                f.write_str("existing-device restore source SQLCipher changed during staging")
+            }
+            Self::TargetIdentityMismatch => {
+                f.write_str("existing-device restore staged SQLCipher identity mismatch")
+            }
+            Self::NonceReservationConflict => f.write_str(
+                "existing-device restore copied blob nonce conflicts with retained history",
+            ),
+            Self::StagedBlobMismatch => {
+                f.write_str("existing-device restore staged blob reread mismatch")
+            }
+            Self::ProtectedStateChanged => f.write_str(
+                "existing-device restore protected current state changed during staging",
+            ),
+        }
+    }
+}
+
+impl<E: Error + 'static> Error for ExistingDeviceRestoreStagingError<E> {}
+
+/// Verified non-canonical target inventory produced before the B505 staging
+/// manifest and B502 publication units. The current canonical object set and
+/// protected freshness state remain unchanged.
+pub struct ExistingDeviceStagedRestore {
+    gate: ExistingDeviceRestoreGate,
+    staged_objects: Vec<ManifestObject>,
+}
+
+impl ExistingDeviceStagedRestore {
+    #[must_use]
+    pub fn gate(&self) -> &ExistingDeviceRestoreGate {
+        &self.gate
+    }
+
+    #[must_use]
+    pub fn staged_objects(&self) -> &[ManifestObject] {
+        &self.staged_objects
+    }
+
+    #[must_use]
+    pub fn into_parts(self) -> (ExistingDeviceRestoreGate, Vec<ManifestObject>) {
+        (self.gate, self.staged_objects)
+    }
+}
+
+const TARGET_STORAGE_ID_ATTEMPTS: usize = 32;
+
+fn generate_target_storage_id<B>(
+    backend: &mut B,
+    forbidden: &mut HashSet<[u8; 16]>,
+) -> Result<[u8; 16], ExistingDeviceRestoreStagingError<B::Error>>
+where
+    B: ExistingDeviceRestoreTargetBackend,
+{
+    for _ in 0..TARGET_STORAGE_ID_ATTEMPTS {
+        let mut candidate = [0_u8; 16];
+        getrandom::fill(&mut candidate)
+            .map_err(|_| ExistingDeviceRestoreStagingError::RandomnessUnavailable)?;
+        if candidate == [0_u8; 16] || forbidden.contains(&candidate) {
+            continue;
+        }
+        if !backend
+            .target_storage_available(candidate)
+            .map_err(ExistingDeviceRestoreStagingError::Backend)?
+        {
+            continue;
+        }
+        forbidden.insert(candidate);
+        return Ok(candidate);
+    }
+    Err(ExistingDeviceRestoreStagingError::TargetStorageIdExhausted)
+}
+
+fn sqlcipher_file_identity(path: &Path) -> io::Result<(u64, [u8; 32])> {
+    let mut file = File::open(path)?;
+    let mut hasher = RestoreSha256::new();
+    let mut total = 0_u64;
+    let mut buffer = vec![0_u8; 1024 * 1024];
+    loop {
+        let read = std::io::Read::read(&mut file, &mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        total = total
+            .checked_add(u64::try_from(read).map_err(io::Error::other)?)
+            .ok_or_else(|| io::Error::other("SQLCipher file length overflow"))?;
+        hasher.update(&buffer[..read]);
+    }
+    Ok((total, hasher.finalize().into()))
+}
+
+fn copy_same_generation_sqlcipher<E>(
+    source: &Path,
+    target: &Path,
+    expected: (u64, [u8; 32]),
+    current_vrk: &OwnedKeyMaterial,
+    current_identity: crate::vault::VaultLeaseIdentity,
+) -> Result<(u64, [u8; 32]), ExistingDeviceRestoreStagingError<E>> {
+    if target.exists() {
+        return Err(ExistingDeviceRestoreStagingError::TargetIdentityMismatch);
+    }
+    let source_before = sqlcipher_file_identity(source)
+        .map_err(|_| ExistingDeviceRestoreStagingError::TargetPath)?;
+    if source_before != expected {
+        return Err(ExistingDeviceRestoreStagingError::SourceChanged);
+    }
+    let mut source_file =
+        File::open(source).map_err(|_| ExistingDeviceRestoreStagingError::Copy)?;
+    let mut target_file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .open(target)
+        .map_err(|_| ExistingDeviceRestoreStagingError::Copy)?;
+    let copied = io::copy(&mut source_file, &mut target_file)
+        .map_err(|_| ExistingDeviceRestoreStagingError::Copy)?;
+    if copied != expected.0 {
+        return Err(ExistingDeviceRestoreStagingError::TargetIdentityMismatch);
+    }
+    target_file
+        .sync_all()
+        .map_err(|_| ExistingDeviceRestoreStagingError::Durability)?;
+    drop(target_file);
+
+    let source_after = sqlcipher_file_identity(source)
+        .map_err(|_| ExistingDeviceRestoreStagingError::TargetPath)?;
+    if source_after != source_before {
+        return Err(ExistingDeviceRestoreStagingError::SourceChanged);
+    }
+    let target_identity = sqlcipher_file_identity(target)
+        .map_err(|_| ExistingDeviceRestoreStagingError::TargetPath)?;
+    if target_identity != expected {
+        return Err(ExistingDeviceRestoreStagingError::TargetIdentityMismatch);
+    }
+
+    let lease = VaultLease::new(current_identity);
+    let context = KeyDerivationContext::new(
+        current_identity.vault_id(),
+        current_identity.key_generation(),
+        KeyPurpose::StructuredStore,
+    );
+    let handle = open_sqlcipher_database(target, lease.keyed_handle_lease(), context, current_vrk)
+        .map_err(|_| ExistingDeviceRestoreStagingError::TargetIdentityMismatch)?;
+    handle
+        .verify_integrity()
+        .map_err(|_| ExistingDeviceRestoreStagingError::TargetIdentityMismatch)?;
+    drop(handle);
+    Ok(target_identity)
+}
+
+fn require_exact_retained_blob<B>(
+    backend: &mut B,
+    reservation: NonceReservation,
+    logical_id: [u8; 16],
+    source_envelope: &[u8],
+) -> Result<(), ExistingDeviceRestoreStagingError<B::Error>>
+where
+    B: ExistingDeviceRestoreTargetBackend,
+{
+    let Some(retained) = backend
+        .retained_blob_for_reservation(reservation)
+        .map_err(ExistingDeviceRestoreStagingError::Backend)?
+    else {
+        return Err(ExistingDeviceRestoreStagingError::NonceReservationConflict);
+    };
+    if retained.logical_id() != logical_id || retained.envelope() != source_envelope {
+        return Err(ExistingDeviceRestoreStagingError::NonceReservationConflict);
+    }
+    Ok(())
+}
+
+fn verify_protected_staging_state<B, P>(
+    backend: &mut B,
+    protector: &mut P,
+    gate: &ExistingDeviceRestoreGate,
+) -> Result<(), ExistingDeviceRestoreStagingError<B::Error>>
+where
+    B: ExistingDeviceRestoreTargetBackend,
+    P: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+{
+    backend
+        .assert_normal_writes_quiesced()
+        .map_err(ExistingDeviceRestoreStagingError::Backend)?;
+    let identity = gate.current_identity();
+    match protector
+        .read_freshness_anchor(identity.vault_id())
+        .map_err(ExistingDeviceRestoreStagingError::Protector)?
+    {
+        ProtectedFreshnessState::Present(anchor) if anchor == gate.trusted_anchor() => {}
+        _ => return Err(ExistingDeviceRestoreStagingError::ProtectedStateChanged),
+    }
+    let reread = protector
+        .unlock_vrk(identity.vault_id(), identity.key_generation())
+        .map_err(ExistingDeviceRestoreStagingError::Protector)?;
+    let key_matches = gate.with_current_vrk(|current| key_material_equal(current, &reread));
+    if !key_matches {
+        return Err(ExistingDeviceRestoreStagingError::ProtectedStateChanged);
+    }
+    gate.with_current_vrk(|current| {
+        backend
+            .verify_current_inventory(current, gate.current_manifest().manifest())
+            .map_err(ExistingDeviceRestoreStagingError::Backend)
+    })
+}
+
+/// Stages a verified non-canonical restore inventory under current generation `H`.
+/// `G == H` preserves ciphertext and reconciles B202 nonces; `G < H` re-encrypts
+/// through qualified SQLCipher/B202 paths. This function never publishes or anchors.
+pub fn stage_existing_device_restore_targets<B, P>(
+    backend: &mut B,
+    protector: &mut P,
+    structured_store_source: &Path,
+    nonce_ledger: &mut NonceReservationLedger,
+    gate: ExistingDeviceRestoreGate,
+) -> Result<ExistingDeviceStagedRestore, ExistingDeviceRestoreStagingError<B::Error>>
+where
+    B: ExistingDeviceRestoreTargetBackend,
+    P: SecretProtector<VaultRootKey = OwnedKeyMaterial>,
+{
+    verify_protected_staging_state(backend, protector, &gate)?;
+    let identity = gate.current_identity();
+    if nonce_ledger.vault_id() != identity.vault_id() {
+        return Err(ExistingDeviceRestoreStagingError::Nonce(
+            NonceLifecycleError::VaultMismatch,
+        ));
+    }
+    let verified = gate.verified_backup().verified_backup();
+    reverify_staged_sqlcipher_backup(structured_store_source, verified)
+        .map_err(ExistingDeviceRestoreStagingError::SourceSqlCipher)?;
+    let source = verified.pre_sqlcipher();
+
+    let mut forbidden_storage_ids: HashSet<[u8; 16]> = gate
+        .current_manifest()
+        .manifest()
+        .objects()
+        .iter()
+        .map(ManifestObject::storage_id)
+        .collect();
+    forbidden_storage_ids.insert(source.structured_store_source_storage_id());
+    forbidden_storage_ids.extend(
+        source
+            .generic_artifacts()
+            .iter()
+            .map(|blob| blob.source_storage_id()),
+    );
+
+    let structured_target_id = generate_target_storage_id(backend, &mut forbidden_storage_ids)?;
+    let structured_target_path = backend
+        .sqlcipher_target_path(structured_target_id)
+        .map_err(ExistingDeviceRestoreStagingError::Backend)?;
+    let current_generation = identity.key_generation();
+    let expected_source_identity = (
+        source.structured_store_exact_length(),
+        source.structured_store_exact_sha256(),
+    );
+
+    let structured_target_identity = match gate.route() {
+        ExistingDeviceRestoreRoute::SameGeneration => gate.with_current_vrk(|current_vrk| {
+            copy_same_generation_sqlcipher(
+                structured_store_source,
+                &structured_target_path,
+                expected_source_identity,
+                current_vrk,
+                identity,
+            )
+        })?,
+        ExistingDeviceRestoreRoute::CrossGeneration => source
+            .with_structured_store_verification_key(|source_vrk, vault_id, source_generation| {
+                gate.with_current_vrk(|current_vrk| {
+                    let source_lease = VaultLease::new(crate::vault::VaultLeaseIdentity::new(
+                        vault_id,
+                        source_generation,
+                    ));
+                    let target_lease = VaultLease::new(identity);
+                    let source_endpoint = SqlCipherGenerationEndpoint::new(
+                        structured_store_source,
+                        source_lease.keyed_handle_lease(),
+                        KeyDerivationContext::new(
+                            vault_id,
+                            source_generation,
+                            KeyPurpose::StructuredStore,
+                        ),
+                        source_vrk,
+                    );
+                    let target_endpoint = SqlCipherGenerationEndpoint::new(
+                        &structured_target_path,
+                        target_lease.keyed_handle_lease(),
+                        KeyDerivationContext::new(
+                            vault_id,
+                            current_generation,
+                            KeyPurpose::StructuredStore,
+                        ),
+                        current_vrk,
+                    );
+                    drop(
+                        stage_sqlcipher_generation(source_endpoint, target_endpoint)
+                            .map_err(ExistingDeviceRestoreStagingError::SqlCipher)?,
+                    );
+                    sqlcipher_file_identity(&structured_target_path)
+                        .map_err(|_| ExistingDeviceRestoreStagingError::TargetPath)
+                })
+            })?,
+    };
+    reverify_staged_sqlcipher_backup(structured_store_source, verified)
+        .map_err(ExistingDeviceRestoreStagingError::SourceSqlCipher)?;
+
+    let mut staged_objects = Vec::new();
+    staged_objects
+        .try_reserve_exact(source.generic_artifacts().len().saturating_add(1))
+        .map_err(|_| ExistingDeviceRestoreStagingError::TargetPath)?;
+    staged_objects.push(ManifestObject::new(
+        [0_u8; 16],
+        structured_target_id,
+        current_generation,
+        structured_target_identity.0,
+        structured_target_identity.1,
+        ManifestAuthMetadata::StructuredStore,
+    ));
+
+    for blob in source.generic_artifacts() {
+        let target_storage_id = generate_target_storage_id(backend, &mut forbidden_storage_ids)?;
+        let target_context =
+            BoundedBlobContext::new(identity.vault_id(), blob.logical_id(), current_generation);
+
+        let (target_reservation, target_envelope) = match gate.route() {
+            ExistingDeviceRestoreRoute::SameGeneration => {
+                let nonce = bounded_blob_nonce(blob.envelope())
+                    .map_err(ExistingDeviceRestoreStagingError::Blob)?;
+                let reservation = NonceReservation::new(
+                    identity.vault_id(),
+                    NoncePurpose::BoundedBlob,
+                    current_generation,
+                    nonce,
+                );
+                if nonce_ledger.contains(reservation) {
+                    require_exact_retained_blob(
+                        backend,
+                        reservation,
+                        blob.logical_id(),
+                        blob.envelope(),
+                    )?;
+                } else {
+                    nonce_ledger
+                        .record_authenticated_canonical_reservation(reservation)
+                        .map_err(ExistingDeviceRestoreStagingError::Nonce)?;
+                }
+                (reservation, blob.envelope().to_vec())
+            }
+            ExistingDeviceRestoreRoute::CrossGeneration => source
+                .with_structured_store_verification_key(|source_vrk, _, source_generation| {
+                    gate.with_current_vrk(|current_vrk| {
+                        let source_context = BoundedBlobContext::new(
+                            identity.vault_id(),
+                            blob.logical_id(),
+                            source_generation,
+                        );
+                        let plaintext = Zeroizing::new(
+                            decrypt_bounded_blob(source_vrk, source_context, blob.envelope())
+                                .map_err(ExistingDeviceRestoreStagingError::Blob)?,
+                        );
+                        let fresh = nonce_ledger
+                            .encrypt_fresh_bounded_blob(current_vrk, target_context, &plaintext)
+                            .map_err(ExistingDeviceRestoreStagingError::FreshBlob)?;
+                        Ok::<_, ExistingDeviceRestoreStagingError<B::Error>>(fresh.into_parts())
+                    })
+                })?,
+        };
+
+        backend
+            .stage_blob(target_storage_id, &target_envelope)
+            .map_err(ExistingDeviceRestoreStagingError::Backend)?;
+        let reread = backend
+            .read_staged_blob(target_storage_id)
+            .map_err(ExistingDeviceRestoreStagingError::Backend)?;
+        if reread != target_envelope {
+            return Err(ExistingDeviceRestoreStagingError::StagedBlobMismatch);
+        }
+        gate.with_current_vrk(|current_vrk| {
+            decrypt_bounded_blob(current_vrk, target_context, &reread)
+                .map(Zeroizing::new)
+                .map_err(ExistingDeviceRestoreStagingError::Blob)
+        })?;
+        staged_objects.push(ManifestObject::new(
+            blob.logical_id(),
+            target_storage_id,
+            current_generation,
+            u64::try_from(target_envelope.len())
+                .map_err(|_| ExistingDeviceRestoreStagingError::TargetIdentityMismatch)?,
+            RestoreSha256::digest(&target_envelope).into(),
+            ManifestAuthMetadata::GenericArtifactBlob {
+                nonce: target_reservation.nonce(),
+            },
+        ));
+    }
+
+    staged_objects.sort_by_key(|object| (object.kind(), object.logical_id()));
+    verify_protected_staging_state(backend, protector, &gate)?;
+    Ok(ExistingDeviceStagedRestore {
+        gate,
+        staged_objects,
+    })
+}
+
 fn remove_database_candidate(path: &Path) {
     let _ = std::fs::remove_file(path);
     for suffix in ["-wal", "-shm"] {
@@ -538,6 +1068,9 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     const PASSPHRASE: &str = "correct horse battery staple";
+    const RESTORE_BLOB_LOGICAL_ID: [u8; 16] = [0x61; 16];
+    const RESTORE_BLOB_STORAGE_ID: [u8; 16] = [0x62; 16];
+    const RESTORE_BLOB_PLAINTEXT: &[u8] = b"HIMSAT_B505U_RESTORE_BLOB";
     static NEXT_TEMP: AtomicU64 = AtomicU64::new(1);
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -752,10 +1285,15 @@ mod tests {
         (bytes.len() as u64, Sha256::digest(bytes).into())
     }
 
+    fn materialized_hash_for_test(path: &Path) -> [u8; 32] {
+        Sha256::digest(std::fs::read(path).unwrap()).into()
+    }
+
     struct Fixture {
         provider: MemoryProvider,
         descriptor: Vec<u8>,
         source_db: PathBuf,
+        source_blob: PathBuf,
         open_source: Connection,
     }
 
@@ -776,6 +1314,16 @@ mod tests {
             )
             .unwrap();
         let (db_len, db_sha) = file_identity(&source_db);
+        let mut ledger = NonceReservationLedger::new(vault_id());
+        let blob_context =
+            BoundedBlobContext::new(vault_id(), RESTORE_BLOB_LOGICAL_ID, generation());
+        let blob = ledger
+            .encrypt_fresh_bounded_blob(&key, blob_context, RESTORE_BLOB_PLAINTEXT)
+            .unwrap();
+        let blob_nonce = blob.reservation().nonce();
+        let blob_envelope = blob.into_parts().1;
+        let source_blob = unused_path("source-blob.bin");
+        std::fs::write(&source_blob, &blob_envelope).unwrap();
         let epoch = FreshnessEpoch::new(9).unwrap();
         let manifest_plaintext = ManifestPlaintext::new(
             vault_id(),
@@ -787,17 +1335,26 @@ mod tests {
                 generation(),
                 GenerationState::Active,
             )],
-            vec![ManifestObject::new(
-                [0; 16],
-                [0x54; 16],
-                generation(),
-                db_len,
-                db_sha,
-                ManifestAuthMetadata::StructuredStore,
-            )],
+            vec![
+                ManifestObject::new(
+                    RESTORE_BLOB_LOGICAL_ID,
+                    RESTORE_BLOB_STORAGE_ID,
+                    generation(),
+                    blob_envelope.len() as u64,
+                    Sha256::digest(&blob_envelope).into(),
+                    ManifestAuthMetadata::GenericArtifactBlob { nonce: blob_nonce },
+                ),
+                ManifestObject::new(
+                    [0; 16],
+                    [0x54; 16],
+                    generation(),
+                    db_len,
+                    db_sha,
+                    ManifestAuthMetadata::StructuredStore,
+                ),
+            ],
         )
         .unwrap();
-        let mut ledger = NonceReservationLedger::new(vault_id());
         let (_, manifest) = encrypt_fresh_manifest(
             &mut ledger,
             &key,
@@ -817,6 +1374,10 @@ mod tests {
         let verify = unused_path("creation-verify.sqlite3");
         let lease = VaultLease::new(VaultLeaseIdentity::new(vault_id(), generation()));
         let mut provider = MemoryProvider::default();
+        let generic_sources = [BackupSourceFile::new(
+            RESTORE_BLOB_STORAGE_ID,
+            source_blob.clone(),
+        )];
         let accepted = create_publish_and_verify_portable_backup(
             &mut Guard,
             &mut provider,
@@ -827,7 +1388,7 @@ mod tests {
             PASSPHRASE,
             &manifest,
             &source_db,
-            &[] as &[BackupSourceFile],
+            &generic_sources,
             &snapshot,
             &package,
             &verify,
@@ -842,6 +1403,7 @@ mod tests {
             provider,
             descriptor,
             source_db,
+            source_blob,
             open_source,
         }
     }
@@ -849,6 +1411,7 @@ mod tests {
     fn cleanup(fixture: Fixture) {
         drop(fixture.open_source);
         remove_database_candidate(&fixture.source_db);
+        let _ = std::fs::remove_file(&fixture.source_blob);
     }
 
     fn verified_material(
@@ -1468,6 +2031,89 @@ mod tests {
         }
     }
 
+    struct TestExistingTargetBackend {
+        gate: TestExistingGateBackend,
+        sqlcipher_paths: HashMap<[u8; 16], PathBuf>,
+        staged_blobs: HashMap<[u8; 16], Vec<u8>>,
+        retained_blobs: HashMap<NonceReservation, ExistingDeviceRetainedBlob>,
+        force_unavailable: bool,
+        availability_calls: usize,
+    }
+
+    impl TestExistingTargetBackend {
+        fn new(expected_key: [u8; 32], expected_generation: KeyGeneration) -> Self {
+            Self {
+                gate: TestExistingGateBackend::new(expected_key, expected_generation),
+                sqlcipher_paths: HashMap::new(),
+                staged_blobs: HashMap::new(),
+                retained_blobs: HashMap::new(),
+                force_unavailable: false,
+                availability_calls: 0,
+            }
+        }
+
+        fn cleanup(&self) {
+            for path in self.sqlcipher_paths.values() {
+                remove_database_candidate(path);
+            }
+        }
+    }
+
+    impl ExistingDeviceRestoreGateBackend for TestExistingTargetBackend {
+        type Error = ExistingGateBackendError;
+
+        fn assert_normal_writes_quiesced(&mut self) -> Result<(), Self::Error> {
+            self.gate.assert_normal_writes_quiesced()
+        }
+
+        fn verify_current_inventory(
+            &mut self,
+            current_vrk: &OwnedKeyMaterial,
+            manifest: &ManifestPlaintext,
+        ) -> Result<(), Self::Error> {
+            self.gate.verify_current_inventory(current_vrk, manifest)
+        }
+    }
+
+    impl ExistingDeviceRestoreTargetBackend for TestExistingTargetBackend {
+        fn target_storage_available(&mut self, storage_id: [u8; 16]) -> Result<bool, Self::Error> {
+            self.availability_calls += 1;
+            Ok(!self.force_unavailable
+                && !self.sqlcipher_paths.contains_key(&storage_id)
+                && !self.staged_blobs.contains_key(&storage_id))
+        }
+
+        fn sqlcipher_target_path(&mut self, storage_id: [u8; 16]) -> Result<PathBuf, Self::Error> {
+            Ok(self
+                .sqlcipher_paths
+                .entry(storage_id)
+                .or_insert_with(|| unused_path("existing-target.sqlite3"))
+                .clone())
+        }
+
+        fn stage_blob(&mut self, storage_id: [u8; 16], envelope: &[u8]) -> Result<(), Self::Error> {
+            if self.staged_blobs.contains_key(&storage_id) {
+                return Err(ExistingGateBackendError::InvalidInventory);
+            }
+            self.staged_blobs.insert(storage_id, envelope.to_vec());
+            Ok(())
+        }
+
+        fn read_staged_blob(&mut self, storage_id: [u8; 16]) -> Result<Vec<u8>, Self::Error> {
+            self.staged_blobs
+                .get(&storage_id)
+                .cloned()
+                .ok_or(ExistingGateBackendError::InvalidInventory)
+        }
+
+        fn retained_blob_for_reservation(
+            &mut self,
+            reservation: NonceReservation,
+        ) -> Result<Option<ExistingDeviceRetainedBlob>, Self::Error> {
+            Ok(self.retained_blobs.get(&reservation).cloned())
+        }
+    }
+
     fn current_state(
         key: &OwnedKeyMaterial,
         current_generation: KeyGeneration,
@@ -1575,6 +2221,235 @@ mod tests {
 
         assert_eq!(gate.route(), ExistingDeviceRestoreRoute::CrossGeneration);
         assert_eq!(gate.current_identity().key_generation(), current_generation);
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_target_staging_same_generation_preserves_ciphertext() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "target-same.sqlite3");
+        let source_blob = material
+            .verified_backup()
+            .pre_sqlcipher()
+            .generic_artifacts()[0]
+            .envelope()
+            .to_vec();
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingTargetBackend::new([0x31; 32], generation());
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+        let mut nonce_ledger = NonceReservationLedger::new(vault_id());
+        let staged = stage_existing_device_restore_targets(
+            &mut backend,
+            &mut protector,
+            &staging,
+            &mut nonce_ledger,
+            gate,
+        )
+        .unwrap();
+
+        assert_eq!(staged.staged_objects().len(), 2);
+        assert!(
+            staged
+                .staged_objects()
+                .iter()
+                .all(|object| object.key_generation() == generation())
+        );
+        let structured = staged
+            .staged_objects()
+            .iter()
+            .find(|object| object.auth_metadata() == ManifestAuthMetadata::StructuredStore)
+            .unwrap();
+        let target_path = backend
+            .sqlcipher_paths
+            .get(&structured.storage_id())
+            .unwrap();
+        assert_eq!(
+            std::fs::read(target_path).unwrap(),
+            std::fs::read(&staging).unwrap()
+        );
+        let blob = staged
+            .staged_objects()
+            .iter()
+            .find(|object| object.logical_id() == RESTORE_BLOB_LOGICAL_ID)
+            .unwrap();
+        assert_eq!(
+            backend.staged_blobs.get(&blob.storage_id()).unwrap(),
+            &source_blob
+        );
+        assert_ne!(structured.storage_id(), [0x54; 16]);
+        assert_ne!(blob.storage_id(), RESTORE_BLOB_STORAGE_ID);
+        assert_ne!(structured.storage_id(), blob.storage_id());
+        assert_eq!(
+            protector.read_freshness_anchor(vault_id()).unwrap(),
+            ProtectedFreshnessState::Present(current_anchor)
+        );
+        backend.cleanup();
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_target_staging_cross_generation_reencrypts_under_current_key() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "target-cross.sqlite3");
+        let source_blob = material
+            .verified_backup()
+            .pre_sqlcipher()
+            .generic_artifacts()[0]
+            .envelope()
+            .to_vec();
+        let current_generation = KeyGeneration::new(8).unwrap();
+        let current_key = OwnedKeyMaterial::from_bytes([0x44; 32]);
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, current_generation, 10);
+        let mut protector = TestProtector::present([0x44; 32], current_anchor);
+        let mut backend = TestExistingTargetBackend::new([0x44; 32], current_generation);
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), current_generation),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+        let mut nonce_ledger = NonceReservationLedger::new(vault_id());
+        let staged = stage_existing_device_restore_targets(
+            &mut backend,
+            &mut protector,
+            &staging,
+            &mut nonce_ledger,
+            gate,
+        )
+        .unwrap();
+
+        assert!(
+            staged
+                .staged_objects()
+                .iter()
+                .all(|object| object.key_generation() == current_generation)
+        );
+        let blob = staged
+            .staged_objects()
+            .iter()
+            .find(|object| object.logical_id() == RESTORE_BLOB_LOGICAL_ID)
+            .unwrap();
+        let target_blob = backend.staged_blobs.get(&blob.storage_id()).unwrap();
+        assert_ne!(target_blob, &source_blob);
+        let plaintext = decrypt_bounded_blob(
+            &current_key,
+            BoundedBlobContext::new(vault_id(), RESTORE_BLOB_LOGICAL_ID, current_generation),
+            target_blob,
+        )
+        .unwrap();
+        assert_eq!(plaintext, RESTORE_BLOB_PLAINTEXT);
+        let structured = staged
+            .staged_objects()
+            .iter()
+            .find(|object| object.auth_metadata() == ManifestAuthMetadata::StructuredStore)
+            .unwrap();
+        assert_ne!(
+            structured.ciphertext_sha256(),
+            materialized_hash_for_test(&staging)
+        );
+        backend.cleanup();
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_target_staging_rejects_conflicting_same_generation_nonce() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "target-conflict.sqlite3");
+        let source_blob = &material
+            .verified_backup()
+            .pre_sqlcipher()
+            .generic_artifacts()[0];
+        let nonce = bounded_blob_nonce(source_blob.envelope()).unwrap();
+        let reservation =
+            NonceReservation::new(vault_id(), NoncePurpose::BoundedBlob, generation(), nonce);
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingTargetBackend::new([0x31; 32], generation());
+        backend.retained_blobs.insert(
+            reservation,
+            ExistingDeviceRetainedBlob::new([0x77; 16], source_blob.envelope().to_vec()),
+        );
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+        let mut nonce_ledger = NonceReservationLedger::new(vault_id());
+        nonce_ledger
+            .record_authenticated_canonical_reservation(reservation)
+            .unwrap();
+        let error = stage_existing_device_restore_targets(
+            &mut backend,
+            &mut protector,
+            &staging,
+            &mut nonce_ledger,
+            gate,
+        )
+        .err()
+        .unwrap();
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreStagingError::NonceReservationConflict
+        ));
+        backend.cleanup();
+        remove_database_candidate(&staging);
+        cleanup(fixture);
+    }
+
+    #[test]
+    fn existing_device_target_staging_fails_closed_when_no_target_id_is_available() {
+        let mut fixture = fixture();
+        let (material, staging) = verified_material(&mut fixture, "target-id-exhausted.sqlite3");
+        let current_key = vrk();
+        let (current_envelope, current_anchor) =
+            stable_current_state(&current_key, generation(), 10);
+        let mut protector = TestProtector::present([0x31; 32], current_anchor);
+        let mut backend = TestExistingTargetBackend::new([0x31; 32], generation());
+        backend.force_unavailable = true;
+        let gate = prepare_existing_device_restore_gate(
+            &mut backend,
+            &mut protector,
+            VaultLeaseIdentity::new(vault_id(), generation()),
+            &current_envelope,
+            material,
+        )
+        .unwrap();
+        let mut nonce_ledger = NonceReservationLedger::new(vault_id());
+        let error = stage_existing_device_restore_targets(
+            &mut backend,
+            &mut protector,
+            &staging,
+            &mut nonce_ledger,
+            gate,
+        )
+        .err()
+        .unwrap();
+        assert!(matches!(
+            error,
+            ExistingDeviceRestoreStagingError::TargetStorageIdExhausted
+        ));
+        assert_eq!(backend.availability_calls, TARGET_STORAGE_ID_ATTEMPTS);
         remove_database_candidate(&staging);
         cleanup(fixture);
     }
