@@ -239,26 +239,26 @@ B101-B105 code and the B105/B201 reconciliation are canonical and exact-post-mer
 
 ## R3 qualification
 
-- [ ] Q001 Exact dependency/license/SBOM/provenance closure.
-- [ ] Q002 Exact-head fmt/lint/build/tests on supported target matrix.
-- [ ] Q003 Positive vault identity/create/lock/unlock/restart, encrypted DB/blob, recovery/backup, freshness genesis/advance, and rotation evidence.
-- [ ] Q004 Random-source failure, wrong-key/passphrase, malformed/truncated/trailing/overflow envelope, tamper, transplant, nonce duplicate/collision, genesis replay, rollback/replay, protector/policy, and post-lock-handle adversarial evidence.
-- [ ] Q005 SQLCipher encryption-active, cipher-integrity, WAL/journal/temp plaintext-spill evidence.
-- [ ] Q006 Interrupted genesis/rotation/recovery/restore phase evidence.
-- [ ] Q007 Backup/filesystem/secret-store metadata allowlist and secret/log/crash-output leakage evidence.
-- [ ] Q008 Platform capability evidence; no universal app-exclusive, user-presence, atomic-anchor, or hardware-backed claim.
+- [x] Q001 Exact dependency/license/SBOM/provenance closure via canonical 004P (P001-P006, P010 proven; P011 transport-only limitation preserved, content complete). Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q002 Exact-head fmt/lint/build/tests on supported target matrix proven per leaf via CI Rust jobs on ubuntu-latest, macos-latest, and windows-latest across every canonical merge. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q003 Positive vault identity/create/lock/unlock/restart, encrypted DB/blob, recovery/backup, freshness genesis/advance, and rotation evidence across the per-leaf final-evidence documents. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q004 Random-source failure, wrong-key/passphrase, malformed/truncated/trailing/overflow envelope, tamper, transplant, nonce duplicate/collision, genesis replay, rollback/replay, protector/policy, and post-lock-handle adversarial evidence via B205, B305, B405, B406, B501A2, B504, and B506b. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q005 SQLCipher encryption-active, cipher-integrity, WAL/journal/temp plaintext-spill evidence via B304 and B306. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q006 Interrupted genesis/rotation/recovery/restore phase evidence via B504 fault injection, B307 per-boundary failure proof, rotation resume/abort paths, and B506b interruption-retry proof. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q007 Backup/filesystem/secret-store metadata allowlist and secret/log/crash-output leakage evidence via B306 scans, B505 provider-view qualification, the Round 5 allowlist, and CI provenance/adversarial jobs. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q008 Platform capability evidence with explicit non-claims via B401 (macOS), B402 (Android emulator), B403 (Windows), B404 (Linux), and B501D (macOS freshness); no universal app-exclusive, user-presence, atomic-anchor, or hardware-backed claim. Verified in `spec-004-closeout-final-evidence.md`.
 - [x] Q009 Independent human crypto/security review is not a mandatory completion gate under the forward-only owner governance amendment. Historical review evidence remains preserved; known findings still require explicit resolution, and CI/R3/adversarial qualification remain mandatory.
-- [ ] Q010 Reconcile all blocking findings, reviews, threads, comments, diff, `main`, and mergeability.
-- [ ] Q011 Merge with exact expected head and verify canonical parentage.
-- [ ] Q012 Require post-merge CI and R3 SUCCESS.
+- [x] Q010 All blocking findings reconciled (B505-R5-001 via B505C; delegate-review BLOCKING-1 plus six non-blocking findings fixed and re-verified 9/9); zero submitted reviews and zero review threads on PRs #155-#157 with billing-blocked/skipped automation recorded as NOT PASS. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q011 Every canonical merge used explicit expected-head protection with verified parentage; the two historical transport gaps (P011, B305R002) are preserved exactly as NOT PASS without retroactive upgrade. Verified in `spec-004-closeout-final-evidence.md`.
+- [x] Q012 Every canonical merge carries a push-triggered post-merge CI+R3 SUCCESS pair on its exact merge SHA. Verified in `spec-004-closeout-final-evidence.md`.
 
 ## Closeout
 
-- [ ] C001 Record durable design/review/provider/provenance/implementation/adversarial/platform/residual-risk evidence.
-- [ ] C002 Restore any temporary policy allowance to conservative successor posture.
-- [ ] C003 Exact-head qualify closeout.
-- [ ] C004 Expected-head merge closeout and require post-closeout CI/R3.
-- [ ] C005 Mark Specification 004 `CLOSED_CANONICAL` only after all prior gates are proven.
+- [x] C001 Durable design/review/provider/provenance/implementation/adversarial/platform/residual-risk evidence recorded in `spec-004-closeout-final-evidence.md` plus the per-leaf final-evidence documents, this ledger, and `CURRENT.md` lineage.
+- [x] C002 No temporary policy allowance exists to restore: the sole C002 mention in the repository is this checkbox, and the only CI `continue-on-error` is a negative control asserting a failure outcome. Verified in `spec-004-closeout-final-evidence.md`.
+- [ ] C003 Exact-head qualify closeout. This checkbox becomes PASS only when this closeout head passes exact-head CI and R3.
+- [ ] C004 Expected-head merge closeout and require post-closeout CI/R3. This checkbox becomes PASS only after guarded merge and exact-SHA post-merge CI/R3 SUCCESS.
+- [ ] C005 Mark Specification 004 `CLOSED_CANONICAL` only after all prior gates are proven. This checkbox becomes PASS only after C003-C004 qualify.
 
 ## Explicit non-tasks
 
