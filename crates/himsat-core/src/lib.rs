@@ -12,8 +12,9 @@
 //! copy-verify-publish migration sequencing without source-retirement behavior.
 //!
 //! B503A exposes the bounded full-VRK rotation contract and quiescence proof.
-//! Portable backup transport, B503 phase execution, deletion, and Specification
-//! 005 remain outside this sub-leaf.
+//! B506 exposes the bounded active-vault deletion coordinator; concrete durable
+//! backend removals, portable backup transport, and Specification 005 remain
+//! outside this sub-leaf.
 
 /// Provider-neutral vault identity, freshness, lease identity, capability, and
 /// secret-protector contract surface.
@@ -95,6 +96,9 @@ pub mod vault_protector;
 
 /// B204 fixed Argon2id v1 recovery-envelope execution/parsing.
 pub mod vault_recovery;
+
+/// B506 bounded active-vault deletion coordinator and retention limits.
+pub mod vault_deletion;
 
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
