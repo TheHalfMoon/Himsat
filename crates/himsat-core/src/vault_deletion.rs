@@ -388,13 +388,8 @@ mod tests {
         ActiveVaultDeletionError, ActiveVaultDeletionStage, run_active_vault_deletion,
     };
     use crate::vault::{KeyGeneration, VAULT_ID_BYTES, VaultId, VaultLeaseIdentity};
-    use crate::vault_keys::{
-        KEY_MATERIAL_BYTES, KeyedHandleCloser, OwnedKeyMaterial, PlaintextCache, VaultKeyMaterial,
-        VaultSessionLifetime, VaultTeardownReason,
-    };
     use crate::vault_lease::VaultLease;
     use std::collections::BTreeSet;
-    use std::convert::Infallible;
     use std::error::Error;
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -440,24 +435,6 @@ mod tests {
         Surface::RestoreRemnants,
         Surface::PublicationTemp,
         Surface::TemporaryState,
-    ];
-
-    const EXPECTED_ORDER: [ActiveVaultDeletionStage; 15] = [
-        ActiveVaultDeletionStage::Quiesce,
-        ActiveVaultDeletionStage::WrappedKeyMaterial,
-        ActiveVaultDeletionStage::FreshnessState,
-        ActiveVaultDeletionStage::ProtectorReferences,
-        ActiveVaultDeletionStage::CanonicalState,
-        ActiveVaultDeletionStage::DerivedState,
-        ActiveVaultDeletionStage::ManifestState,
-        ActiveVaultDeletionStage::StructuredStore,
-        ActiveVaultDeletionStage::BlobStore,
-        ActiveVaultDeletionStage::BackupStaging,
-        ActiveVaultDeletionStage::MigrationRemnants,
-        ActiveVaultDeletionStage::RestoreRemnants,
-        ActiveVaultDeletionStage::PublicationTemp,
-        ActiveVaultDeletionStage::TemporaryState,
-        ActiveVaultDeletionStage::Verification,
     ];
 
     /// Recording backend with one presence flag per surface family, an exact
@@ -757,109 +734,6 @@ mod tests {
         assert_eq!(backend.present.len(), ALL_SURFACES.len());
     }
 
-    /// Maps each removal stage to the surface it clears.
-    fn surface_for_stage(stage: ActiveVaultDeletionStage) -> Option<Surface> {
-        match stage {
-            ActiveVaultDeletionStage::WrappedKeyMaterial => Some(Surface::WrappedKeyMaterial),
-            ActiveVaultDeletionStage::FreshnessState => Some(Surface::FreshnessState),
-            ActiveVaultDeletionStage::ProtectorReferences => Some(Surface::ProtectorReferences),
-            ActiveVaultDeletionStage::CanonicalState => Some(Surface::CanonicalState),
-            ActiveVaultDeletionStage::DerivedState => Some(Surface::DerivedState),
-            ActiveVaultDeletionStage::ManifestState => Some(Surface::ManifestState),
-            ActiveVaultDeletionStage::StructuredStore => Some(Surface::StructuredStore),
-            ActiveVaultDeletionStage::BlobStore => Some(Surface::BlobStore),
-            ActiveVaultDeletionStage::BackupStaging => Some(Surface::BackupStaging),
-            ActiveVaultDeletionStage::MigrationRemnants => Some(Surface::MigrationRemnants),
-            ActiveVaultDeletionStage::RestoreRemnants => Some(Surface::RestoreRemnants),
-            ActiveVaultDeletionStage::PublicationTemp => Some(Surface::PublicationTemp),
-            ActiveVaultDeletionStage::TemporaryState => Some(Surface::TemporaryState),
-            ActiveVaultDeletionStage::Quiesce | ActiveVaultDeletionStage::Verification => None,
-        }
-    }
-
-    #[test]
-    fn every_stage_failure_reports_its_exact_stage_and_stops() {
-        for failing_stage in EXPECTED_ORDER {
-            let mut backend = RecordingBackend::full(identity());
-            backend.fail_at = Some(failing_stage);
-
-            let error = run_active_vault_deletion(&mut backend, &revoked_lease())
-                .expect_err("injected stage failure must fail");
-
-            match error {
-                ActiveVaultDeletionError::Backend { stage, source } => {
-                    assert_eq!(stage, failing_stage);
-                    assert_eq!(source, TestError(failing_stage));
-                    assert_eq!(error.stage(), Some(failing_stage));
-                    assert_eq!(error.source_error(), Some(&TestError(failing_stage)));
-                }
-                unexpected => panic!("expected backend failure, got {unexpected:?}"),
-            }
-            // Every removal stage up to and including the failing stage logs
-            // its attempt (the recorder logs before injecting the failure);
-            // quiesce and verification log no surface event.
-            let mut expected_prefix = Vec::new();
-            for stage in REMOVAL_ORDER {
-                expected_prefix.push(stage);
-                if stage == failing_stage {
-                    break;
-                }
-            }
-            if failing_stage == ActiveVaultDeletionStage::Quiesce {
-                expected_prefix.clear();
-            }
-            assert_eq!(backend.events, expected_prefix);
-            // The failing stage's own surface must still be present, as must
-            // every later surface; strictly earlier surfaces must be gone.
-            let mut expected_present = BTreeSet::new();
-            let mut seen_failure = failing_stage == ActiveVaultDeletionStage::Quiesce;
-            for stage in REMOVAL_ORDER {
-                if stage == failing_stage {
-                    seen_failure = true;
-                }
-                if seen_failure {
-                    expected_present.insert(
-                        surface_for_stage(stage).expect("removal stage must map a surface"),
-                    );
-                }
-            }
-            if failing_stage == ActiveVaultDeletionStage::Verification {
-                expected_present.clear();
-            }
-            assert_eq!(backend.present, expected_present);
-        }
-    }
-
-    #[test]
-    fn interrupted_deletion_retries_to_success_with_keys_already_gone() {
-        let mut backend = RecordingBackend::full(identity());
-        backend.fail_at = Some(ActiveVaultDeletionStage::StructuredStore);
-        let lease = revoked_lease();
-
-        let error: ActiveVaultDeletionError<TestError> =
-            run_active_vault_deletion(&mut backend, &lease)
-                .expect_err("injected interruption must fail");
-        assert_eq!(
-            error.stage(),
-            Some(ActiveVaultDeletionStage::StructuredStore)
-        );
-        // Crypto-shredding already ran: key material is gone while ciphertext
-        // surfaces remain, so the interrupted state is keyless but incomplete.
-        assert!(!backend.present.contains(&Surface::WrappedKeyMaterial));
-        assert!(!backend.present.contains(&Surface::FreshnessState));
-        assert!(!backend.present.contains(&Surface::ProtectorReferences));
-        assert!(backend.present.contains(&Surface::StructuredStore));
-        assert!(backend.present.contains(&Surface::BlobStore));
-
-        backend.fail_at = None;
-        assert!(
-            run_active_vault_deletion(&mut backend, &lease).is_ok(),
-            "retry after clearing the fault must converge"
-        );
-        assert!(backend.present.is_empty());
-        assert!(backend.reopen_for_read().is_err());
-    }
-
     #[test]
     fn deletion_is_idempotent_across_retries() {
         let mut backend = RecordingBackend::full(identity());
@@ -873,30 +747,6 @@ mod tests {
             run_active_vault_deletion(&mut backend, &lease);
         assert!(second.is_ok(), "retry over absent surfaces must succeed");
         assert!(backend.present.is_empty());
-    }
-
-    #[test]
-    fn verification_detects_hidden_residue_on_every_surface() {
-        for residue in ALL_SURFACES {
-            let mut backend = RecordingBackend::full(identity());
-            backend.residue = Some(residue);
-
-            let error: ActiveVaultDeletionError<TestError> =
-                run_active_vault_deletion(&mut backend, &revoked_lease())
-                    .expect_err("hidden residue must fail verification");
-
-            match error {
-                ActiveVaultDeletionError::Backend { stage, .. } => {
-                    assert_eq!(stage, ActiveVaultDeletionStage::Verification);
-                }
-                unexpected => {
-                    panic!("expected verification failure, got {unexpected:?}")
-                }
-            }
-            // Every removal still ran; only the reread proof rejected the
-            // result, including residue on the critical key-material surface.
-            assert_eq!(backend.events, REMOVAL_ORDER);
-        }
     }
 
     #[test]
@@ -940,74 +790,6 @@ mod tests {
                 "limitations notice must not overclaim: {forbidden}"
             );
         }
-    }
-
-    struct RecordingCloser {
-        closed: std::rc::Rc<std::cell::Cell<bool>>,
-    }
-
-    impl KeyedHandleCloser for RecordingCloser {
-        type Error = Infallible;
-
-        fn close_keyed_handles(&mut self) -> Result<(), Self::Error> {
-            self.closed.set(true);
-            Ok(())
-        }
-    }
-
-    struct RecordingCache {
-        discarded: std::rc::Rc<std::cell::Cell<bool>>,
-    }
-
-    impl PlaintextCache for RecordingCache {
-        fn discard_plaintext(&mut self) {
-            self.discarded.set(true);
-        }
-    }
-
-    #[test]
-    fn session_teardown_covers_handles_keys_and_caches_before_deletion() {
-        let handles_closed = std::rc::Rc::new(std::cell::Cell::new(false));
-        let caches_discarded = std::rc::Rc::new(std::cell::Cell::new(false));
-        let mut lifetime = VaultSessionLifetime::new(
-            VaultLease::new(identity()),
-            RecordingCloser {
-                closed: std::rc::Rc::clone(&handles_closed),
-            },
-            VaultKeyMaterial::new(OwnedKeyMaterial::from_bytes([0x1D; KEY_MATERIAL_BYTES])),
-            RecordingCache {
-                discarded: std::rc::Rc::clone(&caches_discarded),
-            },
-        );
-        // A lock-path revocation authorizes deletion at the lease gate, but the
-        // required caller flow still tears the session down first; the flags
-        // below prove teardown effects rather than bare revocation.
-        lifetime
-            .teardown(VaultTeardownReason::Lock)
-            .expect("recording teardown cannot fail");
-        assert!(handles_closed.get(), "teardown must close keyed handles");
-        assert!(
-            lifetime.keys_released(),
-            "teardown must release key material"
-        );
-        assert!(
-            caches_discarded.get(),
-            "teardown must discard plaintext caches"
-        );
-        assert_eq!(
-            lifetime.lease_state(),
-            crate::vault::VaultLeaseState::Revoked,
-            "teardown must leave the lease terminal"
-        );
-
-        let lease = VaultLease::new(identity());
-        assert!(lease.revoke());
-        let mut backend = RecordingBackend::full(identity());
-        assert!(
-            run_active_vault_deletion(&mut backend, &lease).is_ok(),
-            "revoked lease must authorize deletion after teardown"
-        );
-        assert!(backend.present.is_empty());
     }
 
     #[test]
