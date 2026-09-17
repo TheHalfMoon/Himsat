@@ -110,6 +110,9 @@ pub mod vault_media_recovery;
 /// 006A capture source lifecycle and session state machine.
 pub mod capture_session;
 
+/// 006B health telemetry model and change events.
+pub mod capture_health;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 
