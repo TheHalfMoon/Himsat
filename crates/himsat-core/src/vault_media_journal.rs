@@ -1,12 +1,12 @@
-//! Session-journal append path for Specification 005B, first grain.
+//! Session-journal append path and replay for Specification 005B.
 //!
-//! This module executes the 005B record layout and file-append discipline:
-//! fixed session open/close markers, chunk-commit records quoting public
-//! 005A envelope fields, and a `JournalWriter` that appends one
+//! This module executes the 005B record layout, file-append discipline, and
+//! machine replay: fixed session open/close markers, chunk-commit records
+//! quoting public 005A envelope fields, a `JournalWriter` that appends one
 //! caller-owned file per session with a `sync_all` plus length check after
-//! every record. Machine replay of the file (truncation-safe tail
-//! handling) and crash-resume follow in the second 005B grain; recovery
-//! reconciliation stays with 005C.
+//! every record, and truncation-safe replay returning the exact valid
+//! prefix plus a machine `TailStatus`. Crash-resume follows in the third
+//! 005B grain; recovery reconciliation stays with 005C.
 //!
 //! Additive-only 004/005A boundary discipline:
 //!
@@ -20,7 +20,7 @@
 //!
 //! Deliberately out of scope here:
 //!
-//! - file replay and resume (second grain);
+//! - crash-resume for existing files (third grain);
 //! - recovery reconciliation against the manifest inventory (005C);
 //! - fault-injection harnesses and bounded-loss quantification (005D);
 //! - nonce reservation: records quote the 24-byte nonce so a later log can
@@ -47,7 +47,7 @@ use sha2::{Digest, Sha256};
 use std::error::Error;
 use std::fmt;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::Path;
 
 /// Journal magic: `00 0B` length-prefixed `HIMSAT/JRN1` (13 bytes total).
@@ -72,6 +72,12 @@ pub const JOURNAL_OPEN_PAYLOAD_BYTES: usize = 8;
 pub const JOURNAL_COMMIT_PAYLOAD_BYTES: usize = 80;
 /// Exact close payload size: commit_count u64.
 pub const JOURNAL_CLOSE_PAYLOAD_BYTES: usize = 8;
+const VERSION_OFFSET: usize = 13;
+const TYPE_OFFSET: usize = 15;
+const SEQ_OFFSET: usize = 17;
+const VAULT_OFFSET: usize = 25;
+const SESSION_OFFSET: usize = 41;
+const PAYLOAD_LEN_OFFSET: usize = 57;
 
 /// Computes the SHA-256 digest of exact 005A envelope bytes for commit records.
 ///
@@ -85,7 +91,59 @@ pub fn envelope_digest(envelope: &[u8]) -> [u8; 32] {
     out
 }
 
-/// Machine reason a journal tail is torn (reported by replay in the second grain).
+/// One parsed journal record with its sequence number and session binding.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct JournalRecord {
+    seq: u64,
+    vault_id: VaultId,
+    session_id: [u8; 16],
+    kind: JournalRecordKind,
+}
+
+/// Typed journal record payload.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum JournalRecordKind {
+    /// Session open marker carrying the vault key generation.
+    Open { generation: KeyGeneration },
+    /// Chunk-commit record quoting public 005A envelope fields.
+    Commit {
+        chunk_index: u64,
+        generation: KeyGeneration,
+        nonce: [u8; 24],
+        plaintext_len: u64,
+        envelope_digest: [u8; 32],
+    },
+    /// Session close marker carrying the writer's commit count.
+    Close { commit_count: u64 },
+}
+
+impl JournalRecord {
+    /// Returns the 1-based monotonic sequence number of this record.
+    #[must_use]
+    pub const fn seq(self) -> u64 {
+        self.seq
+    }
+
+    /// Returns the vault identity bound into every record of this file.
+    #[must_use]
+    pub const fn vault_id(self) -> VaultId {
+        self.vault_id
+    }
+
+    /// Returns the session identity bound into every record of this file.
+    #[must_use]
+    pub const fn session_id(self) -> [u8; 16] {
+        self.session_id
+    }
+
+    /// Returns the typed payload of this record.
+    #[must_use]
+    pub const fn kind(self) -> JournalRecordKind {
+        self.kind
+    }
+}
+
+/// Machine reason a journal tail stopped the replay.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TailReason {
     /// Header bytes missing before the fixed 61-byte header completed.
@@ -118,11 +176,48 @@ pub enum TailReason {
     RecordAfterClose,
 }
 
+/// Tail state of a journal replay.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TailStatus {
+    /// Every byte parsed into valid records; `valid_bytes` equals file length.
+    CleanEof,
+    /// Replay stopped at `valid_bytes`; the valid prefix is returned and no
+    /// partial record is applied.
+    TornTail {
+        /// Exact valid prefix length in bytes.
+        valid_bytes: usize,
+        /// Machine reason the replay stopped.
+        reason: TailReason,
+    },
+}
+
+/// Read-only result of a journal replay: valid prefix plus tail state.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct JournalReplay {
+    records: Vec<JournalRecord>,
+    tail: TailStatus,
+}
+
+impl JournalReplay {
+    /// Returns the valid records in file order.
+    #[must_use]
+    pub fn records(&self) -> &[JournalRecord] {
+        &self.records
+    }
+
+    /// Returns the tail state (`CleanEof` or the torn-tail stop reason).
+    #[must_use]
+    pub fn tail(&self) -> TailStatus {
+        // TailStatus is Copy; return by value for call-site ergonomics.
+        self.tail
+    }
+}
+
 /// Fail-closed journal errors for append operations. Only filesystem
 /// failures and protocol refusals surface here; content anomalies are
-/// reported by replay in the second grain. The `EmptyJournal`, `TornTail`,
-/// and `ContextMismatch` variants are never constructed by this grain;
-/// they are reserved for the second grain's resume API.
+/// reported by replay. The `EmptyJournal`, `TornTail`, and `ContextMismatch`
+/// variants are never constructed by the append path; they are reserved for
+/// the third grain's resume API.
 #[derive(Debug)]
 pub enum JournalError {
     /// Underlying filesystem operation failed.
@@ -177,6 +272,241 @@ impl From<io::Error> for JournalError {
     }
 }
 
+fn parse_u16(input: &[u8], offset: usize) -> u16 {
+    u16::from_be_bytes(
+        input[offset..offset + 2]
+            .try_into()
+            .expect("fixed 005B header range"),
+    )
+}
+
+fn parse_u32(input: &[u8], offset: usize) -> u32 {
+    u32::from_be_bytes(
+        input[offset..offset + 4]
+            .try_into()
+            .expect("fixed 005B header range"),
+    )
+}
+
+fn parse_u64(input: &[u8], offset: usize) -> u64 {
+    u64::from_be_bytes(
+        input[offset..offset + 8]
+            .try_into()
+            .expect("fixed 005B header range"),
+    )
+}
+
+fn parse_array<const N: usize>(input: &[u8], offset: usize) -> [u8; N] {
+    input[offset..offset + N]
+        .try_into()
+        .expect("fixed 005B header range")
+}
+
+fn record_kind(record_type: u16, payload: &[u8]) -> Result<JournalRecordKind, TailReason> {
+    match record_type {
+        JOURNAL_TYPE_OPEN => {
+            if payload.len() != JOURNAL_OPEN_PAYLOAD_BYTES {
+                return Err(TailReason::LengthMismatch);
+            }
+            let generation = KeyGeneration::new(parse_u64(payload, 0))
+                .map_err(|_| TailReason::InvalidGeneration)?;
+            Ok(JournalRecordKind::Open { generation })
+        }
+        JOURNAL_TYPE_COMMIT => {
+            if payload.len() != JOURNAL_COMMIT_PAYLOAD_BYTES {
+                return Err(TailReason::LengthMismatch);
+            }
+            let chunk_index = parse_u64(payload, 0);
+            let generation = KeyGeneration::new(parse_u64(payload, 8))
+                .map_err(|_| TailReason::InvalidGeneration)?;
+            let nonce = parse_array(payload, 16);
+            let plaintext_len = parse_u64(payload, 40);
+            let envelope_digest = parse_array(payload, 48);
+            Ok(JournalRecordKind::Commit {
+                chunk_index,
+                generation,
+                nonce,
+                plaintext_len,
+                envelope_digest,
+            })
+        }
+        JOURNAL_TYPE_CLOSE => {
+            if payload.len() != JOURNAL_CLOSE_PAYLOAD_BYTES {
+                return Err(TailReason::LengthMismatch);
+            }
+            Ok(JournalRecordKind::Close {
+                commit_count: parse_u64(payload, 0),
+            })
+        }
+        _ => Err(TailReason::UnsupportedType),
+    }
+}
+
+fn parse_records(bytes: &[u8]) -> (Vec<JournalRecord>, TailStatus) {
+    let mut records = Vec::new();
+    let mut offset = 0usize;
+    let mut closed = false;
+    loop {
+        let remaining = bytes.len() - offset;
+        if remaining == 0 {
+            return (records, TailStatus::CleanEof);
+        }
+        if remaining < JOURNAL_HEADER_BYTES {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::TruncatedHeader,
+                },
+            );
+        }
+        let header = &bytes[offset..offset + JOURNAL_HEADER_BYTES];
+        if &header[..JOURNAL_MAGIC.len()] != JOURNAL_MAGIC {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::InvalidMagic,
+                },
+            );
+        }
+        if parse_u16(header, VERSION_OFFSET) != JOURNAL_VERSION {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::UnsupportedVersion,
+                },
+            );
+        }
+        let record_type = parse_u16(header, TYPE_OFFSET);
+        let seq = parse_u64(header, SEQ_OFFSET);
+        let expected_seq = records.len() as u64 + 1;
+        if seq != expected_seq {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::SequenceGap,
+                },
+            );
+        }
+        let vault_id = VaultId::from_bytes(parse_array(header, VAULT_OFFSET));
+        let session_id = parse_array(header, SESSION_OFFSET);
+        let payload_len = parse_u32(header, PAYLOAD_LEN_OFFSET) as usize;
+        let Some(record_end) = JOURNAL_HEADER_BYTES
+            .checked_add(payload_len)
+            .and_then(|body| body.checked_add(JOURNAL_INTEGRITY_BYTES))
+            .and_then(|total| offset.checked_add(total))
+        else {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::LengthMismatch,
+                },
+            );
+        };
+        // Derive all bounds from the checked record_end: record_end is at
+        // least offset + HEADER + INTEGRITY, so body_end cannot underflow and
+        // no second unchecked copy of the length arithmetic exists to drift.
+        let body_end = record_end - JOURNAL_INTEGRITY_BYTES;
+        if bytes.len() < body_end {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::TruncatedPayload,
+                },
+            );
+        }
+        if bytes.len() < record_end {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::TruncatedIntegrity,
+                },
+            );
+        }
+        let payload = &bytes[offset + JOURNAL_HEADER_BYTES..body_end];
+        let stored = &bytes[body_end..record_end];
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes[offset..body_end]);
+        if hasher.finalize().as_slice() != stored {
+            return (
+                records,
+                TailStatus::TornTail {
+                    valid_bytes: offset,
+                    reason: TailReason::IntegrityMismatch,
+                },
+            );
+        }
+        let kind = match record_kind(record_type, payload) {
+            Ok(kind) => kind,
+            Err(reason) => {
+                return (
+                    records,
+                    TailStatus::TornTail {
+                        valid_bytes: offset,
+                        reason,
+                    },
+                );
+            }
+        };
+        if records.is_empty() {
+            if !matches!(kind, JournalRecordKind::Open { .. }) {
+                return (
+                    records,
+                    TailStatus::TornTail {
+                        valid_bytes: offset,
+                        reason: TailReason::FirstRecordNotOpen,
+                    },
+                );
+            }
+        } else {
+            let first = records[0];
+            if vault_id != first.vault_id || session_id != first.session_id {
+                return (
+                    records,
+                    TailStatus::TornTail {
+                        valid_bytes: offset,
+                        reason: TailReason::ContextMismatch,
+                    },
+                );
+            }
+            if matches!(kind, JournalRecordKind::Open { .. }) {
+                return (
+                    records,
+                    TailStatus::TornTail {
+                        valid_bytes: offset,
+                        reason: TailReason::UnexpectedOpen,
+                    },
+                );
+            }
+            if closed {
+                return (
+                    records,
+                    TailStatus::TornTail {
+                        valid_bytes: offset,
+                        reason: TailReason::RecordAfterClose,
+                    },
+                );
+            }
+        }
+        if matches!(kind, JournalRecordKind::Close { .. }) {
+            closed = true;
+        }
+        records.push(JournalRecord {
+            seq,
+            vault_id,
+            session_id,
+            kind,
+        });
+        offset = record_end;
+    }
+}
+
 fn build_record(
     seq: u64,
     vault_id: VaultId,
@@ -226,6 +556,21 @@ fn commit_payload(
 
 fn close_payload(commit_count: u64) -> [u8; JOURNAL_CLOSE_PAYLOAD_BYTES] {
     commit_count.to_be_bytes()
+}
+
+/// Replays one journal file without mutating it.
+///
+/// Returns the valid record prefix plus the tail state. Content anomalies
+/// never surface as errors; only filesystem failures do.
+///
+/// # Errors
+///
+/// Returns `JournalError::Io` when the file cannot be read.
+pub fn replay_journal(path: &Path) -> Result<JournalReplay, JournalError> {
+    let mut bytes = Vec::new();
+    File::open(path)?.read_to_end(&mut bytes)?;
+    let (records, tail) = parse_records(&bytes);
+    Ok(JournalReplay { records, tail })
 }
 
 /// Append handle for one session journal file.
@@ -395,7 +740,10 @@ impl JournalWriter {
 
 #[cfg(test)]
 mod tests {
-    use super::{JournalError, envelope_digest};
+    use super::{
+        JournalError, JournalRecordKind, JournalWriter, TailReason, TailStatus, envelope_digest,
+        replay_journal,
+    };
     use crate::vault::{KeyGeneration, VaultId};
     use std::fs;
     use std::path::PathBuf;
@@ -535,5 +883,205 @@ mod tests {
         for case in &cases {
             assert!(!format!("{case}").is_empty());
         }
+    }
+
+    fn write_session(path: &std::path::Path, commits: u64, close: bool) -> Vec<u8> {
+        let mut writer =
+            JournalWriter::create(path, vault(), TEST_SESSION, generation()).expect("create");
+        for index in 0..commits {
+            writer
+                .append_commit(index, generation(), TEST_NONCE, 128, TEST_DIGEST)
+                .expect("commit");
+        }
+        if close {
+            writer.append_close(commits).expect("close");
+        }
+        drop(writer);
+        fs::read(path).expect("journal must be readable")
+    }
+
+    #[test]
+    fn replay_returns_valid_prefix_with_clean_tail() {
+        let file = TestFile::new();
+        let bytes = write_session(file.path(), 3, true);
+        assert_eq!(bytes.len(), 101 + 3 * 173 + 101);
+        let replay = replay_journal(file.path()).expect("replay");
+        assert_eq!(replay.records().len(), 5);
+        assert_eq!(replay.tail(), TailStatus::CleanEof);
+        assert_eq!(replay.records()[0].seq(), 1);
+        assert!(matches!(
+            replay.records()[0].kind(),
+            JournalRecordKind::Open { .. }
+        ));
+        assert!(matches!(
+            replay.records()[4].kind(),
+            JournalRecordKind::Close { commit_count: 3 }
+        ));
+        if let JournalRecordKind::Commit {
+            chunk_index,
+            nonce,
+            plaintext_len,
+            envelope_digest,
+            ..
+        } = replay.records()[2].kind()
+        {
+            assert_eq!(chunk_index, 1);
+            assert_eq!(nonce, TEST_NONCE);
+            assert_eq!(plaintext_len, 128);
+            assert_eq!(envelope_digest, TEST_DIGEST);
+        } else {
+            panic!("record 3 must be a commit");
+        }
+    }
+
+    #[test]
+    fn empty_file_replays_clean_with_zero_records() {
+        let file = TestFile::new();
+        fs::write(file.path(), []).expect("empty file");
+        let replay = replay_journal(file.path()).expect("replay");
+        assert!(replay.records().is_empty());
+        assert_eq!(replay.tail(), TailStatus::CleanEof);
+    }
+
+    #[test]
+    fn every_truncation_offset_returns_the_exact_valid_prefix() {
+        let file = TestFile::new();
+        let bytes = write_session(file.path(), 2, true);
+        // Boundaries: open 101, commits 274/447, close 548.
+        let boundaries = [0usize, 101, 274, 447, 548];
+        for cut in 0..=bytes.len() {
+            fs::write(file.path(), &bytes[..cut]).expect("truncate fixture");
+            let replay = replay_journal(file.path()).expect("replay");
+            let contained = [101, 274, 447, 548].iter().filter(|b| **b <= cut).count();
+            assert_eq!(replay.records().len(), contained, "cut at {cut}");
+            if boundaries.contains(&cut) {
+                // A cut on a record boundary is a clean crash point.
+                assert_eq!(replay.tail(), TailStatus::CleanEof, "cut at {cut}");
+            } else {
+                let valid = boundaries
+                    .iter()
+                    .copied()
+                    .filter(|b| *b <= cut)
+                    .max()
+                    .unwrap_or(0);
+                assert!(
+                    matches!(replay.tail(), TailStatus::TornTail { valid_bytes, .. } if valid_bytes == valid),
+                    "cut at {cut} must stop at the last complete record, got {:?}",
+                    replay.tail()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn single_bit_flips_stop_at_the_damaged_record() {
+        let file = TestFile::new();
+        let bytes = write_session(file.path(), 2, false);
+        // Flip every bit of the second commit (274..447): the valid prefix
+        // is preserved and replay stops at 274. Payload/trailer flips
+        // (at/after 335) break exactly the integrity; header-region reasons
+        // follow parser order.
+        for byte in 274..447 {
+            for bit in 0..8 {
+                let mut damaged = bytes.clone();
+                damaged[byte] ^= 1 << bit;
+                fs::write(file.path(), &damaged).expect("damage fixture");
+                let replay = replay_journal(file.path()).expect("replay");
+                assert_eq!(replay.records().len(), 2, "flip at byte {byte} bit {bit}");
+                if byte < 335 {
+                    assert!(
+                        matches!(
+                            replay.tail(),
+                            TailStatus::TornTail {
+                                valid_bytes: 274,
+                                ..
+                            }
+                        ),
+                        "flip at byte {byte} bit {bit} must stop at 274, got {:?}",
+                        replay.tail()
+                    );
+                } else {
+                    assert_eq!(
+                        replay.tail(),
+                        TailStatus::TornTail {
+                            valid_bytes: 274,
+                            reason: TailReason::IntegrityMismatch,
+                        },
+                        "flip at byte {byte} bit {bit}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn magic_corruption_at_offset_zero_yields_empty_prefix() {
+        let file = TestFile::new();
+        let mut bytes = write_session(file.path(), 1, false);
+        bytes[0] ^= 0xFF;
+        fs::write(file.path(), &bytes).expect("damage fixture");
+        let replay = replay_journal(file.path()).expect("replay");
+        assert!(replay.records().is_empty());
+        assert_eq!(
+            replay.tail(),
+            TailStatus::TornTail {
+                valid_bytes: 0,
+                reason: TailReason::InvalidMagic,
+            }
+        );
+    }
+
+    #[test]
+    fn sequence_gap_stops_replay_without_applying_later_records() {
+        let file = TestFile::new();
+        let bytes = write_session(file.path(), 2, false);
+        // Drop the middle commit: open (seq 1) then commit (seq 3), both
+        // integrity-valid, so the sequence rule stops the replay.
+        let mut gapped = bytes[0..101].to_vec();
+        gapped.extend_from_slice(&bytes[274..447]);
+        fs::write(file.path(), &gapped).expect("gap fixture");
+        let replay = replay_journal(file.path()).expect("replay");
+        assert_eq!(replay.records().len(), 1);
+        assert_eq!(
+            replay.tail(),
+            TailStatus::TornTail {
+                valid_bytes: 101,
+                reason: TailReason::SequenceGap,
+            }
+        );
+    }
+
+    #[test]
+    fn transplanted_vault_binding_stops_replay() {
+        use sha2::{Digest, Sha256};
+
+        const OTHER_VAULT: [u8; 16] = [0x52; 16];
+        let file = TestFile::new();
+        let bytes = write_session(file.path(), 2, false);
+        // Transplant the second commit under a foreign vault id and repair
+        // its integrity trailer, so the parser reaches the binding rule.
+        let mut transplant = bytes[274..447].to_vec();
+        transplant[25..41].copy_from_slice(&OTHER_VAULT);
+        let digest = Sha256::digest(&transplant[..141]);
+        transplant[141..173].copy_from_slice(&digest);
+        let mut spliced = bytes[0..274].to_vec();
+        spliced.extend_from_slice(&transplant);
+        fs::write(file.path(), &spliced).expect("transplant fixture");
+        let replay = replay_journal(file.path()).expect("replay");
+        assert_eq!(replay.records().len(), 2);
+        assert_eq!(
+            replay.tail(),
+            TailStatus::TornTail {
+                valid_bytes: 274,
+                reason: TailReason::ContextMismatch,
+            }
+        );
+    }
+
+    #[test]
+    fn missing_file_replay_is_an_io_error_not_a_tail() {
+        let file = TestFile::new();
+        let err = replay_journal(file.path()).expect_err("missing file must fail");
+        assert!(matches!(err, JournalError::Io(_)));
     }
 }
