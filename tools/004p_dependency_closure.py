@@ -1142,6 +1142,7 @@ EXPECTED_DIRECT: dict[str, dict[str, Any]] = {
     "chacha20poly1305": {"version": "=0.11.0", "default-features": False, "features": ["alloc", "zeroize"]},
     "getrandom": {"version": "=0.4.3", "default-features": False},
     "hkdf": {"version": "=0.13.0", "default-features": False},
+    "himsat-events": {"version": "=0.0.0", "path": "../himsat-events"},
     "libsqlite3-sys": {
         "version": "=0.38.2",
         "default-features": False,
