@@ -107,6 +107,9 @@ pub mod vault_media_journal;
 /// 005C crash-recovery scan: journal replay and envelope inventory (first grain).
 pub mod vault_media_recovery;
 
+/// 006A capture source lifecycle and session state machine.
+pub mod capture_session;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 
