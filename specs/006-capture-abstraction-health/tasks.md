@@ -10,8 +10,11 @@
 - [x] S004 Note upstream facts to refresh at implementation time (per-OS native capture APIs, audio-session/route behavior, background-service rules) without adopting dependencies.
 - [x] S005 Split prospective leaves 006A-006C as candidates only; exact split re-bounds after shaping qualifies.
 - [x] S006 Define scope, additive-only 003/004/005 boundary discipline, donor-compare posture, acceptance, and R3 evidence contracts in `spec.md`/`plan.md`.
-- [ ] S007 Exact-head qualify shaping head: CI and R3 SUCCESS.
-  - Shaping head TBD (PR TBD): pre-merge CI TBD, R3 TBD.
-- [ ] S008 Reconcile shaping diff/reviews/threads/comments/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
-- [ ] S009 Merge shaping; canonical merge contains the exact shaping head as parent.
-- [ ] S010 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge.
+- [x] S007 Exact-head qualify shaping head: CI and R3 SUCCESS.
+  - Shaping head `5785124f44cb7db5e75acee1154f20229d1dbb91` (PR #175): pre-merge CI `35247902444` SUCCESS, R3 `35247902485` SUCCESS.
+- [x] S008 Reconcile shaping diff/reviews/threads/comments/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
+  - Zero submitted reviews; comments are bot-only (Qodo billing-blocked, CodeRabbit skip), no blocking finding.
+- [x] S009 Merge shaping; canonical merge contains the exact shaping head as parent.
+  - Canonical shaping merge `61414cd164a59973a0b5d4f469a16afebddc6b72` (PR #175, parents `85b2cb2ee5b7f8b043c66920b7ebc465edf48504` + `5785124f44cb7db5e75acee1154f20229d1dbb91`; merge tree equals shaping-head tree).
+- [x] S010 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge.
+  - Post-merge CI `35249873459` SUCCESS, R3 `35249873475` SUCCESS on `61414cd164a59973a0b5d4f469a16afebddc6b72`.
