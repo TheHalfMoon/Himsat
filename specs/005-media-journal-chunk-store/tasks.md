@@ -26,4 +26,14 @@
 - [x] A004 OCR delegate adversarial review: NO_BLOCKING_FINDINGS; reconcile zero submitted reviews/threads with unavailable/skipped/neutral outputs as NOT PASS.
 - [x] A005 Expected-head merge PR #160 to canonical merge `c3a371511b1bad519c2ed57817f3951e67cb6355` (parents `2d7ec3e8e714d493f865ecf445d93d503351e390` + `f338b3c264103a64a74dcc27248f3badd930ca34`; merge tree equals accepted tree).
 - [x] A006 Post-merge qualification: CI and R3 SUCCESS on `c3a371511b1bad519c2ed57817f3951e67cb6355` (push CI `35189660586` SUCCESS 17m59s / push R3 `35189660481` SUCCESS 10m23s, both head `c3a3715`).
-- [ ] A007 Reconcile `specs/CURRENT.md` and this evidence in the 005A reconciliation PR before authorizing 005B.
+- [x] A007 Reconcile `specs/CURRENT.md` and this evidence in the 005A reconciliation PR before authorizing 005B.
+  - Reconciliation merged as `a97f627088ead6770af2b019ccee0e1b16e8ee80` (PR #161, parents `c3a371511b1bad519c2ed57817f3951e67cb6355` + `517fdf38a11559b52da0269d0f0842785c333409`; merge tree equals accepted tree). Post-merge CI `35192652860` SUCCESS and R3 `35192652887` SUCCESS on exact merge SHA `a97f627` (transcribed by this 005B reconciliation per the next-unit-records-prior-postmerge precedent).
+
+## 005B session journal — implementation leaf in three size-fitting grains (re-bounded after 005A closed)
+
+- [x] B001 Re-bound 005B against live main as the second implementation Grain; 005C/005D remain candidates. Single-PR attempt #162 (1550 added) failed the R3 900-line size gate with no scope violation and was closed superseded; the leaf re-split forward-only into grains of 541/563/322 added lines.
+- [x] B002 Grain 1 append path (`vault_media_journal.rs` record layout + `JournalWriter` create/append/close, 5 tests): exact-head `f13dbea` CI `35197258314` SUCCESS (after identical-head rerun of one flaky pre-existing macOS job) / R3 `35197258286` SUCCESS; OCR delegate PASS with 4 notes (2 fixed); expected-head merge PR #163 to `477eecc`; post-merge CI `35199911608` / R3 `35199911573` SUCCESS on `477eecc`.
+- [x] B003 Grain 2 replay (offsets, record/tail types, `parse_records`, `replay_journal`, 8 tests): exact-head `e5337f4` CI `35200540127` / R3 `35200540194` SUCCESS; OCR delegate PASS with 3 notes fixed; expected-head merge PR #164 to `889cce2`; post-merge CI `35202239838` / R3 `35202239842` SUCCESS on `889cce2`.
+- [x] B004 Grain 3 resume and arm precision (`resume`, no-mutation lock-in, empty/missing tests, 8-arm + split tests): exact-head `f0b4ea8` CI `35202919135` SUCCESS (after identical-head rerun of one flaky pre-existing R2 job) / R3 `35202918981` SUCCESS; OCR delegate APPROVE with 3 notes fixed; expected-head merge PR #165 to `59ebf17`.
+- [x] B005 Post-merge qualification: CI and R3 SUCCESS on `59ebf17806e8072302eb6f7a2ae2461d71851d2b` (push CI `35205561976` SUCCESS / push R3 `35205561880` SUCCESS, both head `59ebf17`).
+- [x] B006 Record post-merge results in `005b-session-journal-final-evidence.md` and reconcile `specs/CURRENT.md` in this reconciliation before authorizing 005C.
