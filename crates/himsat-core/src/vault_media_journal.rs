@@ -116,6 +116,63 @@ pub enum JournalRecordKind {
     Close { commit_count: u64 },
 }
 
+/// Public view of a chunk-commit payload for cross-module consumers
+/// (recovery reconciliation). All fields are public 005A header values.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CommitView {
+    /// Session-scoped chunk index.
+    pub chunk_index: u64,
+    /// Vault key generation active at commit time.
+    pub generation: KeyGeneration,
+    /// Quoted 005A nonce (B203-owned, never generated here).
+    pub nonce: [u8; 24],
+    /// Quoted plaintext length.
+    pub plaintext_len: u64,
+    /// SHA-256 of the exact 005A envelope bytes.
+    pub envelope_digest: [u8; 32],
+}
+
+impl JournalRecordKind {
+    /// Returns the commit view for commit records, `None` otherwise.
+    #[must_use]
+    pub const fn as_commit(self) -> Option<CommitView> {
+        match self {
+            Self::Commit {
+                chunk_index,
+                generation,
+                nonce,
+                plaintext_len,
+                envelope_digest,
+            } => Some(CommitView {
+                chunk_index,
+                generation,
+                nonce,
+                plaintext_len,
+                envelope_digest,
+            }),
+            _ => None,
+        }
+    }
+
+    /// Returns the generation for open markers, `None` otherwise.
+    #[must_use]
+    pub const fn as_open_generation(self) -> Option<KeyGeneration> {
+        match self {
+            Self::Open { generation } => Some(generation),
+            _ => None,
+        }
+    }
+
+    /// Returns the commit count for close markers, `None` otherwise.
+    #[must_use]
+    pub const fn as_close_count(self) -> Option<u64> {
+        match self {
+            Self::Close { commit_count } => Some(commit_count),
+            _ => None,
+        }
+    }
+}
+
 impl JournalRecord {
     /// Returns the 1-based monotonic sequence number of this record.
     #[must_use]
