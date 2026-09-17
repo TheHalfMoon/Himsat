@@ -123,6 +123,20 @@ B501C_EXPECTED_BLOBS = {
 }
 B501C_EXPECTED_FILES = set(B501C_EXPECTED_BLOBS)
 
+B006A_PRECONDITION_BASE = "31b3e6cbe50a952f1f13743cfd30f0cff730e0d9"
+B006A_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B006A_EXPECTED_ADDED_LINES = 766
+B006A_EXPECTED_DELETED_LINES = 0
+B006A_EXPECTED_BLOBS = {
+    "Cargo.lock": "c29dd34f16fb4921bbf68ccc5f3a2cb7c2c17ff3",
+    "crates/himsat-core/Cargo.toml": "89b1e8bc9993ac2f18a7e60943cde0613a5b6076",
+    "crates/himsat-core/src/capture_session.rs": "96495172b9cdfbda24f41f56ffbbfd7511d03ddf",
+    "crates/himsat-core/src/lib.rs": "c670a6a6e04c3b2ea073d6559e34cb450d9178d9",
+    "specs/006-capture-abstraction-health/b006a-workspace-events-dependency-adoption-evidence.md": "7e6ae19d2e93df952aa7b4374d03afd688c11c16",
+    "tools/004p_dependency_closure.py": "d848b765e28eb24c5d206853d030aa158851bc51",
+}
+B006A_EXPECTED_FILES = set(B006A_EXPECTED_BLOBS)
+
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
     ".github/workflows/ci.yml",
@@ -768,6 +782,99 @@ def check_b501c_exception(args: argparse.Namespace, proof: dict[str, Any]) -> in
     return 0
 
 
+def b006a_trusted_base(base: str) -> bool:
+    """Accept only the canonical B006A gate successor or its immediate merge parent.
+
+    Pull-request qualification requires current canonical main to be the trusted
+    gate-hardening merge. Push-triggered qualification after the guarded B006A
+    adoption merge accepts that same trusted gate merge as the first parent of
+    current canonical main. The trusted gate merge itself must have the exact
+    B006A precondition as first parent and change only this gate path.
+    """
+
+    try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            canonical_parent_row = git("rev-list", "--parents", "-n", "1", canonical_main).split()
+            if len(canonical_parent_row) != 3 or canonical_parent_row[1] != base:
+                return False
+        base_parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(base_parent_row) != 3 or base_parent_row[1] != B006A_PRECONDITION_BASE:
+            return False
+        raw = git("diff", "--no-renames", "--name-only", B006A_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B006A_TRUSTED_BASE_DELTA and len(paths) == len(B006A_TRUSTED_BASE_DELTA)
+
+
+def check_b006a_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the pinned B006A intra-workspace events dependency adoption."""
+
+    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
+        return fail(
+            f"unexpected B006A non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B006A Git diff: {exc}")
+
+    if set(actual_files) != B006A_EXPECTED_FILES or len(actual_files) != len(B006A_EXPECTED_FILES):
+        return fail("actual B006A Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B006A Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B006A_EXPECTED_FILES or len(files) != len(B006A_EXPECTED_FILES):
+        return fail("B006A exception changed-path set is not exact")
+
+    if proof.get("changed_files") != len(B006A_EXPECTED_FILES):
+        return fail("B006A Diffcipline changed-file count is not exact")
+    if actual_added != B006A_EXPECTED_ADDED_LINES or proof.get("added_lines") != actual_added:
+        return fail("B006A added-line count is not exact")
+    if actual_deleted != B006A_EXPECTED_DELETED_LINES or proof.get("deleted_lines") != actual_deleted:
+        return fail("B006A deleted-line count is not exact")
+    if actual_added > POLICY_MAX_ADDED_LINES:
+        return fail("B006A dependency leaf unexpectedly exceeds ordinary line bounds")
+
+    expected_reasons = {
+        "dependency manifest changed: crates/himsat-core/Cargo.toml",
+        "lockfile changed: Cargo.lock",
+    }
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != 2:
+        return fail(f"unexpected B006A Diffcipline reason set: {reasons!r}")
+    if proof.get("scope_violations") != []:
+        return fail("B006A scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B006A verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B006A verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B006A_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"B006A candidate artifact blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B006A candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B006A DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--proof", type=Path, required=True)
@@ -794,6 +901,12 @@ def main() -> int:
     if args.exit_code == 0 and verdict == "PASS":
         print("DIFFCIPLINE PASS")
         return 0
+
+    # B006A adopts the intra-workspace himsat-events dependency for the 006A
+    # capture session (zero external packages, zero transitive dependencies).
+    # The exception pins the complete six-file candidate and accepts REVIEW only.
+    if b006a_trusted_base(args.base):
+        return check_b006a_exception(args, proof)
 
     # B501C exposes an already-provenanced Apple transitive dependency directly
     # so the safe Security Framework update-only API can receive CFData. The
