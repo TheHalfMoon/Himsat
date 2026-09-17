@@ -10,7 +10,20 @@
 - [x] S004 Note upstream facts to refresh at implementation time (container framing, fsync/durability semantics, fault-injection harnesses) without adopting dependencies.
 - [x] S005 Split prospective leaves 005A-005D as candidates only; exact split re-bounds after shaping qualifies.
 - [x] S006 Define scope, additive-only 004 boundary discipline, donor-compare posture, acceptance, and R3 evidence contracts in `spec.md`/`plan.md`.
-- [ ] S007 Exact-head qualify shaping head: CI and R3 SUCCESS.
-- [ ] S008 Reconcile shaping diff/reviews/threads/comments/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
-- [ ] S009 Merge shaping with explicit expected-head protection; canonical merge contains the exact shaping head as parent.
-- [ ] S010 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge.
+- [x] S007 Exact-head qualify shaping head: CI and R3 SUCCESS.
+  - Shaping head `feb92dd4b13b9982c1fd5404b99a000138172fd7` (PR #159): pre-merge CI `35094188292` SUCCESS, R3 `35094188252` SUCCESS.
+- [x] S008 Reconcile shaping diff/reviews/threads/comments/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
+- [x] S009 Merge shaping; canonical merge contains the exact shaping head as parent.
+  - Canonical shaping merge `2d7ec3e8e714d493f865ecf445d93d503351e390` (PR #159, parents `c5255f6a60044edbdd7562fe1f295ce59e14c5a0` + `feb92dd4b13b9982c1fd5404b99a000138172fd7`; merge tree equals shaping-head tree). The historical merge API transport argument is not reconstructible post hoc; parentage and tree are verified live. Zero submitted reviews; comments are bot-only (Qodo billing-blocked, CodeRabbit skip), no blocking finding.
+- [x] S010 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge.
+  - Post-merge CI `35096310420` SUCCESS, R3 `35096310425` SUCCESS on `2d7ec3e8e714d493f865ecf445d93d503351e390`.
+
+## 005A media-chunk envelope — implementation leaf (re-bounded after shaping qualified)
+
+- [x] A001 Re-bound 005A against live main `2d7ec3e8e714d493f865ecf445d93d503351e390` as the first implementation Grain; 005B-005D remain candidates.
+- [x] A002 Implement additive-only envelope (`vault_media_chunk.rs`), `KeyPurpose::MediaChunk` domain, teardown-owned key slot, 15 adversarial tests; no B202 byte changed, no donor adoption, no dependency change.
+- [x] A003 Exact-head qualify `f338b3c264103a64a74dcc27248f3badd930ca34`: CI `35099474113` SUCCESS, R3 `35099474219` SUCCESS; local fmt/clippy/tests green.
+- [x] A004 OCR delegate adversarial review: NO_BLOCKING_FINDINGS; reconcile zero submitted reviews/threads with unavailable/skipped/neutral outputs as NOT PASS.
+- [x] A005 Expected-head merge PR #160 to canonical merge `c3a371511b1bad519c2ed57817f3951e67cb6355` (parents `2d7ec3e8e714d493f865ecf445d93d503351e390` + `f338b3c264103a64a74dcc27248f3badd930ca34`; merge tree equals accepted tree).
+- [x] A006 Post-merge qualification: CI and R3 SUCCESS on `c3a371511b1bad519c2ed57817f3951e67cb6355` (push CI `35189660586` SUCCESS 17m59s / push R3 `35189660481` SUCCESS 10m23s, both head `c3a3715`).
+- [ ] A007 Reconcile `specs/CURRENT.md` and this evidence in the 005A reconciliation PR before authorizing 005B.
