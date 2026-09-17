@@ -113,6 +113,9 @@ pub mod capture_session;
 /// 006B health telemetry model and change events.
 pub mod capture_health;
 
+/// 006C checkpoint derivation and chunk metadata binding.
+pub mod capture_checkpoint;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 
