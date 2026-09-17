@@ -821,6 +821,36 @@ pub struct VaultMismatchFile {
     file: OsString,
 }
 
+/// A cleanly closed journal whose close marker disagrees with the
+/// replayed commit count: the writer's claimed total against the actual
+/// commit records in the file.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CloseCountMismatch {
+    file: OsString,
+    claimed: u64,
+    actual: u64,
+}
+
+impl CloseCountMismatch {
+    /// Returns the opaque journal file with the disagreeing close marker.
+    #[must_use]
+    pub fn file(&self) -> &OsString {
+        &self.file
+    }
+
+    /// Returns the commit total claimed by the close marker.
+    #[must_use]
+    pub const fn claimed(&self) -> u64 {
+        self.claimed
+    }
+
+    /// Returns the actual replayed commit record count.
+    #[must_use]
+    pub const fn actual(&self) -> u64 {
+        self.actual
+    }
+}
+
 /// Deterministic crash-recovery reconciliation report. Every list is
 /// sorted; every anomaly is reported; nothing is mutated.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -834,6 +864,7 @@ pub struct RecoveryReport {
     unreferenced: Vec<UnreferencedEnvelope>,
     torn: Vec<TornJournalFile>,
     vault_mismatches: Vec<VaultMismatchFile>,
+    close_counts: Vec<CloseCountMismatch>,
 }
 
 impl RecoveryReport {
@@ -848,6 +879,7 @@ impl RecoveryReport {
             && self.unreferenced.is_empty()
             && self.torn.is_empty()
             && self.vault_mismatches.is_empty()
+            && self.close_counts.is_empty()
     }
 
     /// Returns verified commits in (session, index) order.
@@ -902,6 +934,12 @@ impl RecoveryReport {
     #[must_use]
     pub fn vault_mismatches(&self) -> &[VaultMismatchFile] {
         &self.vault_mismatches
+    }
+
+    /// Returns cleanly closed journals with disagreeing close markers.
+    #[must_use]
+    pub fn close_counts(&self) -> &[CloseCountMismatch] {
+        &self.close_counts
     }
 }
 
@@ -1076,7 +1114,9 @@ impl VaultMismatchFile {
 /// field disagreements become `DivergedManifest`). Media-tagged manifest
 /// objects with no commit become `UnloggedEntry`; envelopes matching no
 /// commit become `UnreferencedEnvelope`; torn journals and
-/// vault-mismatched files are listed and otherwise skipped.
+/// vault-mismatched files are listed and otherwise skipped. Cleanly
+/// closed journals cross-check the close marker against the replayed
+/// commit count; disagreements become `CloseCountMismatch`.
 #[must_use]
 pub fn reconcile_recovery(
     scan: &JournalScan,
@@ -1087,6 +1127,7 @@ pub fn reconcile_recovery(
     let mut occurrences: BTreeMap<([u8; 16], u64), Vec<CommitOccurrence>> = BTreeMap::new();
     let mut torn = Vec::new();
     let mut vault_mismatches = Vec::new();
+    let mut close_counts = Vec::new();
 
     for journal in scan.journals() {
         let records = journal.records();
@@ -1111,10 +1152,17 @@ pub fn reconcile_recovery(
             });
             continue;
         }
+        let mut commits_in_file = 0u64;
+        let mut close_claim = None;
         for record in records {
+            if let Some(claimed) = record.kind().as_close_count() {
+                close_claim = Some(claimed);
+                continue;
+            }
             let Some(commit) = record.kind().as_commit() else {
                 continue;
             };
+            commits_in_file += 1;
             occurrences
                 .entry((record.session_id(), commit.chunk_index))
                 .or_default()
@@ -1126,6 +1174,20 @@ pub fn reconcile_recovery(
                     plaintext_len: commit.plaintext_len,
                     digest: commit.envelope_digest,
                 });
+        }
+        // Only cleanly closed journals carry a trustworthy close marker:
+        // a torn tail already reports through `torn`, and a vault mismatch
+        // skips above. A clean tail with a non-final close is refused by
+        // replay, so any surviving claim is the file's own final word.
+        if matches!(journal.tail(), TailStatus::CleanEof)
+            && let Some(claimed) = close_claim
+            && claimed != commits_in_file
+        {
+            close_counts.push(CloseCountMismatch {
+                file: journal.file_name().clone(),
+                claimed,
+                actual: commits_in_file,
+            });
         }
     }
 
@@ -1296,6 +1358,7 @@ pub fn reconcile_recovery(
         unreferenced,
         torn,
         vault_mismatches,
+        close_counts,
     }
 }
 
@@ -1309,7 +1372,11 @@ mod reconcile_tests {
         GenerationState, ManifestAuthMetadata, ManifestGeneration, ManifestObject,
         ManifestPlaintext, RotationPhase,
     };
-    use crate::vault_media_journal::{JournalWriter, envelope_digest};
+    use crate::vault_media_journal::{
+        JOURNAL_CLOSE_PAYLOAD_BYTES, JOURNAL_HEADER_BYTES, JOURNAL_INTEGRITY_BYTES, JournalWriter,
+        envelope_digest,
+    };
+    use sha2::{Digest, Sha256};
     use std::ffi::OsString;
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -1360,14 +1427,17 @@ mod reconcile_tests {
         KeyGeneration::new(value).expect("test generation")
     }
 
-    fn write_journal(dir: &Path, name: &str, commits: &[TestCommit]) {
-        let mut writer = JournalWriter::create(
+    fn open_writer(dir: &Path, name: &str) -> JournalWriter {
+        JournalWriter::create(
             &dir.join(name),
             VaultId::from_bytes(VAULT),
             SESSION,
             generation(4),
         )
-        .expect("create journal");
+        .expect("create journal")
+    }
+
+    fn append_test_commits(writer: &mut JournalWriter, commits: &[TestCommit]) {
         for (index, gen_value, nonce, seed) in commits {
             let content = envelope_bytes(*seed);
             writer
@@ -1380,6 +1450,17 @@ mod reconcile_tests {
                 )
                 .expect("append commit");
         }
+    }
+
+    fn write_journal(dir: &Path, name: &str, commits: &[TestCommit]) {
+        let mut writer = open_writer(dir, name);
+        append_test_commits(&mut writer, commits);
+    }
+
+    fn write_journal_closed(dir: &Path, name: &str, commits: &[TestCommit], claimed: u64) {
+        let mut writer = open_writer(dir, name);
+        append_test_commits(&mut writer, commits);
+        writer.append_close(claimed).expect("close journal");
     }
 
     fn test_manifest(objects: Vec<ManifestObject>) -> ManifestPlaintext {
@@ -1672,5 +1753,88 @@ mod reconcile_tests {
         let second = reconcile(&fixture, &manifest);
         assert_eq!(first, second);
         assert!(!first.is_clean());
+    }
+
+    fn build_closed_fixture(
+        name: &str,
+        commits: &[TestCommit],
+        claimed: u64,
+        envelope_seeds: &[u64],
+    ) -> Fixture {
+        let root = ReconcileDir::new();
+        let journals_dir = root.path.join("journals");
+        let envelopes_dir = root.path.join("envelopes");
+        fs::create_dir_all(&journals_dir).expect("journals dir");
+        fs::create_dir_all(&envelopes_dir).expect("envelopes dir");
+        write_journal_closed(&journals_dir, name, commits, claimed);
+        for seed in envelope_seeds {
+            fs::write(
+                envelopes_dir.join(format!("chunk-{seed}.bin")),
+                envelope_bytes(*seed),
+            )
+            .expect("envelope");
+        }
+        Fixture {
+            _root: root,
+            journals: journals_dir,
+            envelopes: envelopes_dir,
+        }
+    }
+
+    #[test]
+    fn matching_close_count_stays_clean() {
+        let fixture = build_closed_fixture("journal-0001.log", &[(0, 4, N0, 0)], 1, &[0]);
+        let manifest = test_manifest(vec![blob(0, 4, N0)]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(report.is_clean());
+        assert!(report.close_counts().is_empty());
+    }
+
+    // Rewrites the final close record's claimed count and reseals its
+    // integrity trailer. The writer refuses to emit a disagreeing close
+    // (debug assertion), so the fixture forges one the way faulty bytes
+    // would leave it, using only public layout constants.
+    fn corrupt_close_claim(path: &Path, claimed: u64) {
+        let mut bytes = fs::read(path).expect("read journal");
+        let record_len =
+            JOURNAL_HEADER_BYTES + JOURNAL_CLOSE_PAYLOAD_BYTES + JOURNAL_INTEGRITY_BYTES;
+        assert!(bytes.len() >= record_len, "journal holds a close record");
+        // Integrity covers the single record (magic..payload), not the file.
+        let record_at = bytes.len() - record_len;
+        let payload_at = bytes.len() - JOURNAL_INTEGRITY_BYTES - JOURNAL_CLOSE_PAYLOAD_BYTES;
+        bytes[payload_at..payload_at + JOURNAL_CLOSE_PAYLOAD_BYTES]
+            .copy_from_slice(&claimed.to_be_bytes());
+        let digest = Sha256::digest(&bytes[record_at..bytes.len() - JOURNAL_INTEGRITY_BYTES]);
+        let trailer_at = bytes.len() - JOURNAL_INTEGRITY_BYTES;
+        bytes[trailer_at..].copy_from_slice(&digest);
+        fs::write(path, &bytes).expect("rewrite journal");
+    }
+
+    #[test]
+    fn disagreeing_close_marker_reported() {
+        let fixture = build_closed_fixture(
+            "journal-0001.log",
+            &[(0, 4, N0, 0), (1, 4, N1, 1)],
+            2,
+            &[0, 1],
+        );
+        corrupt_close_claim(&fixture.journals.join("journal-0001.log"), 5);
+        let manifest = test_manifest(vec![blob(0, 4, N0), blob(1, 4, N1)]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(!report.is_clean());
+        assert_eq!(report.verified().len(), 2);
+        assert!(
+            report
+                .verified()
+                .iter()
+                .all(|commit| commit.manifest_bound())
+        );
+        assert_eq!(report.close_counts().len(), 1);
+        assert_eq!(
+            report.close_counts()[0].file(),
+            &OsString::from("journal-0001.log")
+        );
+        assert_eq!(report.close_counts()[0].claimed(), 5);
+        assert_eq!(report.close_counts()[0].actual(), 2);
     }
 }
