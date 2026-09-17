@@ -97,8 +97,8 @@ CANONICAL_MERGE = 59ebf17806e8072302eb6f7a2ae2461d71851d2b
 MERGE_PARENT_1 = 889cce29af40e6d8ddf79570d68c0065b867ef0e
 MERGE_PARENT_2 = f0b4ea823916f47a2c5970f67967cdc83298e777
 MERGE_TREE = ebd1699437fcef03938a41f14ca7146b6a2402f0_EQUALS_ACCEPTED_TREE
-POSTMERGE_CI = PENDING (push run 35205561976 on 59ebf17)
-POSTMERGE_R3 = PENDING (push run 35205561880 on 59ebf17)
+POSTMERGE_CI = 35205561976_SUCCESS_PUSH_ATTEMPT_1 (head 59ebf17)
+POSTMERGE_R3 = 35205561880_SUCCESS_PUSH_ATTEMPT_1 (head 59ebf17)
 OCR_DELEGATE_REVIEW = APPROVE_NO_BLOCKING_FINDINGS with 3 non-blocking
   notes, all fixed (resume no-mutation lock-in, empty/missing resume
   tests, file-derived binding)
@@ -154,6 +154,6 @@ tests (ubuntu/macos/windows Rust jobs all green per grain).
 
 ## Post-merge qualification
 
-Grain-3 post-merge results are filled before this reconciliation merges;
-if either run fails, this reconciliation does not merge and the failure
-is repaired forward-only.
+005B is post-merge qualified on its exact canonical merges (grain-1
+`477eecc`, grain-2 `889cce2`, grain-3 `59ebf17`, each with CI and R3
+SUCCESS on the merge SHA).
