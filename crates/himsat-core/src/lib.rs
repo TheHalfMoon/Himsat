@@ -102,6 +102,8 @@ pub mod vault_deletion;
 
 /// 005A media-chunk authenticated-encryption envelope.
 pub mod vault_media_chunk;
+/// 005B append-only session journal codec and fsync discipline.
+pub mod vault_media_journal;
 
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;

@@ -26,4 +26,15 @@
 - [x] A004 OCR delegate adversarial review: NO_BLOCKING_FINDINGS; reconcile zero submitted reviews/threads with unavailable/skipped/neutral outputs as NOT PASS.
 - [x] A005 Expected-head merge PR #160 to canonical merge `c3a371511b1bad519c2ed57817f3951e67cb6355` (parents `2d7ec3e8e714d493f865ecf445d93d503351e390` + `f338b3c264103a64a74dcc27248f3badd930ca34`; merge tree equals accepted tree).
 - [x] A006 Post-merge qualification: CI and R3 SUCCESS on `c3a371511b1bad519c2ed57817f3951e67cb6355` (push CI `35189660586` SUCCESS 17m59s / push R3 `35189660481` SUCCESS 10m23s, both head `c3a3715`).
-- [ ] A007 Reconcile `specs/CURRENT.md` and this evidence in the 005A reconciliation PR before authorizing 005B.
+- [x] A007 Reconcile `specs/CURRENT.md` and this evidence in the 005A reconciliation PR before authorizing 005B.
+  - Reconciliation merged as `a97f627088ead6770af2b019ccee0e1b16e8ee80` (PR #161, parents `c3a371511b1bad519c2ed57817f3951e67cb6355` + `517fdf38a11559b52da0269d0f0842785c333409`; merge tree equals accepted tree). Post-merge CI `35192652860` SUCCESS and R3 `35192652887` SUCCESS on exact merge SHA `a97f627` (transcribed by the 005B leaf PR per the next-unit-records-prior-postmerge precedent).
+
+## 005B session journal codec and fsync discipline — implementation leaf (re-bounded after 005A closed)
+
+- [x] B001 Re-bound 005B against live main `a97f627088ead6770af2b019ccee0e1b16e8ee80` as the second implementation Grain; 005C/005D remain candidates.
+- [x] B002 Implement additive-only journal (`vault_media_journal.rs`): fixed 61B header, open/commit/close records, per-record `sync_all` with length check, read-only replay with `TailStatus`, 15 focused tests incl. exhaustive truncation/bit-flip matrices and exact-reason replay arms; no reviewed file changed, no donor adoption, no dependency change.
+- [x] B003 Local exact-head proof: `cargo fmt --check` clean; `cargo clippy --workspace --all-targets --all-features -- -D warnings` clean; `cargo test --workspace --all-targets --locked` green (257 lib incl. 15 new, 0 failures).
+- [ ] B004 OCR delegate adversarial review with NO_BLOCKING_FINDINGS; reconcile submitted reviews/threads with unavailable/skipped/neutral outputs as NOT PASS.
+- [ ] B005 Exact-head qualify 005B head: CI and R3 SUCCESS (IDs filled before merge).
+- [ ] B006 Expected-head merge; canonical merge contains the exact 005B head as parent with merge tree equal to the accepted tree.
+- [ ] B007 Post-merge qualification and follow-up reconciliation (records B005B merge/post-merge IDs, closes 005B) before authorizing 005C.
