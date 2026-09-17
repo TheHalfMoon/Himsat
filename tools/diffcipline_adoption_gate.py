@@ -123,6 +123,23 @@ B501C_EXPECTED_BLOBS = {
 }
 B501C_EXPECTED_FILES = set(B501C_EXPECTED_BLOBS)
 
+B007_PRECONDITION_BASE = "0ef54bc941bdaddce35eb1d4a18554fc544d3966"
+B007_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B007_MAX_ADDED_LINES = 6000
+B007_EXPECTED_ADDED_LINES = 5551
+B007_EXPECTED_DELETED_LINES = 297
+B007_EXPECTED_BLOBS = {
+    "Cargo.lock": "2e745dccc4bdf322b8ccdc2debc038c2d161dcd5",
+    "THIRD_PARTY_NOTICES.md": "8b5648b8b95d2353be480156676b071e2e6c4e96",
+    "crates/himsat-core/Cargo.toml": "7dba8678cd7a2b55ad41e19b94501b54abb93600",
+    "crates/himsat-core/src/capture_macos.rs": "ad48a1f2b4fdacbe54b3b3afa53e9f9260b010f1",
+    "governance/generated/sbom.json": "3537146236fddef89c16e48000125536d2bcc5aa",
+    "governance/provenance/registry.json": "8b09a5a2851d4fdd6b1cf4a30d42066e053547fb",
+    "specs/007-macos-capture/b007a-cpal-binding-evidence.md": "4ad1405bf9c63a84588c492312d9e5bca4c434d6",
+    "tools/004p_dependency_closure.py": "f20791502c421e2ce43aebd43de1515b17cc8867",
+}
+B007_EXPECTED_FILES = set(B007_EXPECTED_BLOBS)
+
 B006A_PRECONDITION_BASE = "31b3e6cbe50a952f1f13743cfd30f0cff730e0d9"
 B006A_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
 B006A_EXPECTED_ADDED_LINES = 766
@@ -782,6 +799,100 @@ def check_b501c_exception(args: argparse.Namespace, proof: dict[str, Any]) -> in
     return 0
 
 
+def b007_trusted_base(base: str) -> bool:
+    """Accept only the canonical B007 gate successor or its immediate merge parent.
+
+    Pull-request qualification requires current canonical main to be the trusted
+    gate-hardening merge. Push-triggered qualification after the guarded B007
+    cpal adoption merge accepts that same trusted gate merge as the first parent
+    of current canonical main. The trusted gate merge itself must have the exact
+    B007 precondition as first parent and change only this gate path.
+    """
+
+    try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            canonical_parent_row = git("rev-list", "--parents", "-n", "1", canonical_main).split()
+            if len(canonical_parent_row) != 3 or canonical_parent_row[1] != base:
+                return False
+        base_parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(base_parent_row) != 3 or base_parent_row[1] != B007_PRECONDITION_BASE:
+            return False
+        raw = git("diff", "--no-renames", "--name-only", B007_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B007_TRUSTED_BASE_DELTA and len(paths) == len(B007_TRUSTED_BASE_DELTA)
+
+
+def check_b007_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the pinned B007 cpal OS-binding dependency adoption."""
+
+    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
+        return fail(
+            f"unexpected B007 non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B007 Git diff: {exc}")
+
+    if set(actual_files) != B007_EXPECTED_FILES or len(actual_files) != len(B007_EXPECTED_FILES):
+        return fail("actual B007 Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B007 Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B007_EXPECTED_FILES or len(files) != len(B007_EXPECTED_FILES):
+        return fail("B007 exception changed-path set is not exact")
+
+    if proof.get("changed_files") != len(B007_EXPECTED_FILES):
+        return fail("B007 Diffcipline changed-file count is not exact")
+    if actual_added != B007_EXPECTED_ADDED_LINES or proof.get("added_lines") != actual_added:
+        return fail("B007 added-line count is not exact")
+    if actual_deleted != B007_EXPECTED_DELETED_LINES or proof.get("deleted_lines") != actual_deleted:
+        return fail("B007 deleted-line count is not exact")
+    if not (POLICY_MAX_ADDED_LINES < actual_added <= B007_MAX_ADDED_LINES):
+        return fail("B007 dependency leaf is outside the bounded adoption line window")
+
+    expected_reasons = {
+        f"added lines {actual_added} exceed maximum {POLICY_MAX_ADDED_LINES}",
+        "dependency manifest changed: crates/himsat-core/Cargo.toml",
+        "lockfile changed: Cargo.lock",
+    }
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != 3:
+        return fail(f"unexpected B007 Diffcipline reason set: {reasons!r}")
+    if proof.get("scope_violations") != []:
+        return fail("B007 scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B007 verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B007 verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B007_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"B007 candidate artifact blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B007 candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B007 DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
 def b006a_trusted_base(base: str) -> bool:
     """Accept only the canonical B006A gate successor or its immediate merge parent.
 
@@ -901,6 +1012,12 @@ def main() -> int:
     if args.exit_code == 0 and verdict == "PASS":
         print("DIFFCIPLINE PASS")
         return 0
+
+    # B007 adopts the cpal 0.18.2 macOS OS binding for the 007A microphone
+    # pathway with full 004P/provenance closure (48-crate subtree). The
+    # exception pins the complete eight-file candidate and accepts REVIEW only.
+    if b007_trusted_base(args.base):
+        return check_b007_exception(args, proof)
 
     # B006A adopts the intra-workspace himsat-events dependency for the 006A
     # capture session (zero external packages, zero transitive dependencies).
