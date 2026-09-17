@@ -4,9 +4,9 @@
 //! machine replay: fixed session open/close markers, chunk-commit records
 //! quoting public 005A envelope fields, a `JournalWriter` that appends one
 //! caller-owned file per session with a `sync_all` plus length check after
-//! every record, and truncation-safe replay returning the exact valid
-//! prefix plus a machine `TailStatus`. Crash-resume follows in the third
-//! 005B grain; recovery reconciliation stays with 005C.
+//! every record, truncation-safe replay returning the exact valid
+//! prefix plus a machine `TailStatus`, and crash-resume that refuses torn
+//! tails without mutating them. Recovery reconciliation stays with 005C.
 //!
 //! Additive-only 004/005A boundary discipline:
 //!
@@ -20,7 +20,6 @@
 //!
 //! Deliberately out of scope here:
 //!
-//! - crash-resume for existing files (third grain);
 //! - recovery reconciliation against the manifest inventory (005C);
 //! - fault-injection harnesses and bounded-loss quantification (005D);
 //! - nonce reservation: records quote the 24-byte nonce so a later log can
@@ -216,8 +215,8 @@ impl JournalReplay {
 /// Fail-closed journal errors for append operations. Only filesystem
 /// failures and protocol refusals surface here; content anomalies are
 /// reported by replay. The `EmptyJournal`, `TornTail`, and `ContextMismatch`
-/// variants are never constructed by the append path; they are reserved for
-/// the third grain's resume API.
+/// variants are constructed only by resume; the append path never emits
+/// them.
 #[derive(Debug)]
 pub enum JournalError {
     /// Underlying filesystem operation failed.
@@ -580,10 +579,10 @@ pub fn replay_journal(path: &Path) -> Result<JournalReplay, JournalError> {
 /// length check before the sequence number is returned.
 ///
 /// Single-writer contract: at most one live writer (or creator) per file;
-/// the caller serializes creation across processes and threads. Two
+/// the caller serializes create/resume across processes and threads. Two
 /// concurrent creators can both observe an empty file and both append a
 /// seq-1 open, and two interleaved writers corrupt sequencing (replay then
-/// stops torn once replay exists). The crash-safe single-open
+/// stops torn, typically at `RecordAfterClose`). The crash-safe single-open
 /// guarantee covers crash-restart, not races.
 #[derive(Debug)]
 pub struct JournalWriter {
@@ -664,6 +663,62 @@ impl JournalWriter {
     #[must_use]
     pub const fn next_seq(&self) -> u64 {
         self.next_seq
+    }
+
+    /// Resumes a cleanly closed-tailed session journal for further appends.
+    ///
+    /// Refuses an empty file (`EmptyJournal`), a torn tail (`TornTail`,
+    /// owned by 005C recovery), a binding mismatch (`ContextMismatch`), and
+    /// an already-closed session (`SessionClosed`).
+    ///
+    /// # Errors
+    ///
+    /// Returns the refusal above or `JournalError::Io` on filesystem failure.
+    pub fn resume(
+        path: &Path,
+        vault_id: VaultId,
+        session_id: [u8; 16],
+    ) -> Result<Self, JournalError> {
+        let replay = replay_journal(path)?;
+        // Torn tail first: a garbage file has zero valid records but must
+        // report TornTail, not EmptyJournal (whose "create it first" advice
+        // would then refuse with JournalNotEmpty).
+        if let TailStatus::TornTail {
+            valid_bytes,
+            reason,
+        } = replay.tail
+        {
+            return Err(JournalError::TornTail {
+                valid_records: replay.records.len(),
+                valid_bytes,
+                reason,
+            });
+        }
+        if replay.records.is_empty() {
+            return Err(JournalError::EmptyJournal);
+        }
+        let first = replay.records[0];
+        if first.vault_id != vault_id || first.session_id != session_id {
+            return Err(JournalError::ContextMismatch);
+        }
+        if matches!(
+            replay.records.last().map(|record| record.kind()),
+            Some(JournalRecordKind::Close { .. })
+        ) {
+            return Err(JournalError::SessionClosed);
+        }
+        let file = OpenOptions::new().append(true).open(path)?;
+        let next_seq = replay.records.len() as u64 + 1;
+        // Bind from the replayed file, not the caller: the equality check
+        // above makes them identical on this path, and reading from `first`
+        // stays correct even if a future edit reorders the check.
+        Ok(Self {
+            file,
+            vault_id: first.vault_id,
+            session_id: first.session_id,
+            next_seq,
+            closed: false,
+        })
     }
 
     /// Appends one chunk-commit record quoting public 005A envelope fields.
@@ -755,6 +810,7 @@ mod tests {
     const TEST_SESSION: [u8; 16] = [0x53; 16];
     const TEST_NONCE: [u8; 24] = [0x54; 24];
     const TEST_DIGEST: [u8; 32] = [0x55; 32];
+    const OTHER_SESSION: [u8; 16] = [0x56; 16];
 
     /// Unique journal path removed on drop. Declared before any writer
     /// handle so reverse-drop order closes handles before deletion
@@ -1083,5 +1139,263 @@ mod tests {
         let file = TestFile::new();
         let err = replay_journal(file.path()).expect_err("missing file must fail");
         assert!(matches!(err, JournalError::Io(_)));
+    }
+
+    #[test]
+    fn resume_refuses_empty_and_missing_files() {
+        let file = TestFile::new();
+        fs::write(file.path(), []).expect("empty file");
+        let err = JournalWriter::resume(file.path(), vault(), TEST_SESSION)
+            .expect_err("resume on empty file must fail");
+        assert!(matches!(err, super::JournalError::EmptyJournal));
+        let missing = TestFile::new();
+        let err = JournalWriter::resume(missing.path(), vault(), TEST_SESSION)
+            .expect_err("resume on missing file must fail");
+        assert!(matches!(err, super::JournalError::Io(_)));
+    }
+
+    #[test]
+    fn resume_continues_a_clean_tail_and_refuses_closed_or_torn() {
+        let file = TestFile::new();
+        let path = file.path().to_path_buf();
+        let mut writer =
+            JournalWriter::create(&path, vault(), TEST_SESSION, generation()).expect("create");
+        writer
+            .append_commit(0, generation(), TEST_NONCE, 64, TEST_DIGEST)
+            .expect("commit");
+        drop(writer);
+        let mut resumed =
+            JournalWriter::resume(&path, vault(), TEST_SESSION).expect("resume clean tail");
+        assert_eq!(resumed.next_seq(), 3);
+        resumed.append_close(1).expect("close");
+        drop(resumed);
+        // Refused resumes must not mutate the file: snapshot before each.
+        let before = fs::read(&path).expect("read");
+        let err = JournalWriter::resume(&path, vault(), TEST_SESSION)
+            .expect_err("resume after close must fail");
+        assert!(matches!(err, super::JournalError::SessionClosed));
+        assert_eq!(fs::read(&path).expect("read"), before);
+        // Torn tail: truncate mid-record, resume must refuse with the replay.
+        let mut bytes = fs::read(&path).expect("read");
+        bytes.truncate(bytes.len() - 7);
+        fs::write(&path, &bytes).expect("tear fixture");
+        let before = fs::read(&path).expect("read");
+        let err = JournalWriter::resume(&path, vault(), TEST_SESSION)
+            .expect_err("resume on torn tail must fail");
+        assert!(
+            matches!(err, super::JournalError::TornTail { valid_bytes, .. } if valid_bytes == 274),
+            "torn tail must report the valid prefix, got {err:?}"
+        );
+        assert_eq!(fs::read(&path).expect("read"), before);
+        // Wrong session binding on a clean file is refused as a mismatch.
+        let clean_file = TestFile::new();
+        let clean = clean_file.path().to_path_buf();
+        let writer =
+            JournalWriter::create(&clean, vault(), TEST_SESSION, generation()).expect("create");
+        drop(writer);
+        let before = fs::read(&clean).expect("read");
+        let err = JournalWriter::resume(&clean, vault(), [0x99; 16])
+            .expect_err("wrong session must fail");
+        assert!(matches!(err, super::JournalError::ContextMismatch));
+        assert_eq!(fs::read(&clean).expect("read"), before);
+    }
+
+    #[test]
+    fn replay_arms_report_exact_reasons() {
+        use sha2::{Digest, Sha256};
+
+        // Recompute the integrity trailer after crafting a record mutation.
+        fn repair(record: &mut [u8]) {
+            let body = record.len() - 32;
+            let digest = Sha256::digest(&record[..body]);
+            record[body..].copy_from_slice(&digest);
+        }
+
+        // One open-only journal (101B) and one open+commit journal (274B).
+        let fa = TestFile::new();
+        write_session(fa.path(), 0, false);
+        let a = fs::read(fa.path()).expect("read open journal");
+        let fb = TestFile::new();
+        write_session(fb.path(), 1, false);
+        let b = fs::read(fb.path()).expect("read commit journal");
+
+        // Each case: crafted file bytes, expected record count, exact tail.
+        let mut cases: Vec<(&str, Vec<u8>, usize, TailStatus)> = Vec::new();
+
+        // Record after close: open + close + a commit carrying the correct
+        // next seq (3) with repaired integrity, so the parser reaches the
+        // close rule instead of stopping at a sequence gap.
+        let mut after_close = write_session(TestFile::new().path(), 0, true);
+        let mut post_close = b[101..274].to_vec();
+        post_close[17..25].copy_from_slice(&3u64.to_be_bytes());
+        repair(&mut post_close);
+        after_close.extend_from_slice(&post_close);
+        cases.push((
+            "record-after-close",
+            after_close,
+            2,
+            TailStatus::TornTail {
+                valid_bytes: 202,
+                reason: TailReason::RecordAfterClose,
+            },
+        ));
+
+        // Second open: open + open(seq patched to 2, integrity repaired).
+        let mut second_open = a.clone();
+        let mut reopen = a.clone();
+        reopen[17..25].copy_from_slice(&2u64.to_be_bytes());
+        repair(&mut reopen);
+        second_open.extend_from_slice(&reopen);
+        cases.push((
+            "second-open",
+            second_open,
+            1,
+            TailStatus::TornTail {
+                valid_bytes: 101,
+                reason: TailReason::UnexpectedOpen,
+            },
+        ));
+
+        // First record not open: lone commit re-sequenced to 1.
+        let mut lone_commit = b[101..274].to_vec();
+        lone_commit[17..25].copy_from_slice(&1u64.to_be_bytes());
+        repair(&mut lone_commit);
+        cases.push((
+            "first-not-open",
+            lone_commit,
+            0,
+            TailStatus::TornTail {
+                valid_bytes: 0,
+                reason: TailReason::FirstRecordNotOpen,
+            },
+        ));
+
+        // Unsupported version: open with version 2, integrity repaired.
+        let mut bad_version = a.clone();
+        bad_version[13..15].copy_from_slice(&2u16.to_be_bytes());
+        repair(&mut bad_version);
+        cases.push((
+            "bad-version",
+            bad_version,
+            0,
+            TailStatus::TornTail {
+                valid_bytes: 0,
+                reason: TailReason::UnsupportedVersion,
+            },
+        ));
+
+        // Unsupported type: open with type 9, integrity repaired.
+        let mut bad_type = a.clone();
+        bad_type[15..17].copy_from_slice(&9u16.to_be_bytes());
+        repair(&mut bad_type);
+        cases.push((
+            "bad-type",
+            bad_type,
+            0,
+            TailStatus::TornTail {
+                valid_bytes: 0,
+                reason: TailReason::UnsupportedType,
+            },
+        ));
+
+        // Length mismatch: open header declaring 16 payload bytes with a
+        // matching 16-byte payload and valid integrity.
+        let mut bad_len = a[..61].to_vec();
+        bad_len[57..61].copy_from_slice(&16u32.to_be_bytes());
+        bad_len.extend_from_slice(&[0xABu8; 16]);
+        bad_len.extend_from_slice(&[0u8; 32]);
+        repair(&mut bad_len);
+        cases.push((
+            "bad-length",
+            bad_len,
+            0,
+            TailStatus::TornTail {
+                valid_bytes: 0,
+                reason: TailReason::LengthMismatch,
+            },
+        ));
+
+        // Invalid generation: open with zeroed generation, repaired.
+        let mut bad_gen = a.clone();
+        bad_gen[61..69].copy_from_slice(&0u64.to_be_bytes());
+        repair(&mut bad_gen);
+        cases.push((
+            "bad-generation",
+            bad_gen,
+            0,
+            TailStatus::TornTail {
+                valid_bytes: 0,
+                reason: TailReason::InvalidGeneration,
+            },
+        ));
+
+        // Session transplant: second commit under a foreign session id with
+        // repaired integrity (mirrors the vault transplant proof).
+        let mut session_swap = b[101..274].to_vec();
+        session_swap[41..57].copy_from_slice(&OTHER_SESSION);
+        repair(&mut session_swap);
+        let mut spliced = b[..101].to_vec();
+        spliced.extend_from_slice(&session_swap);
+        cases.push((
+            "session-transplant",
+            spliced,
+            1,
+            TailStatus::TornTail {
+                valid_bytes: 101,
+                reason: TailReason::ContextMismatch,
+            },
+        ));
+
+        for (name, bytes, expected_records, expected_tail) in &cases {
+            let file = TestFile::new();
+            fs::write(file.path(), bytes).expect("arm fixture");
+            let replay = replay_journal(file.path()).expect("replay");
+            assert_eq!(
+                replay.records().len(),
+                *expected_records,
+                "arm {name} must preserve the valid prefix"
+            );
+            assert_eq!(
+                replay.tail(),
+                *expected_tail,
+                "arm {name} must report its exact reason"
+            );
+        }
+    }
+
+    #[test]
+    fn truncation_reason_split_reports_header_payload_integrity() {
+        // One-commit journal: open 0..101, commit header 101..162, commit
+        // payload 162..242, commit integrity 242..274.
+        let file = TestFile::new();
+        let bytes = write_session(file.path(), 1, false);
+        // Cut inside the open record tears it: empty prefix at offset 0.
+        fs::write(file.path(), &bytes[..50]).expect("cut fixture");
+        let replay = replay_journal(file.path()).expect("replay");
+        assert!(replay.records().is_empty());
+        assert_eq!(
+            replay.tail(),
+            TailStatus::TornTail {
+                valid_bytes: 0,
+                reason: TailReason::TruncatedHeader,
+            }
+        );
+        // Later cuts keep the open and name the torn commit region.
+        for (cut, reason) in [
+            (200, TailReason::TruncatedPayload),
+            (260, TailReason::TruncatedIntegrity),
+        ] {
+            fs::write(file.path(), &bytes[..cut]).expect("cut fixture");
+            let replay = replay_journal(file.path()).expect("replay");
+            assert_eq!(replay.records().len(), 1, "cut at {cut} keeps the open");
+            assert_eq!(
+                replay.tail(),
+                TailStatus::TornTail {
+                    valid_bytes: 101,
+                    reason,
+                },
+                "cut at {cut} must report {reason:?}"
+            );
+        }
     }
 }
