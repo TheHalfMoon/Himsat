@@ -504,6 +504,7 @@ dependencies = [
  "core-foundation",
  "fs_at",
  "getrandom",
+ "himsat-events",
  "hkdf",
  "libsqlite3-sys",
  "rusqlite",
