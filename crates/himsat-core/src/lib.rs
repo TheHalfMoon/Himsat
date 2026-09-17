@@ -100,6 +100,9 @@ pub mod vault_recovery;
 /// B506 bounded active-vault deletion coordinator and retention limits.
 pub mod vault_deletion;
 
+/// 005A media-chunk authenticated-encryption envelope.
+pub mod vault_media_chunk;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 

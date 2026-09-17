@@ -19,6 +19,7 @@ pub const KEY_MATERIAL_BYTES: usize = 32;
 const STRUCTURED_DOMAIN: &[u8] = b"HIMSAT/004/STRUCTURED/v1";
 const BLOB_DOMAIN: &[u8] = b"HIMSAT/004/BLOB/v1";
 const MANIFEST_DOMAIN: &[u8] = b"HIMSAT/004/MANIFEST/v1";
+const MEDIA_CHUNK_DOMAIN: &[u8] = b"HIMSAT/005/MEDIA-CHUNK/v1";
 
 /// Reviewed v1 key purpose used to construct an HKDF `info` value.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -29,6 +30,11 @@ pub enum KeyPurpose {
     BoundedBlob,
     /// Freshness-manifest purpose key.
     FreshnessManifest,
+    /// 005A media-chunk purpose key. Additive to the reviewed 004 purposes:
+    /// existing derivations are byte-identical, while media chunks receive a
+    /// disjoint key even under the same vault and generation, so a nonce need
+    /// only be unique within its own protocol.
+    MediaChunk,
 }
 
 impl KeyPurpose {
@@ -37,6 +43,7 @@ impl KeyPurpose {
             Self::StructuredStore => STRUCTURED_DOMAIN,
             Self::BoundedBlob => BLOB_DOMAIN,
             Self::FreshnessManifest => MANIFEST_DOMAIN,
+            Self::MediaChunk => MEDIA_CHUNK_DOMAIN,
         }
     }
 }
@@ -184,6 +191,7 @@ pub struct VaultKeyMaterial {
     structured_store: Option<OwnedKeyMaterial>,
     bounded_blob: Option<OwnedKeyMaterial>,
     freshness_manifest: Option<OwnedKeyMaterial>,
+    media_chunk: Option<OwnedKeyMaterial>,
 }
 
 impl VaultKeyMaterial {
@@ -196,6 +204,7 @@ impl VaultKeyMaterial {
             structured_store: None,
             bounded_blob: None,
             freshness_manifest: None,
+            media_chunk: None,
         }
     }
 
@@ -210,6 +219,7 @@ impl VaultKeyMaterial {
             KeyPurpose::StructuredStore => self.structured_store = Some(key),
             KeyPurpose::BoundedBlob => self.bounded_blob = Some(key),
             KeyPurpose::FreshnessManifest => self.freshness_manifest = Some(key),
+            KeyPurpose::MediaChunk => self.media_chunk = Some(key),
         }
     }
 
@@ -221,6 +231,7 @@ impl VaultKeyMaterial {
             && self.structured_store.is_none()
             && self.bounded_blob.is_none()
             && self.freshness_manifest.is_none()
+            && self.media_chunk.is_none()
     }
 
     fn release_all(&mut self) {
@@ -229,6 +240,7 @@ impl VaultKeyMaterial {
         self.structured_store = None;
         self.bounded_blob = None;
         self.freshness_manifest = None;
+        self.media_chunk = None;
     }
 }
 
@@ -243,6 +255,7 @@ impl fmt::Debug for VaultKeyMaterial {
                 "freshness_manifest_present",
                 &self.freshness_manifest.is_some(),
             )
+            .field("media_chunk_present", &self.media_chunk.is_some())
             .finish()
     }
 }
@@ -420,6 +433,10 @@ mod tests {
                 KeyPurpose::FreshnessManifest,
                 b"HIMSAT/004/MANIFEST/v1".as_slice(),
             ),
+            (
+                KeyPurpose::MediaChunk,
+                b"HIMSAT/005/MEDIA-CHUNK/v1".as_slice(),
+            ),
         ];
 
         for (purpose, domain) in cases {
@@ -438,6 +455,12 @@ mod tests {
 
     #[test]
     fn hkdf_sha256_matches_independent_deterministic_vectors_for_all_v1_purposes() {
+        // Oracle recipe (independent Python `hmac`/`hashlib` implementation of
+        // RFC 5869, no Himsat code): salt is the 16 raw vault-id bytes
+        // (`vector_vault_id`), IKM is vrk bytes `0..32`, info is
+        // `domain || u64be(generation)`, output is the first 32 expanded bytes.
+        // The recipe was validated by reproducing the three committed 004
+        // vectors before deriving the MediaChunk vector below.
         let vrk = vector_vrk();
         let generation =
             KeyGeneration::new(0x0102_0304_0506_0708).expect("test generation is non-zero");
@@ -453,6 +476,10 @@ mod tests {
             (
                 KeyPurpose::FreshnessManifest,
                 "19540379cb9fd9b63cad8f3be133c0a985339bcfeb323c26b1bd95e20202d019",
+            ),
+            (
+                KeyPurpose::MediaChunk,
+                "7c41a72830f0568a8344ba657cc7c4de02ad631ea6163b4f721c6d8c034cd6d8",
             ),
         ];
 
@@ -480,6 +507,8 @@ mod tests {
         let manifest =
             KeyDerivationContext::new(vault_id, generation, KeyPurpose::FreshnessManifest)
                 .derive_purpose_key(&vrk);
+        let media = KeyDerivationContext::new(vault_id, generation, KeyPurpose::MediaChunk)
+            .derive_purpose_key(&vrk);
         let other_vault = KeyDerivationContext::new(
             VaultId::from_bytes([0xa5; VAULT_ID_BYTES]),
             generation,
@@ -493,6 +522,9 @@ mod tests {
         assert_ne!(structured.bytes, blob.bytes);
         assert_ne!(structured.bytes, manifest.bytes);
         assert_ne!(blob.bytes, manifest.bytes);
+        assert_ne!(media.bytes, structured.bytes);
+        assert_ne!(media.bytes, blob.bytes);
+        assert_ne!(media.bytes, manifest.bytes);
         assert_ne!(structured.bytes, other_vault.bytes);
         assert_ne!(structured.bytes, other_generation.bytes);
     }
@@ -515,6 +547,7 @@ mod tests {
         keys.set_purpose_key(KeyPurpose::StructuredStore, key(3));
         keys.set_purpose_key(KeyPurpose::BoundedBlob, key(4));
         keys.set_purpose_key(KeyPurpose::FreshnessManifest, key(5));
+        keys.set_purpose_key(KeyPurpose::MediaChunk, key(6));
 
         assert!(!keys.is_released());
         keys.release_all();
@@ -564,6 +597,7 @@ mod tests {
         keys.set_purpose_key(KeyPurpose::StructuredStore, key(0x33));
         keys.set_purpose_key(KeyPurpose::BoundedBlob, key(0x44));
         keys.set_purpose_key(KeyPurpose::FreshnessManifest, key(0x55));
+        keys.set_purpose_key(KeyPurpose::MediaChunk, key(0x66));
         keys
     }
 
