@@ -22,6 +22,7 @@ sha2 = { version = "=0.11.0", default-features = false }
 zeroize = { version = "=1.9.0" }
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "=0.10.1", default-features = false }
+cpal = { version = "=0.18.2", default-features = false }
 security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
