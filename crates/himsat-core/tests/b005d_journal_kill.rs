@@ -146,14 +146,14 @@ fn spawn_writer(root: &Path) -> Child {
         .expect("spawn crash writer")
 }
 
-fn wait_for_progress(progress: &Path) {
+fn wait_for_progress(progress: &Path, kill_at: u64) {
     let deadline = Instant::now() + POLL_DEADLINE;
     loop {
         let done = fs::read_to_string(progress)
             .ok()
             .and_then(|text| text.trim().parse::<u64>().ok())
             .unwrap_or(0);
-        if done >= KILL_AT {
+        if done >= kill_at {
             return;
         }
         assert!(Instant::now() < deadline, "crash writer stalled");
@@ -170,7 +170,7 @@ fn kill_mid_stream_recovery_stays_bounded() {
     fs::create_dir_all(&envelopes_dir).expect("envelopes dir");
 
     let mut child = spawn_writer(&root.path);
-    wait_for_progress(&root.path.join("progress"));
+    wait_for_progress(&root.path.join("progress"), KILL_AT);
     child.kill().expect("kill lands");
     let _ = child.wait();
 
@@ -209,4 +209,42 @@ fn kill_mid_stream_recovery_stays_bounded() {
     assert!(report.unlogged().is_empty());
     assert!(report.vault_mismatches().is_empty());
     assert!(!report.is_clean());
+}
+
+/// Bounded-loss proof, executable: a kill at every commit point keeps
+/// recovery inside the same bounds. Progress proving `k` commits durable
+/// means at least `k` complete records must classify and at most all
+/// eight ran, whatever the kill timing around them.
+#[test]
+fn kill_matrix_covers_every_commit_point() {
+    for kill_at in 0..COMMITS {
+        let root = KillDir::new();
+        let journals_dir = root.path.join("journals");
+        let envelopes_dir = root.path.join("envelopes");
+        fs::create_dir_all(&journals_dir).expect("journals dir");
+        fs::create_dir_all(&envelopes_dir).expect("envelopes dir");
+
+        let mut child = spawn_writer(&root.path);
+        wait_for_progress(&root.path.join("progress"), kill_at);
+        child.kill().expect("kill lands");
+        let _ = child.wait();
+
+        let scan = scan_journal_dir(&journals_dir).expect("scan succeeds");
+        let envelopes = inventory_envelopes(&envelopes_dir).expect("inventory succeeds");
+        let report = reconcile_recovery(&scan, &envelopes, &empty_manifest());
+
+        assert!(report.torn().len() <= 1, "kill point {kill_at}");
+        assert!(report.duplicates().is_empty(), "kill point {kill_at}");
+        let classified = report.verified().len() + report.orphans().len();
+        assert!(
+            (kill_at as usize) <= classified && classified <= COMMITS as usize,
+            "kill point {kill_at}: {classified} classified"
+        );
+        for commit in report.verified() {
+            assert!(commit.chunk_index() < COMMITS, "kill point {kill_at}");
+        }
+        for orphan in report.orphans() {
+            assert!(orphan.chunk_index() < COMMITS, "kill point {kill_at}");
+        }
+    }
 }

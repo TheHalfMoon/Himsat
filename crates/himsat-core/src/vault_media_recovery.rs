@@ -1837,4 +1837,36 @@ mod reconcile_tests {
         assert_eq!(report.close_counts()[0].claimed(), 5);
         assert_eq!(report.close_counts()[0].actual(), 2);
     }
+
+    #[test]
+    fn misleading_names_still_match_by_content_only() {
+        let root = ReconcileDir::new();
+        let journals_dir = root.path.join("journals");
+        let envelopes_dir = root.path.join("envelopes");
+        fs::create_dir_all(&journals_dir).expect("journals dir");
+        fs::create_dir_all(&envelopes_dir).expect("envelopes dir");
+        // Names impersonate foreign vault/session metadata and a non-chunk
+        // file: association must ignore them entirely.
+        write_journal(
+            &journals_dir,
+            "vault-ffff-session-eeee.log",
+            &[(0, 4, N0, 0)],
+        );
+        fs::write(
+            envelopes_dir.join("totally-unrelated-name.dat"),
+            envelope_bytes(0),
+        )
+        .expect("envelope");
+        let scan = scan_journal_dir(&journals_dir).expect("scan");
+        // Discovery keys on magic, never on names.
+        assert_eq!(scan.journals().len(), 1);
+        let envelopes = inventory_envelopes(&envelopes_dir).expect("envelopes");
+        let manifest = test_manifest(vec![blob(0, 4, N0)]);
+        let report = reconcile_recovery(&scan, &envelopes, &manifest);
+        assert!(report.is_clean());
+        assert_eq!(
+            report.verified()[0].envelope_files(),
+            &[OsString::from("totally-unrelated-name.dat")]
+        );
+    }
 }
