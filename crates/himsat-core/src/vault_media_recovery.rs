@@ -905,6 +905,166 @@ impl RecoveryReport {
     }
 }
 
+// Anomaly field accessors (005C grain 2b): read API for every anomaly
+// struct the reconcile pass reports. Each mirrors the construction site;
+// lists stay sorted per the report contract.
+
+impl FoundManifestFacts {
+    /// Returns the manifest-recorded key generation.
+    #[must_use]
+    pub const fn key_generation(&self) -> KeyGeneration {
+        self.key_generation
+    }
+
+    /// Returns the manifest-recorded ciphertext length.
+    #[must_use]
+    pub const fn ciphertext_length(&self) -> u64 {
+        self.ciphertext_length
+    }
+
+    /// Returns the manifest-recorded ciphertext digest.
+    #[must_use]
+    pub const fn ciphertext_sha256(&self) -> [u8; 32] {
+        self.ciphertext_sha256
+    }
+
+    /// Returns the manifest-recorded nonce.
+    #[must_use]
+    pub const fn nonce(&self) -> [u8; 24] {
+        self.nonce
+    }
+}
+
+impl DivergedManifest {
+    /// Returns the session identity of this commit.
+    #[must_use]
+    pub const fn session_id(&self) -> [u8; 16] {
+        self.session_id
+    }
+
+    /// Returns the chunk index of this commit.
+    #[must_use]
+    pub const fn chunk_index(&self) -> u64 {
+        self.chunk_index
+    }
+
+    /// Returns the media logical id that diverged.
+    #[must_use]
+    pub const fn logical_id(&self) -> [u8; 16] {
+        self.logical_id
+    }
+
+    /// Returns the journal-quoted key generation.
+    #[must_use]
+    pub const fn expected_generation(&self) -> KeyGeneration {
+        self.expected_generation
+    }
+
+    /// Returns the envelope length the manifest should record.
+    #[must_use]
+    pub const fn expected_length(&self) -> u64 {
+        self.expected_length
+    }
+
+    /// Returns the journal-quoted envelope digest.
+    #[must_use]
+    pub const fn expected_digest(&self) -> [u8; 32] {
+        self.expected_digest
+    }
+
+    /// Returns the journal-quoted nonce.
+    #[must_use]
+    pub const fn expected_nonce(&self) -> [u8; 24] {
+        self.expected_nonce
+    }
+
+    /// Returns the authenticated manifest facts found.
+    #[must_use]
+    pub const fn found(&self) -> FoundManifestFacts {
+        self.found
+    }
+}
+
+impl UnloggedEntry {
+    /// Returns the media logical id with no journal commit.
+    #[must_use]
+    pub const fn logical_id(&self) -> [u8; 16] {
+        self.logical_id
+    }
+
+    /// Returns the manifest-recorded key generation.
+    #[must_use]
+    pub const fn key_generation(&self) -> KeyGeneration {
+        self.key_generation
+    }
+
+    /// Returns the manifest-recorded ciphertext length.
+    #[must_use]
+    pub const fn ciphertext_length(&self) -> u64 {
+        self.ciphertext_length
+    }
+
+    /// Returns the manifest-recorded ciphertext digest.
+    #[must_use]
+    pub const fn ciphertext_sha256(&self) -> [u8; 32] {
+        self.ciphertext_sha256
+    }
+}
+
+impl UnreferencedEnvelope {
+    /// Returns the opaque envelope file with no commit.
+    #[must_use]
+    pub fn file(&self) -> &OsString {
+        &self.file
+    }
+
+    /// Returns the digest of the unreferenced bytes.
+    #[must_use]
+    pub const fn digest(&self) -> [u8; 32] {
+        self.digest
+    }
+
+    /// Returns the exact length of the unreferenced bytes.
+    #[must_use]
+    pub const fn length(&self) -> u64 {
+        self.length
+    }
+}
+
+impl TornJournalFile {
+    /// Returns the opaque journal file with a torn tail.
+    #[must_use]
+    pub fn file(&self) -> &OsString {
+        &self.file
+    }
+
+    /// Returns the valid record count of the reconciled prefix.
+    #[must_use]
+    pub const fn valid_records(&self) -> usize {
+        self.valid_records
+    }
+
+    /// Returns the valid prefix length in bytes.
+    #[must_use]
+    pub const fn valid_bytes(&self) -> usize {
+        self.valid_bytes
+    }
+
+    /// Returns the machine reason the replay stopped.
+    #[must_use]
+    pub const fn reason(&self) -> TailReason {
+        self.reason
+    }
+}
+
+impl VaultMismatchFile {
+    /// Returns the opaque journal file bound to another vault.
+    #[must_use]
+    pub fn file(&self) -> &OsString {
+        &self.file
+    }
+}
+
 /// Reconciles journal commits against envelope files and the manifest
 /// inventory into a deterministic, read-only `RecoveryReport`.
 ///
@@ -1326,5 +1486,191 @@ mod reconcile_tests {
         assert_eq!(proposed.ciphertext_length(), envelope_bytes(0).len() as u64);
         assert_eq!(proposed.ciphertext_sha256(), digest_of(0));
         assert_eq!(proposed.nonce(), N0);
+    }
+
+    #[test]
+    fn missing_envelope_bytes_yield_orphan() {
+        let fixture = build_fixture(
+            &[("journal-0001.log", vec![(0, 4, N0, 0), (1, 4, N1, 1)])],
+            &[0],
+        );
+        let manifest = test_manifest(vec![blob(0, 4, N0), blob(1, 4, N1)]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(!report.is_clean());
+        assert_eq!(report.verified().len(), 1);
+        assert_eq!(report.orphans().len(), 1);
+        assert_eq!(report.orphans()[0].chunk_index(), 1);
+        assert_eq!(report.orphans()[0].digest(), digest_of(1));
+        assert!(report.unreferenced().is_empty());
+        assert!(report.unlogged().is_empty());
+    }
+
+    #[test]
+    fn duplicate_commits_report_first_by_file_seq() {
+        let fixture = build_fixture(
+            &[
+                ("journal-0001.log", vec![(0, 4, N0, 0)]),
+                ("journal-0002.log", vec![(0, 4, N1, 1)]),
+            ],
+            &[0, 1],
+        );
+        let manifest = test_manifest(vec![blob(0, 4, N0)]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(!report.is_clean());
+        assert!(report.verified().is_empty());
+        assert_eq!(report.duplicates().len(), 1);
+        let duplicate = &report.duplicates()[0];
+        assert_eq!(duplicate.chunk_index(), 0);
+        assert_eq!(duplicate.canonical_digest(), digest_of(0));
+        // Both duplicate-quoted digests count as committed: nothing is
+        // unreferenced even though no commit verified.
+        assert!(report.unreferenced().is_empty());
+        let occurrences = duplicate.occurrences();
+        assert_eq!(occurrences.len(), 2);
+        assert_eq!(occurrences[0].file(), &OsString::from("journal-0001.log"));
+        assert_eq!(occurrences[1].file(), &OsString::from("journal-0002.log"));
+    }
+
+    #[test]
+    fn diverged_manifest_reports_expected_and_found() {
+        let fixture = build_fixture(&[("journal-0001.log", vec![(0, 4, N0, 0)])], &[0]);
+        let wrong = ManifestObject::new(
+            derive_media_logical_id(SESSION, 0),
+            [0xD0; 16],
+            generation(4),
+            envelope_bytes(0).len() as u64,
+            [0xFF; 32],
+            ManifestAuthMetadata::GenericArtifactBlob { nonce: N0 },
+        );
+        let manifest = test_manifest(vec![wrong]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(!report.is_clean());
+        assert_eq!(report.verified().len(), 1);
+        assert!(!report.verified()[0].manifest_bound());
+        assert!(report.unbound().is_empty());
+        assert_eq!(report.diverged().len(), 1);
+        let diverged = &report.diverged()[0];
+        assert_eq!(diverged.logical_id(), derive_media_logical_id(SESSION, 0));
+        assert_eq!(diverged.expected_digest(), digest_of(0));
+        assert_eq!(diverged.expected_nonce(), N0);
+        assert_eq!(diverged.found().ciphertext_sha256(), [0xFF; 32]);
+        assert_eq!(diverged.found().nonce(), N0);
+    }
+
+    #[test]
+    fn unlogged_media_entry_reported() {
+        const N2: [u8; 24] = [0xC2; 24];
+        let fixture = build_fixture(&[("journal-0001.log", vec![(0, 4, N0, 0)])], &[0]);
+        let manifest = test_manifest(vec![blob(0, 4, N0), blob(5, 4, N2)]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(!report.is_clean());
+        assert_eq!(report.verified().len(), 1);
+        assert!(report.verified()[0].manifest_bound());
+        assert_eq!(report.unlogged().len(), 1);
+        assert_eq!(
+            report.unlogged()[0].logical_id(),
+            derive_media_logical_id(SESSION, 5)
+        );
+        assert_eq!(report.unlogged()[0].ciphertext_sha256(), digest_of(5));
+    }
+
+    #[test]
+    fn unreferenced_envelope_reported() {
+        let fixture = build_fixture(&[("journal-0001.log", vec![(0, 4, N0, 0)])], &[0, 9]);
+        let manifest = test_manifest(vec![blob(0, 4, N0)]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(!report.is_clean());
+        assert!(report.verified()[0].manifest_bound());
+        assert_eq!(report.unreferenced().len(), 1);
+        assert_eq!(
+            report.unreferenced()[0].file(),
+            &OsString::from("chunk-9.bin")
+        );
+        assert_eq!(report.unreferenced()[0].digest(), digest_of(9));
+        assert_eq!(
+            report.unreferenced()[0].length(),
+            envelope_bytes(9).len() as u64
+        );
+    }
+
+    #[test]
+    fn torn_journal_prefix_still_reconciles() {
+        let fixture = build_fixture(&[("journal-0001.log", vec![(0, 4, N0, 0)])], &[0]);
+        let path = fixture.journals.join("journal-0001.log");
+        let mut bytes = fs::read(&path).expect("read journal");
+        bytes.extend_from_slice(b"TORN-TAIL-GARBAGE!!");
+        fs::write(&path, &bytes).expect("tear tail");
+        let manifest = test_manifest(vec![]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(!report.is_clean());
+        assert_eq!(report.torn().len(), 1);
+        assert_eq!(report.torn()[0].file(), &OsString::from("journal-0001.log"));
+        assert_eq!(report.torn()[0].valid_records(), 2);
+        assert_eq!(report.verified().len(), 1);
+        assert_eq!(report.unbound().len(), 1);
+    }
+
+    #[test]
+    fn vault_mismatch_file_skipped() {
+        let root = ReconcileDir::new();
+        let journals_dir = root.path.join("journals");
+        let envelopes_dir = root.path.join("envelopes");
+        fs::create_dir_all(&journals_dir).expect("journals dir");
+        fs::create_dir_all(&envelopes_dir).expect("envelopes dir");
+        let mut writer = JournalWriter::create(
+            &journals_dir.join("journal-0001.log"),
+            VaultId::from_bytes([0x5A; 16]),
+            SESSION,
+            generation(4),
+        )
+        .expect("create journal");
+        writer
+            .append_commit(
+                0,
+                generation(4),
+                N0,
+                envelope_bytes(0).len() as u64,
+                digest_of(0),
+            )
+            .expect("append commit");
+        fs::write(envelopes_dir.join("chunk-0.bin"), envelope_bytes(0)).expect("envelope");
+        let scan = scan_journal_dir(&journals_dir).expect("scan");
+        let envelopes = inventory_envelopes(&envelopes_dir).expect("envelopes");
+        let manifest = test_manifest(vec![]);
+        let report = reconcile_recovery(&scan, &envelopes, &manifest);
+        assert!(!report.is_clean());
+        assert_eq!(report.vault_mismatches().len(), 1);
+        assert_eq!(
+            report.vault_mismatches()[0].file(),
+            &OsString::from("journal-0001.log")
+        );
+        assert!(report.verified().is_empty());
+        assert!(report.orphans().is_empty());
+        assert!(report.torn().is_empty());
+        assert_eq!(report.unreferenced().len(), 1);
+    }
+
+    #[test]
+    fn empty_inputs_report_clean() {
+        let fixture = build_fixture(&[], &[]);
+        let manifest = test_manifest(vec![]);
+        let report = reconcile(&fixture, &manifest);
+        assert!(report.is_clean());
+    }
+
+    #[test]
+    fn reconcile_is_deterministic() {
+        let fixture = build_fixture(
+            &[
+                ("journal-0001.log", vec![(0, 4, N0, 0)]),
+                ("journal-0002.log", vec![(0, 4, N1, 1)]),
+            ],
+            &[0, 1, 9],
+        );
+        let manifest = test_manifest(vec![blob(0, 4, N0)]);
+        let first = reconcile(&fixture, &manifest);
+        let second = reconcile(&fixture, &manifest);
+        assert_eq!(first, second);
+        assert!(!first.is_clean());
     }
 }
