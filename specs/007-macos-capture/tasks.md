@@ -18,3 +18,7 @@
   - Canonical shaping merge `61a300c844befe273c3a89577a485f89087812be` (PR #183, parents `ea5a5e4b43dcc7e9de756a9ea3ce619179718687` + `189974bf7826f4824696a34019f36f1d0bf5751b`; merge tree equals shaping-head tree).
 - [x] S010 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge.
   - Post-merge CI `35278832383` SUCCESS, R3 `35278832399` SUCCESS on `61a300c844befe273c3a89577a485f89087812be`.
+
+## 007A implementation grains (re-bound after shaping qualified)
+
+- [x] A001 Re-bind 007A grain 1 against live main as the adapter-core Grain: discovery/selection/identity/fault-classification over an injected backend with zero new dependencies. cpal binding deferred to grain 2 with the recorded DEPEND decision; system tap stays in 007B.

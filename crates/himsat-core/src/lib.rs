@@ -116,6 +116,9 @@ pub mod capture_health;
 /// 006C checkpoint derivation and chunk metadata binding.
 pub mod capture_checkpoint;
 
+/// 007A macOS microphone adapter core over an injected audio backend.
+pub mod capture_macos;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 
