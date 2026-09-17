@@ -104,6 +104,8 @@ pub mod vault_deletion;
 pub mod vault_media_chunk;
 /// 005B session journal: append path and replay (resume follows).
 pub mod vault_media_journal;
+/// 005C crash-recovery scan: journal replay and envelope inventory (first grain).
+pub mod vault_media_recovery;
 
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
