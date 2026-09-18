@@ -32,3 +32,12 @@
 - [x] B001 Re-bind 007B grain 1 against live main as the tap-core Grain: discovery/selection/identity/fault-classification over an injected backend with zero new dependencies (`SourceKind::SystemAudio` already closed, no contract change). cidre binding deferred to grain 2 with the recorded DEPEND decision.
 - [x] B002 Bind 007B grain 2 against live main as the tap-lifecycle Grain: `CidreSystemTapBackend` over cidre 0.29.0 (macOS-only DEPEND, features `av`/`core_audio`/`dispatch`/`macos_15_0`) implementing route enumeration plus a live `probe_process_tap` authorization/create/format proof (TAP_OK 1ch/48kHz); full closure for the 2-crate subtree (both MIT, registry 211); sample streaming deferred to 007C as the recorded residual (unsafe extraction forbidden by workspace policy). Evidence: `b007b-tap-binding-evidence.md`.
 - [x] B003 Record this aggregate evidence in `007b-system-tap-final-evidence.md`, reconcile `specs/CURRENT.md` with B007B entries, and close B007B as CANONICAL_CLOSED in this reconciliation; only then may 007C shaping begin.
+
+## 007C shaping — canonical
+
+- [ ] C001 Re-read canonical `main` at the 007B reconciliation merge `5f64f04` (post-merge CI/R3 SUCCESS) and confirm the 007B residuals: streaming sanction open, aggregate device unproven, non-F32 refused.
+- [ ] C002 Declare the 007C leaf in `plan.md` with outcome, `scope_in`/`scope_out`, dependencies, acceptance, risk, recovery path, context budget, change surface, evidence requirements, minimality rationale, and safety/security implications; no code, manifest, closure, workflow, or donor change in shaping.
+- [ ] C003 Exact-head qualify shaping head: CI and R3 SUCCESS.
+- [ ] C004 Reconcile shaping diff/reviews/threads/comments/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
+- [ ] C005 Merge shaping; canonical merge contains the exact shaping head as parent.
+- [ ] C006 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge; only then may 007C implementation grains be bound.
