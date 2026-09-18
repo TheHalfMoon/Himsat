@@ -75,6 +75,9 @@ pub enum MacosMicError {
     NoInputDevices,
     /// A device exists but its stream failed at the given stage.
     StreamFault(StreamStage),
+    /// The OS denied microphone access (TCC). Distinct from absence:
+    /// the device exists but policy forbids capture.
+    PermissionDenied,
 }
 
 impl MacosMicError {
@@ -85,6 +88,7 @@ impl MacosMicError {
             Self::NoInputDevices => "no-input-devices",
             Self::StreamFault(StreamStage::Build) => "stream-build-fault",
             Self::StreamFault(StreamStage::Play) => "stream-play-fault",
+            Self::PermissionDenied => "permission-denied",
         }
     }
 }
@@ -163,6 +167,9 @@ pub const fn event_for_start_failure(error: &MacosMicError) -> CaptureEvent {
     match error {
         MacosMicError::NoInputDevices => CaptureEvent::FailRecoverable(HealthReason::SourceSilent),
         MacosMicError::StreamFault(_) => CaptureEvent::FailRecoverable(HealthReason::RouteChanged),
+        MacosMicError::PermissionDenied => {
+            CaptureEvent::FailRecoverable(HealthReason::PermissionRevoked)
+        }
     }
 }
 
@@ -173,6 +180,9 @@ pub const fn event_for_runtime_fault(error: &MacosMicError) -> CaptureEvent {
     match error {
         MacosMicError::NoInputDevices => CaptureEvent::Interrupted(HealthReason::RouteChanged),
         MacosMicError::StreamFault(_) => CaptureEvent::Interrupted(HealthReason::RouteChanged),
+        MacosMicError::PermissionDenied => {
+            CaptureEvent::Interrupted(HealthReason::PermissionRevoked)
+        }
     }
 }
 
@@ -262,6 +272,181 @@ impl MicrophoneBackend for MockMicrophoneBackend {
 
     fn default_input_name(&self) -> Option<String> {
         self.default_name.clone()
+    }
+}
+
+/// cpal trait imports for the 007A OS binding (macOS only).
+#[cfg(target_os = "macos")]
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
+/// Live cpal input stream. Dropping stops capture: callers must drive
+/// `StopRequested`/`StopCompleted` through the session machine first so
+/// a drop is never a silent stop.
+#[cfg(target_os = "macos")]
+pub struct LiveMicStream {
+    stream: cpal::Stream,
+    device_name: String,
+    config: DeviceConfig,
+}
+
+#[cfg(target_os = "macos")]
+impl LiveMicStream {
+    /// OS-reported name of the streaming device.
+    #[must_use]
+    pub fn device_name(&self) -> &str {
+        &self.device_name
+    }
+
+    /// Configuration the stream was built with.
+    #[must_use]
+    pub const fn config(&self) -> DeviceConfig {
+        self.config
+    }
+
+    /// Pauses frame delivery without tearing down, for the
+    /// `Interrupted` state. Failures classify as play-stage faults.
+    pub fn pause(&self) -> Result<(), MacosMicError> {
+        self.stream
+            .pause()
+            .map_err(|_| MacosMicError::StreamFault(StreamStage::Play))
+    }
+
+    /// Resumes a paused stream, for the `Recovering` state.
+    pub fn resume(&self) -> Result<(), MacosMicError> {
+        self.stream
+            .play()
+            .map_err(|_| MacosMicError::StreamFault(StreamStage::Play))
+    }
+}
+
+/// cpal-backed implementation of [`MicrophoneBackend`]: the 007A OS
+/// binding. Enumeration and default queries only probe; nothing
+/// streams until [`open_f32_input_stream`] builds and plays.
+#[cfg(target_os = "macos")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CpalMicrophoneBackend;
+
+/// Names the OS default input device, if the OS names one.
+#[cfg(target_os = "macos")]
+fn cpal_default_name(host: &cpal::Host) -> Option<String> {
+    host.default_input_device()
+        .and_then(|device| device.description().ok())
+        .map(|description| description.name().to_owned())
+}
+
+/// Names one enumerated device, refusing devices the OS will not describe.
+#[cfg(target_os = "macos")]
+fn cpal_device_name(device: &cpal::Device) -> Result<String, MacosMicError> {
+    device
+        .description()
+        .map(|description| description.name().to_owned())
+        .map_err(|_| MacosMicError::NoInputDevices)
+}
+
+/// Classifies a cpal stream error: permission denial keeps its own
+/// identity so the machine reports revocation honestly; every other
+/// mid-stream fault is a play-stage stream fault with detail.
+#[cfg(target_os = "macos")]
+fn classify_stream_error(error: &cpal::Error) -> MacosMicError {
+    match error.kind() {
+        cpal::ErrorKind::PermissionDenied => MacosMicError::PermissionDenied,
+        _ => MacosMicError::StreamFault(StreamStage::Play),
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl MicrophoneBackend for CpalMicrophoneBackend {
+    fn input_devices(&self) -> Result<Vec<InputDeviceInfo>, MacosMicError> {
+        let host = cpal::default_host();
+        let default_name = cpal_default_name(&host);
+        let devices = host
+            .input_devices()
+            .map_err(|_| MacosMicError::NoInputDevices)?;
+        let mut out = Vec::new();
+        for device in devices {
+            let name = cpal_device_name(&device)?;
+            let supported = device
+                .default_input_config()
+                .map_err(|_| MacosMicError::StreamFault(StreamStage::Build))?;
+            out.push(InputDeviceInfo {
+                is_default: default_name.as_deref() == Some(name.as_str()),
+                name,
+                preferred_config: DeviceConfig::from_supported(&supported),
+            });
+        }
+        Ok(out)
+    }
+
+    fn default_input_name(&self) -> Option<String> {
+        cpal_default_name(&cpal::default_host())
+    }
+}
+
+/// Opens an F32 input stream on the named device and starts it
+/// flowing. Frames arrive on the cpal audio thread via `on_frames`;
+/// stream faults arrive via `on_error` already classified, with the
+/// OS detail string for telemetry. Non-F32 default configurations
+/// are refused as build faults (format negotiation widens only with
+/// Gate E evidence, never by silent conversion).
+#[cfg(target_os = "macos")]
+pub fn open_f32_input_stream(
+    device_name: &str,
+    mut on_frames: impl FnMut(&[f32]) + Send + 'static,
+    mut on_error: impl FnMut(MacosMicError, String) + Send + 'static,
+) -> Result<LiveMicStream, MacosMicError> {
+    let host = cpal::default_host();
+    let mut found = host
+        .input_devices()
+        .map_err(|_| MacosMicError::NoInputDevices)?;
+    let device = found
+        .find(|candidate| cpal_device_name(candidate).is_ok_and(|name| name == device_name))
+        .ok_or(MacosMicError::NoInputDevices)?;
+    let supported = device
+        .default_input_config()
+        .map_err(|_| MacosMicError::StreamFault(StreamStage::Build))?;
+    if supported.sample_format() != cpal::SampleFormat::F32 {
+        return Err(MacosMicError::StreamFault(StreamStage::Build));
+    }
+    let config = DeviceConfig::from_supported(&supported);
+    let stream = device
+        .build_input_stream(
+            supported.config(),
+            move |frames: &[f32], _info: &cpal::InputCallbackInfo| {
+                on_frames(frames);
+            },
+            move |error| {
+                let detail = error.to_string();
+                on_error(classify_stream_error(&error), detail);
+            },
+            None,
+        )
+        .map_err(|_| MacosMicError::StreamFault(StreamStage::Build))?;
+    stream
+        .play()
+        .map_err(|_| MacosMicError::StreamFault(StreamStage::Play))?;
+    Ok(LiveMicStream {
+        stream,
+        device_name: device_name.to_owned(),
+        config,
+    })
+}
+
+#[cfg(target_os = "macos")]
+impl DeviceConfig {
+    /// Reads the portable configuration out of a cpal supported config.
+    fn from_supported(supported: &cpal::SupportedStreamConfig) -> Self {
+        let format = match supported.sample_format() {
+            cpal::SampleFormat::F32 => SampleFormat::F32,
+            cpal::SampleFormat::I16 => SampleFormat::I16,
+            cpal::SampleFormat::U16 => SampleFormat::U16,
+            _ => SampleFormat::F32,
+        };
+        let config = supported.config();
+        Self {
+            channels: config.channels,
+            sample_rate_hz: config.sample_rate,
+            format,
+        }
     }
 }
 
@@ -428,6 +613,131 @@ mod tests {
             MacosMicError::StreamFault(StreamStage::Play).classifier(),
             "stream-play-fault"
         );
+        assert_eq!(
+            MacosMicError::PermissionDenied.classifier(),
+            "permission-denied"
+        );
         assert_ne!(SourceId::new(1), SourceId::new(2));
+    }
+
+    #[test]
+    fn permission_denial_maps_to_revocation_on_both_paths() {
+        assert_eq!(
+            event_for_start_failure(&MacosMicError::PermissionDenied),
+            CaptureEvent::FailRecoverable(HealthReason::PermissionRevoked)
+        );
+        assert_eq!(
+            event_for_runtime_fault(&MacosMicError::PermissionDenied),
+            CaptureEvent::Interrupted(HealthReason::PermissionRevoked)
+        );
+    }
+}
+
+/// Live cpal backend tests (macOS only). Enumeration is read-only and
+/// safe headless; stream opening stays behind
+/// `HIMSAT_LIVE_MIC_TEST=1` so CI never touches capture hardware.
+#[cfg(all(test, target_os = "macos"))]
+mod live_tests {
+    use super::{
+        CaptureEvent, CpalMicrophoneBackend, MicrophoneBackend, event_for_runtime_fault,
+        event_for_start_failure, open_f32_input_stream, select_input,
+    };
+    use crate::capture_session::CaptureSession;
+    use himsat_events::SessionId;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Mutex};
+
+    const SESSION: SessionId = SessionId::new(11);
+
+    #[test]
+    fn cpal_enumeration_never_panics_and_selects_consistently() {
+        let backend = CpalMicrophoneBackend;
+        match backend.input_devices() {
+            Ok(devices) => {
+                let selected = select_input(&backend, None);
+                if devices.is_empty() {
+                    assert!(selected.is_err());
+                } else {
+                    let selected = selected.expect("non-empty enumerates");
+                    assert!(!selected.descriptor(SESSION).label().is_empty());
+                }
+            }
+            Err(error) => {
+                assert_eq!(
+                    error,
+                    super::MacosMicError::NoInputDevices,
+                    "enumeration fails only as no-input-devices"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn cpal_default_name_agrees_with_selection() {
+        let backend = CpalMicrophoneBackend;
+        if backend.default_input_name().is_some() {
+            assert!(select_input(&backend, None).is_ok());
+        }
+    }
+
+    #[test]
+    fn live_stream_open_reports_frames_or_classified_fault() {
+        if std::env::var("HIMSAT_LIVE_MIC_TEST").is_err() {
+            return;
+        }
+        let backend = CpalMicrophoneBackend;
+        let devices = backend.input_devices().expect("live test needs hardware");
+        let selected = select_input(&backend, None).expect("live test needs hardware");
+        assert!(!devices.is_empty());
+        let frames_seen = Arc::new(AtomicBool::new(false));
+        let faults: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+        let frames_flag = Arc::clone(&frames_seen);
+        let faults_log = Arc::clone(&faults);
+        let mut session = CaptureSession::new(SESSION);
+        assert!(session.apply(CaptureEvent::Prepare).is_ok());
+        assert!(session.attach(selected.descriptor(SESSION)).is_ok());
+        match open_f32_input_stream(
+            &selected.info.name,
+            move |frames: &[f32]| {
+                if !frames.is_empty() {
+                    frames_flag.store(true, Ordering::SeqCst);
+                }
+            },
+            move |error, detail| {
+                faults_log
+                    .lock()
+                    .expect("fault log")
+                    .push(format!("{} {detail}", error.classifier()));
+            },
+        ) {
+            Ok(stream) => {
+                assert_eq!(stream.device_name(), selected.info.name);
+                assert!(stream.config().sample_rate_hz > 0);
+                assert!(stream.config().channels > 0);
+                drop(stream);
+            }
+            Err(error) => {
+                assert!(session.apply(event_for_start_failure(&error)).is_ok());
+                assert!(session.apply(CaptureEvent::RetryRequested).is_ok());
+            }
+        }
+        let _ = (frames_seen, faults);
+    }
+
+    #[test]
+    fn live_runtime_fault_event_is_accepted_when_flowing() {
+        if std::env::var("HIMSAT_LIVE_MIC_TEST").is_err() {
+            return;
+        }
+        let backend = CpalMicrophoneBackend;
+        if backend.input_devices().is_ok() {
+            let mut session = CaptureSession::new(SESSION);
+            assert!(session.apply(CaptureEvent::Prepare).is_ok());
+            let selected = select_input(&backend, None).expect("hardware");
+            assert!(session.attach(selected.descriptor(SESSION)).is_ok());
+            assert!(session.apply(CaptureEvent::SourcesReady).is_ok());
+            let fault = super::MacosMicError::PermissionDenied;
+            assert!(session.apply(event_for_runtime_fault(&fault)).is_ok());
+        }
     }
 }
