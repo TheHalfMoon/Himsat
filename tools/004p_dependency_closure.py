@@ -20,7 +20,7 @@ LOCK_PATH = ROOT / "Cargo.lock"
 REGISTRY_SCHEMA = "himsat.provenance-registry/v2"
 REGISTRY_SOURCE = "registry+https://github.com/rust-lang/crates.io-index"
 EXPECTED_PROVIDER_EXTERNAL_COUNT = 41
-EXPECTED_TOTAL_EXTERNAL_COUNT = 209
+EXPECTED_TOTAL_EXTERNAL_COUNT = 211
 EVIDENCE_REFERENCE = "specs/004-vault-key-crypto/provider-package-source-license-review-remediation.md"
 
 EXPECTED_APPLE_TARGET = 'cfg(target_os = "macos")'
@@ -37,6 +37,11 @@ EXPECTED_APPLE_DIRECT: dict[str, dict[str, Any]] = {
     "cpal": {
         "version": "=0.18.2",
         "default-features": False,
+    },
+    "cidre": {
+        "version": "=0.29.0",
+        "default-features": False,
+        "features": ["av", "core_audio", "dispatch", "macos_15_0"],
     },
 }
 
@@ -128,6 +133,22 @@ EXPECTED_PLATFORM_PACKAGES: dict[tuple[str, str], dict[str, str]] = {
         "license_expression": 'Apache-2.0 OR MIT',
         "selected_license": "MIT",
         "license_evidence": 'crate MIT license text at immutable VCS revision',
+    },
+    ('cidre', '0.29.0'): {
+        "checksum": '8fde4542e9dfd21498f5366a5ad60963879fd1885743a18980f6dbb27f525895',
+        "repository": 'https://github.com/yury/cidre',
+        "revision": '6f3b3626c98460301c979b4a76f60e23eb3f99f0',
+        "license_expression": 'MIT',
+        "selected_license": 'MIT',
+        "license_evidence": 'upstream LICENSE.txt at immutable VCS revision',
+    },
+    ('cidre-macros', '0.12.0'): {
+        "checksum": 'a85776177a885b3cd2cda74d634cabe7fa05fecfde8ded8779c0b34110a44dcb',
+        "repository": 'https://github.com/yury/cidre',
+        "revision": '5639439132f730e62e065211ede9c2c269eddd0c',
+        "license_expression": 'MIT',
+        "selected_license": 'MIT',
+        "license_evidence": 'upstream LICENSE.txt at immutable VCS revision',
     },
     ('field-offset', '0.3.6'): {
         "checksum": '38e2275cc4e4fc009b0669731a1e5ab7ebf11f469eaede2bab9309a5b4d6057f',
