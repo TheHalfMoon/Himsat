@@ -123,7 +123,7 @@ B501C_EXPECTED_BLOBS = {
 }
 B501C_EXPECTED_FILES = set(B501C_EXPECTED_BLOBS)
 
-B007_PRECONDITION_BASE = "0ef54bc941bdaddce35eb1d4a18554fc544d3966"
+B007_PRECONDITION_BASE = "9041323ba6bff95571ecf4eec95ce457e6ea12e0"
 B007_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
 B007_MAX_ADDED_LINES = 6000
 B007_EXPECTED_ADDED_LINES = 5551
@@ -828,7 +828,7 @@ def b007_trusted_base(base: str) -> bool:
 def check_b007_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
     """Accept only the pinned B007 cpal OS-binding dependency adoption."""
 
-    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
+    if args.exit_code != 2 or proof.get("verdict") != "FAIL":
         return fail(
             f"unexpected B007 non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
         )
@@ -1015,7 +1015,8 @@ def main() -> int:
 
     # B007 adopts the cpal 0.18.2 macOS OS binding for the 007A microphone
     # pathway with full 004P/provenance closure (48-crate subtree). The
-    # exception pins the complete eight-file candidate and accepts REVIEW only.
+    # exception pins the complete eight-file candidate and accepts the
+    # oversized-adoption FAIL shape only (B404 precedent).
     if b007_trusted_base(args.base):
         return check_b007_exception(args, proof)
 
