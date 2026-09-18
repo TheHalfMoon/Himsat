@@ -23,6 +23,7 @@ zeroize = { version = "=1.9.0" }
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { version = "=0.10.1", default-features = false }
 cpal = { version = "=0.18.2", default-features = false }
+cidre = { version = "=0.29.0", default-features = false, features = ["av", "core_audio", "dispatch", "macos_15_0"] }
 security-framework = { version = "=3.7.0", default-features = false, features = ["OSX_10_15"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

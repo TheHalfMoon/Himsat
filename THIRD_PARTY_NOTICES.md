@@ -982,6 +982,70 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
+## Cargo: cidre 0.29.0 (`cargo-cidre-0.29.0`)
+
+- Kind: `dependency`
+- Adoption mode: `depend`
+- Source: https://github.com/yury/cidre
+- Revision: `6f3b3626c98460301c979b4a76f60e23eb3f99f0`
+- Source license: `MIT`
+- Cargo package: `cidre 0.29.0`
+- Cargo checksum: `8fde4542e9dfd21498f5366a5ad60963879fd1885743a18980f6dbb27f525895`
+
+MIT License
+
+Copyright (c) Yury Korolev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## Cargo: cidre-macros 0.12.0 (`cargo-cidre-macros-0.12.0`)
+
+- Kind: `dependency`
+- Adoption mode: `depend`
+- Source: https://github.com/yury/cidre
+- Revision: `5639439132f730e62e065211ede9c2c269eddd0c`
+- Source license: `MIT`
+- Cargo package: `cidre-macros 0.12.0`
+- Cargo checksum: `a85776177a885b3cd2cda74d634cabe7fa05fecfde8ded8779c0b34110a44dcb`
+
+MIT License
+
+Copyright (c) Yury Korolev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 ## Cargo: cipher 0.5.2 (`cargo-cipher-0.5.2`)
 
 - Kind: `dependency`

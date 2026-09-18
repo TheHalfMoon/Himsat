@@ -434,7 +434,7 @@ pub fn open_f32_input_stream(
 #[cfg(target_os = "macos")]
 impl DeviceConfig {
     /// Reads the portable configuration out of a cpal supported config.
-    fn from_supported(supported: &cpal::SupportedStreamConfig) -> Self {
+    pub(crate) fn from_supported(supported: &cpal::SupportedStreamConfig) -> Self {
         let format = match supported.sample_format() {
             cpal::SampleFormat::F32 => SampleFormat::F32,
             cpal::SampleFormat::I16 => SampleFormat::I16,
