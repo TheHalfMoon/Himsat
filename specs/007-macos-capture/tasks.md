@@ -35,9 +35,13 @@
 
 ## 007C shaping — canonical
 
-- [ ] C001 Re-read canonical `main` at the 007B reconciliation merge `5f64f04` (post-merge CI/R3 SUCCESS) and confirm the 007B residuals: streaming sanction open, aggregate device unproven, non-F32 refused.
-- [ ] C002 Declare the 007C leaf in `plan.md` with outcome, `scope_in`/`scope_out`, dependencies, acceptance, risk, recovery path, context budget, change surface, evidence requirements, minimality rationale, and safety/security implications; no code, manifest, closure, workflow, or donor change in shaping.
-- [ ] C003 Exact-head qualify shaping head: CI and R3 SUCCESS.
-- [ ] C004 Reconcile shaping diff/reviews/threads/comments/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
-- [ ] C005 Merge shaping; canonical merge contains the exact shaping head as parent.
-- [ ] C006 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge; only then may 007C implementation grains be bound.
+- [x] C001 Re-read canonical `main` at the 007B reconciliation merge `5f64f04` (post-merge CI `35312683706` / R3 `35312683709` SUCCESS) and confirm the 007B residuals: streaming sanction open, aggregate device unproven, non-F32 refused.
+- [x] C002 Declare the 007C leaf in `plan.md` with outcome, `scope_in`/`scope_out`, dependencies, acceptance, risk, recovery path, context budget, change surface, evidence requirements, minimality rationale, and safety/security implications; no code, manifest, closure, workflow, or donor change in shaping.
+- [x] C003 Exact-head qualify shaping head: CI and R3 SUCCESS.
+  - Shaping head `f8d967ded183a956efa88d7dd13005bf466cf123` (PR #195): pre-merge CI `35314133113` SUCCESS, R3 `35314133154` SUCCESS.
+- [x] C004 Reconcile shaping diff/reviews/threads/comments/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
+  - Zero submitted reviews; 2 bot comments, no blocking finding.
+- [x] C005 Merge shaping; canonical merge contains the exact shaping head as parent.
+  - Canonical shaping merge `8d379af2042cf23ea4da1f70e03f9a7675296fb0` (PR #195, parents `5f64f04` + `f8d967d`; merge tree equals shaping-head tree).
+- [x] C006 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge; only then may 007C implementation grains be bound.
+  - Post-merge CI `35315392601` SUCCESS, R3 `35315392695` SUCCESS on `8d379af2042cf23ea4da1f70e03f9a7675296fb0`.
