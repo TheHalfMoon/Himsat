@@ -1,14 +1,14 @@
-//! 007B system-audio tap adapter core over an injected tap backend.
-//!
-//! Portable selection, identity, and fault-classification logic for
-//! the authorized system/screen-audio pathway. The OS binding (a
-//! process-tap plus aggregate-device backend in the donor-proven
-//! shape, arriving in the next grain behind [`SystemTapBackend`])
-//! is the only OS surface; this core already drives the closed
-//! 006A session machine without ever producing a refused
-//! transition. Tap authorization keeps its own identity end to
-//! end: denial is reported as revocation, never folded into a
-//! generic fault and never silent.
+//! 007B system-audio tap adapter: portable selection, identity,
+//! and fault classification over the closed cidre/cpal OS binding
+//! (process tap plus private aggregate device, donor-proven
+//! shape). The binding is the only OS surface; this adapter
+//! drives the closed 006A session machine without ever producing
+//! a refused transition. Tap authorization keeps its own identity
+//! end to end: denial is reported as revocation, never folded
+//! into a generic fault and never silent. Streaming crosses no
+//! FFI sample boundary in Himsat code: tap -> aggregate ->
+//! cpal keeps every unsafe sample crossing inside the closed
+//! bindings.
 
 use himsat_events::{SessionId, SourceId};
 
@@ -27,6 +27,9 @@ pub enum TapStage {
     Create,
     /// A created tap would not start flowing.
     Start,
+    /// The tap exists but the aggregate device would not assemble
+    /// or publish (007C-1).
+    Assemble,
 }
 
 /// Adapter fault. OS detail travels with telemetry; the machine only
@@ -50,6 +53,7 @@ impl SystemTapError {
             Self::NoTapAvailable => "no-tap-available",
             Self::TapFault(TapStage::Create) => "tap-create-fault",
             Self::TapFault(TapStage::Start) => "tap-start-fault",
+            Self::TapFault(TapStage::Assemble) => "tap-assemble-fault",
             Self::AuthorizationDenied => "tap-authorization-denied",
         }
     }
@@ -66,9 +70,10 @@ pub struct TapTargetInfo {
     pub preferred_config: DeviceConfig,
 }
 
-/// Backend contract the OS binding implements. Enumeration only in
-/// this grain; tap creation arrives with the native binding so the
-/// handle types match the proven backend shape instead of a guess.
+/// Backend contract the OS binding implements: route
+/// enumeration. Tap creation and streaming live beside the
+/// backend as free functions so the handle types match the
+/// proven binding shape instead of a guess.
 pub trait SystemTapBackend {
     /// Lists currently usable system-audio tap targets.
     fn tap_targets(&self) -> Result<Vec<TapTargetInfo>, SystemTapError>;
@@ -197,11 +202,10 @@ pub struct TapDescription {
 
 /// cidre-backed implementation of [`SystemTapBackend`]: the 007B OS
 /// binding. Route enumeration reuses the adopted cpal host (output
-/// routes); tap lifecycle uses cidre process taps. Nothing streams
-/// in this grain: sample extraction from IOProc buffers needs an
-/// unsafe block, which the workspace forbids, so streaming waits
-/// for a sanctioned sample path while authorization, creation, and
-/// format proof land here.
+/// routes); tap lifecycle uses cidre process taps; streaming uses
+/// [`open_aggregate_tap_stream`] (tap -> private aggregate ->
+/// cpal), which keeps every unsafe sample crossing inside the
+/// closed bindings.
 #[cfg(target_os = "macos")]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CidreSystemTapBackend;
@@ -273,6 +277,212 @@ pub fn probe_process_tap() -> Result<TapDescription, (SystemTapError, String)> {
 #[cfg(target_os = "macos")]
 fn status_string(status: cidre::os::Error) -> String {
     format!("{status:?}")
+}
+
+/// Aggregate device uid published for the streaming tap. Private
+/// to this process and destroyed with the stream; a fixed uid
+/// faults honestly on a second concurrent open instead of
+/// shadowing it.
+#[cfg(target_os = "macos")]
+const AGGREGATE_DEVICE_UID: &str = "com.himsat.system-tap-aggregate";
+
+/// Aggregate device name the OS publishes and cpal enumerates.
+#[cfg(target_os = "macos")]
+const AGGREGATE_DEVICE_NAME: &str = "Himsat System Tap";
+
+/// Bounded wait for asynchronous aggregate publication: the OS
+/// publishes the new device after creation returns, so cpal
+/// visibility is polled, never assumed and never awaited
+/// without a deadline.
+#[cfg(target_os = "macos")]
+const AGGREGATE_VISIBILITY_POLLS: u32 = 100;
+/// Poll step for aggregate visibility, in milliseconds.
+#[cfg(target_os = "macos")]
+const AGGREGATE_VISIBILITY_STEP_MS: u64 = 50;
+
+/// Live tap-to-cpal stream (007C-1). Fields drop in declaration
+/// order — stream, aggregate, tap — so teardown reverses
+/// assembly: the cpal stream stops before its device is
+/// destroyed, and the device is destroyed before its tap.
+#[cfg(target_os = "macos")]
+pub struct LiveSystemTapStream {
+    _stream: cpal::Stream,
+    _aggregate: cidre::core_audio::AggregateDevice,
+    _tap: cidre::core_audio::TapGuard,
+    /// Aggregate device name cpal enumerated.
+    pub device_name: String,
+    /// Running stream configuration.
+    pub config: DeviceConfig,
+}
+
+/// Encodes one tap-list entry pointing at a tap uid. Pure over
+/// its input so the encoding is unit-testable without touching
+/// the OS.
+#[cfg(target_os = "macos")]
+fn tap_list_entry(
+    tap_uid: &cidre::cf::String,
+) -> cidre::arc::R<cidre::cf::DictionaryOf<cidre::cf::String, cidre::cf::Type>> {
+    use cidre::core_audio::aggregate_device_keys as keys;
+    cidre::cf::DictionaryOf::with_keys_values(&[keys::uid()], &[tap_uid.as_type_ref()])
+}
+
+/// Builds the private aggregate composition for a tap uid: our
+/// uid and name, process-private flag, and the single-tap list.
+/// Pure over its input so the composition is unit-testable
+/// without touching the OS.
+#[cfg(target_os = "macos")]
+fn aggregate_composition(
+    tap_uid: &cidre::cf::String,
+) -> cidre::arc::R<cidre::cf::DictionaryOf<cidre::cf::String, cidre::cf::Type>> {
+    use cidre::core_audio::aggregate_device_keys as keys;
+    let uid = cidre::cf::String::from_str(AGGREGATE_DEVICE_UID);
+    let name = cidre::cf::String::from_str(AGGREGATE_DEVICE_NAME);
+    let one = cidre::cf::Number::from_i32(1);
+    let tap_entry = tap_list_entry(tap_uid);
+    let taps =
+        cidre::cf::ArrayOf::<cidre::cf::Type>::from_slice(&[tap_entry.as_ref().as_type_ref()]);
+    cidre::cf::DictionaryOf::with_keys_values(
+        &[
+            keys::uid(),
+            keys::name(),
+            keys::is_private(),
+            keys::tap_list(),
+        ],
+        &[
+            uid.as_type_ref(),
+            name.as_type_ref(),
+            one.as_type_ref(),
+            taps.as_type_ref(),
+        ],
+    )
+}
+
+/// Opens a live system-tap stream: mono global tap, private
+/// aggregate device containing it, then a cpal F32 input stream
+/// on the aggregate. The sanctioned sample path is tap ->
+/// aggregate -> cpal: every FFI sample crossing stays inside
+/// the closed cidre/cpal bindings, so this function contains no
+/// unsafe block. Aggregate publication is asynchronous, hence
+/// the bounded visibility poll; expiry is an assemble-stage
+/// fault with detail, never a hang and never silent.
+#[cfg(target_os = "macos")]
+pub fn open_aggregate_tap_stream(
+    mut on_frames: impl FnMut(&[f32]) + Send + 'static,
+    mut on_error: impl FnMut(SystemTapError, String) + Send + 'static,
+) -> Result<LiveSystemTapStream, (SystemTapError, String)> {
+    let excluded = cidre::ns::Array::new();
+    let desc = cidre::core_audio::TapDesc::with_mono_global_tap_excluding_processes(&excluded);
+    let tap = desc.create_process_tap().map_err(|status| {
+        (
+            SystemTapError::TapFault(TapStage::Create),
+            status_string(status),
+        )
+    })?;
+    let tap_uid = tap.uid().map_err(|status| {
+        (
+            SystemTapError::TapFault(TapStage::Create),
+            status_string(status),
+        )
+    })?;
+    let composition = aggregate_composition(&tap_uid);
+    let aggregate =
+        cidre::core_audio::AggregateDevice::with_desc(&composition).map_err(|status| {
+            (
+                SystemTapError::TapFault(TapStage::Assemble),
+                status_string(status),
+            )
+        })?;
+    let host = cpal::default_host();
+    let mut visible = false;
+    for _ in 0..AGGREGATE_VISIBILITY_POLLS {
+        let found = host.input_devices().map_err(|_| {
+            (
+                SystemTapError::TapFault(TapStage::Assemble),
+                "aggregate visibility poll lost the device list".to_owned(),
+            )
+        })?;
+        visible = found
+            .filter_map(|device| device.description().ok())
+            .any(|description| description.name().contains(AGGREGATE_DEVICE_NAME));
+        if visible {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(
+            AGGREGATE_VISIBILITY_STEP_MS,
+        ));
+    }
+    if !visible {
+        return Err((
+            SystemTapError::TapFault(TapStage::Assemble),
+            "private aggregate device never published to cpal".to_owned(),
+        ));
+    }
+    let device = host
+        .input_devices()
+        .map_err(|_| {
+            (
+                SystemTapError::TapFault(TapStage::Assemble),
+                "aggregate visibility poll lost the device list".to_owned(),
+            )
+        })?
+        .find(|candidate| {
+            candidate
+                .description()
+                .is_ok_and(|description| description.name().contains(AGGREGATE_DEVICE_NAME))
+        })
+        .ok_or_else(|| {
+            (
+                SystemTapError::TapFault(TapStage::Assemble),
+                "private aggregate device unpublished between poll and open".to_owned(),
+            )
+        })?;
+    let supported = device.default_input_config().map_err(|_| {
+        (
+            SystemTapError::TapFault(TapStage::Start),
+            "aggregate device reports no input configuration".to_owned(),
+        )
+    })?;
+    if supported.sample_format() != cpal::SampleFormat::F32 {
+        return Err((
+            SystemTapError::TapFault(TapStage::Start),
+            "aggregate device is not F32".to_owned(),
+        ));
+    }
+    let config = DeviceConfig::from_supported(&supported);
+    let stream = device
+        .build_input_stream(
+            supported.config(),
+            move |frames: &[f32], _info: &cpal::InputCallbackInfo| {
+                on_frames(frames);
+            },
+            move |error| {
+                let detail = error.to_string();
+                on_error(SystemTapError::TapFault(TapStage::Start), detail);
+            },
+            None,
+        )
+        .map_err(|_| {
+            (
+                SystemTapError::TapFault(TapStage::Start),
+                "aggregate input stream would not build".to_owned(),
+            )
+        })?;
+    {
+        use cpal::traits::StreamTrait;
+        stream.play().map_err(|_| {
+            (
+                SystemTapError::TapFault(TapStage::Start),
+                "aggregate input stream would not start".to_owned(),
+            )
+        })?;
+    }
+    Ok(LiveSystemTapStream {
+        _stream: stream,
+        _aggregate: aggregate,
+        _tap: tap,
+        device_name: AGGREGATE_DEVICE_NAME.to_owned(),
+        config,
+    })
 }
 
 /// Reads a portable device configuration out of a tap stream
@@ -510,9 +720,49 @@ mod tests {
             "tap-start-fault"
         );
         assert_eq!(
+            SystemTapError::TapFault(TapStage::Assemble).classifier(),
+            "tap-assemble-fault"
+        );
+        assert_eq!(
             SystemTapError::AuthorizationDenied.classifier(),
             "tap-authorization-denied"
         );
+    }
+
+    #[test]
+    fn assemble_faults_classify_as_route_events_without_detail_loss() {
+        let error = SystemTapError::TapFault(TapStage::Assemble);
+        assert!(matches!(
+            event_for_tap_start_failure(&error),
+            CaptureEvent::FailRecoverable(_)
+        ));
+        assert!(matches!(
+            event_for_tap_runtime_fault(&error),
+            CaptureEvent::Interrupted(_)
+        ));
+    }
+
+    /// Composition is pure: the private aggregate dictionary
+    /// carries our uid, name, process-private flag, and tap list,
+    /// and the tap entry round-trips exactly the given tap uid,
+    /// all without touching the OS and without unsafe code.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn aggregate_composition_pins_private_tap_shape() {
+        use cidre::core_audio::aggregate_device_keys as keys;
+        let tap_uid = cidre::cf::String::from_str("tap-uid-under-test");
+        let entry = super::tap_list_entry(&tap_uid);
+        let round_tripped = entry.get(keys::uid()).expect("tap entry uid");
+        assert!(round_tripped.equal(tap_uid.as_type_ref()));
+        let composition = super::aggregate_composition(&tap_uid);
+        let expected_uid = cidre::cf::String::from_str(super::AGGREGATE_DEVICE_UID);
+        let uid = composition.get(keys::uid()).expect("aggregate uid entry");
+        assert!(uid.equal(expected_uid.as_type_ref()));
+        let expected_name = cidre::cf::String::from_str(super::AGGREGATE_DEVICE_NAME);
+        let name = composition.get(keys::name()).expect("aggregate name entry");
+        assert!(name.equal(expected_name.as_type_ref()));
+        assert!(composition.get(keys::is_private()).is_some());
+        assert!(composition.get(keys::tap_list()).is_some());
     }
 }
 
@@ -605,6 +855,48 @@ mod live_tests {
             }
             Err((error, detail)) => {
                 assert!(!detail.is_empty());
+                assert!(session.apply(CaptureEvent::Prepare).is_ok());
+                assert!(session.apply(event_for_tap_start_failure(&error)).is_ok());
+                assert!(session.apply(CaptureEvent::RetryRequested).is_ok());
+            }
+        }
+    }
+
+    #[test]
+    fn live_aggregate_tap_stream_flows_or_classifies() {
+        if std::env::var("HIMSAT_LIVE_TAP_TEST").is_err() {
+            return;
+        }
+        let (frames_tx, frames_rx) = std::sync::mpsc::channel::<usize>();
+        match super::open_aggregate_tap_stream(
+            move |frames| {
+                let _ = frames_tx.send(frames.len());
+            },
+            move |_error, _detail| {},
+        ) {
+            Ok(stream) => {
+                assert_eq!(stream.device_name, "Himsat System Tap");
+                assert!(stream.config.channels > 0);
+                assert!(stream.config.sample_rate_hz > 0);
+                let deadline = std::time::Instant::now() + std::time::Duration::from_millis(1500);
+                let mut callbacks = 0_u32;
+                let mut frames = 0_usize;
+                while std::time::Instant::now() < deadline {
+                    match frames_rx.recv_timeout(std::time::Duration::from_millis(300)) {
+                        Ok(len) => {
+                            callbacks += 1;
+                            frames += len;
+                        }
+                        Err(_) => break,
+                    }
+                }
+                assert!(callbacks > 0, "aggregate stream delivered no callbacks");
+                assert!(frames > 0, "aggregate stream delivered no frames");
+                drop(stream);
+            }
+            Err((error, detail)) => {
+                assert!(!detail.is_empty());
+                let mut session = CaptureSession::new(SESSION);
                 assert!(session.apply(CaptureEvent::Prepare).is_ok());
                 assert!(session.apply(event_for_tap_start_failure(&error)).is_ok());
                 assert!(session.apply(CaptureEvent::RetryRequested).is_ok());

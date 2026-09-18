@@ -45,3 +45,7 @@
   - Canonical shaping merge `8d379af2042cf23ea4da1f70e03f9a7675296fb0` (PR #195, parents `5f64f04` + `f8d967d`; merge tree equals shaping-head tree).
 - [x] C006 Require post-shaping qualification: CI and R3 SUCCESS on the exact canonical merge; only then may 007C implementation grains be bound.
   - Post-merge CI `35315392601` SUCCESS, R3 `35315392695` SUCCESS on `8d379af2042cf23ea4da1f70e03f9a7675296fb0`.
+
+## 007C implementation grains
+
+- [x] C101 Bind 007C grain 1 against live main as the aggregate-first-audio Grain: `open_aggregate_tap_stream` (tap -> private aggregate -> cpal F32 input, zero unsafe, zero new dependencies) with drop-ordered `LiveSystemTapStream`, `TapStage::Assemble` classification, pure composition builders, and the 007B streaming-sanction residual closed by evidence (no safe IOProc sample view exists in cidre 0.29.0; the aggregate route keeps every FFI crossing inside the closed bindings). Live proof here: 318 callbacks / 162,816 frames / 79,298 nonzero with system audio playing. Evidence: `b007c1-aggregate-first-audio-evidence.md`.
