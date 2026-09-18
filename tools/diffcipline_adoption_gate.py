@@ -154,6 +154,24 @@ B006A_EXPECTED_BLOBS = {
 }
 B006A_EXPECTED_FILES = set(B006A_EXPECTED_BLOBS)
 
+B007B_PRECONDITION_BASE = "45e913056a26477ac3bb1f5d2f499f80e0bec295"
+B007B_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B007B_EXPECTED_ADDED_LINES = 529
+B007B_EXPECTED_DELETED_LINES = 2
+B007B_EXPECTED_BLOBS = {
+    "Cargo.lock": "877904585f39e9133023be0407cd088be54d9ce8",
+    "THIRD_PARTY_NOTICES.md": "d1219930b716cb4c13a089eec3d3425130b4d4b2",
+    "crates/himsat-core/Cargo.toml": "1693b7bac4b457434507832cd9f3949c7ced836f",
+    "crates/himsat-core/src/capture_macos.rs": "b1798d1ea796d00bed904b3c2327087f783d64d8",
+    "crates/himsat-core/src/capture_system_audio.rs": "798458887044d3367ac21671807758fc2baf6b3a",
+    "governance/generated/sbom.json": "699f4ec6bb42a30bd81b6cbef615327106c4ddf7",
+    "governance/provenance/registry.json": "dc52c2d1e82a7348dd9c50f845f902f95faea34b",
+    "specs/007-macos-capture/b007b-tap-binding-evidence.md": "d75c712fdb200813e253617df0f3a13c67bd9da7",
+    "specs/007-macos-capture/tasks.md": "332645fc085d0d80cd1115c867f545eedba6a4e2",
+    "tools/004p_dependency_closure.py": "36b3cd990f1255f71114b3db0d99bc8747ae71e1",
+}
+B007B_EXPECTED_FILES = set(B007B_EXPECTED_BLOBS)
+
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
     ".github/workflows/ci.yml",
@@ -986,6 +1004,99 @@ def check_b006a_exception(args: argparse.Namespace, proof: dict[str, Any]) -> in
     return 0
 
 
+def b007b_trusted_base(base: str) -> bool:
+    """Accept only the canonical B007B gate successor or its immediate merge parent.
+
+    Pull-request qualification requires current canonical main to be the trusted
+    gate-hardening merge. Push-triggered qualification after the guarded B007B
+    cidre adoption merge accepts that same trusted gate merge as the first parent
+    of current canonical main. The trusted gate merge itself must have the exact
+    B007B precondition as first parent and change only this gate path.
+    """
+
+    try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            canonical_parent_row = git("rev-list", "--parents", "-n", "1", canonical_main).split()
+            if len(canonical_parent_row) != 3 or canonical_parent_row[1] != base:
+                return False
+        base_parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(base_parent_row) != 3 or base_parent_row[1] != B007B_PRECONDITION_BASE:
+            return False
+        raw = git("diff", "--no-renames", "--name-only", B007B_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B007B_TRUSTED_BASE_DELTA and len(paths) == len(B007B_TRUSTED_BASE_DELTA)
+
+
+def check_b007b_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the pinned B007B cidre process-tap dependency adoption."""
+
+    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
+        return fail(
+            f"unexpected B007B non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B007B Git diff: {exc}")
+
+    if set(actual_files) != B007B_EXPECTED_FILES or len(actual_files) != len(B007B_EXPECTED_FILES):
+        return fail("actual B007B Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B007B Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B007B_EXPECTED_FILES or len(files) != len(B007B_EXPECTED_FILES):
+        return fail("B007B exception changed-path set is not exact")
+
+    if proof.get("changed_files") != len(B007B_EXPECTED_FILES):
+        return fail("B007B Diffcipline changed-file count is not exact")
+    if actual_added != B007B_EXPECTED_ADDED_LINES or proof.get("added_lines") != actual_added:
+        return fail("B007B added-line count is not exact")
+    if actual_deleted != B007B_EXPECTED_DELETED_LINES or proof.get("deleted_lines") != actual_deleted:
+        return fail("B007B deleted-line count is not exact")
+    if actual_added > POLICY_MAX_ADDED_LINES:
+        return fail("B007B dependency leaf unexpectedly exceeds ordinary line bounds")
+
+    expected_reasons = {
+        "dependency manifest changed: crates/himsat-core/Cargo.toml",
+        "lockfile changed: Cargo.lock",
+    }
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != 2:
+        return fail(f"unexpected B007B Diffcipline reason set: {reasons!r}")
+    if proof.get("scope_violations") != []:
+        return fail("B007B scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B007B verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B007B verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B007B_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"B007B candidate artifact blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B007B candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B007B DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--proof", type=Path, required=True)
@@ -1019,6 +1130,14 @@ def main() -> int:
     # oversized-adoption FAIL shape only (B404 precedent).
     if b007_trusted_base(args.base):
         return check_b007_exception(args, proof)
+
+    # B007B adopts the cidre 0.29.0 macOS process-tap OS binding for the
+    # 007B system-tap pathway with full 004P/provenance closure (2-crate
+    # subtree, both MIT). The exception pins the complete ten-file candidate
+    # and accepts REVIEW only (B006A precedent: in-policy size with manifest
+    # + lockfile reasons only).
+    if b007b_trusted_base(args.base):
+        return check_b007b_exception(args, proof)
 
     # B006A adopts the intra-workspace himsat-events dependency for the 006A
     # capture session (zero external packages, zero transitive dependencies).
