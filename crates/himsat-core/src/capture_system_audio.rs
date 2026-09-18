@@ -521,6 +521,167 @@ fn config_from_asbd(asbd: &cidre::cat::AudioStreamBasicDesc) -> Result<DeviceCon
     })
 }
 
+/// Lifecycle signal observed beneath a running tap session
+/// (007C-2). Portable data: the watch thread reports these over
+/// a channel and the owner maps each to a session event. No OS
+/// type crosses this boundary.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum TapLifecycleSignal {
+    /// The enumerated device-name set changed (route change,
+    /// device yank, aggregate unpublished).
+    DevicesChanged,
+    /// The watch thread slept far longer than its cadence: the
+    /// process was suspended (sleep) and has now resumed. Carries
+    /// the observed gap in whole seconds.
+    WakeNotified(u64),
+}
+
+/// Minimum watch cadence in milliseconds. The watch never spins:
+/// shorter requests clamp to this floor.
+pub const LIFECYCLE_WATCH_MIN_CADENCE_MS: u64 = 100;
+
+/// A gap counts as suspension when the observed poll interval
+/// exceeds this multiple of the cadence. Scheduling jitter stays
+/// far below it; real sleep exceeds it by orders of magnitude.
+pub const LIFECYCLE_SLEEP_GAP_MULTIPLE: u32 = 10;
+
+/// Reports whether the enumerated device-name set changed
+/// between polls. Order-insensitive; duplicates collapse. Pure
+/// so the matrix row is unit-testable without hardware.
+#[must_use]
+pub fn detect_device_delta(before: &[String], after: &[String]) -> bool {
+    if before.len() != after.len() {
+        return true;
+    }
+    let mut previous: Vec<&str> = before.iter().map(String::as_str).collect();
+    let mut current: Vec<&str> = after.iter().map(String::as_str).collect();
+    previous.sort_unstable();
+    current.sort_unstable();
+    previous != current
+}
+
+/// Reports suspension when the observed poll interval overshoots
+/// the cadence by the sleep-gap multiple, returning the gap in
+/// whole seconds. Pure so the wake row is unit-testable without
+/// sleeping a machine.
+#[must_use]
+pub fn detect_sleep_gap(
+    cadence: std::time::Duration,
+    observed: std::time::Duration,
+) -> Option<u64> {
+    let threshold = cadence.checked_mul(LIFECYCLE_SLEEP_GAP_MULTIPLE)?;
+    if observed >= threshold {
+        Some(observed.as_secs())
+    } else {
+        None
+    }
+}
+
+/// Classifies a lifecycle signal into the machine event the
+/// `RecordingHealthy`, `RecordingDegraded`, or `Interrupted`
+/// states accept. Wake maps to interruption (the process was
+/// suspended); the owner drives resume and recovery, never the
+/// watch. The closed 006 contract is untouched: only existing
+/// events and reasons are used.
+#[must_use]
+pub const fn event_for_lifecycle_signal(signal: &TapLifecycleSignal) -> CaptureEvent {
+    match signal {
+        TapLifecycleSignal::DevicesChanged => CaptureEvent::Interrupted(HealthReason::RouteChanged),
+        TapLifecycleSignal::WakeNotified(_) => {
+            CaptureEvent::Interrupted(HealthReason::ProcessInterrupted)
+        }
+    }
+}
+
+/// Polling lifecycle watch (007C-2). A background thread lists
+/// device names each cadence and reports [`TapLifecycleSignal`]
+/// deltas plus suspension gaps over the sender. Polling keeps
+/// the whole path safe and portable: no property-listener
+/// callback (which would need an unsafe client-data
+/// dereference) and no block-observer feature (which would
+/// change the closed dependency closure). Dropping the watch
+/// stops and joins the thread; signals already sent are never
+/// retracted.
+pub struct LifecycleWatch {
+    stop: std::sync::mpsc::Sender<()>,
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl LifecycleWatch {
+    /// Starts watching with the given device lister. Cadence
+    /// clamps to [`LIFECYCLE_WATCH_MIN_CADENCE_MS`]; a lister
+    /// fault ends the thread after one final poll attempt, never
+    /// a signal and never a spin.
+    pub fn spawn(
+        cadence: std::time::Duration,
+        list_devices: impl Fn() -> Result<Vec<String>, SystemTapError> + Send + 'static,
+        signals: std::sync::mpsc::Sender<TapLifecycleSignal>,
+    ) -> Self {
+        let floor = std::time::Duration::from_millis(LIFECYCLE_WATCH_MIN_CADENCE_MS);
+        let cadence = cadence.max(floor);
+        let (stop_tx, stop_rx) = std::sync::mpsc::channel::<()>();
+        let thread = std::thread::spawn(move || {
+            let mut previous = match list_devices() {
+                Ok(names) => names,
+                Err(_) => return,
+            };
+            let mut last_poll = std::time::Instant::now();
+            loop {
+                if stop_rx.recv_timeout(cadence).is_ok() {
+                    return;
+                }
+                let now = std::time::Instant::now();
+                let gap = detect_sleep_gap(cadence, now - last_poll);
+                if gap
+                    .is_some_and(|gap| signals.send(TapLifecycleSignal::WakeNotified(gap)).is_err())
+                {
+                    return;
+                }
+                last_poll = now;
+                match list_devices() {
+                    Ok(names) => {
+                        if detect_device_delta(&previous, &names) {
+                            previous = names;
+                            if signals.send(TapLifecycleSignal::DevicesChanged).is_err() {
+                                return;
+                            }
+                        }
+                    }
+                    Err(_) => return,
+                }
+            }
+        });
+        Self {
+            stop: stop_tx,
+            thread: Some(thread),
+        }
+    }
+}
+
+impl Drop for LifecycleWatch {
+    fn drop(&mut self) {
+        let _ = self.stop.send(());
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+/// cpal device-name lister for the production watch (macOS).
+/// Unusable routes are skipped, never faulted: a momentarily
+/// undescribable device is not a route change.
+#[cfg(target_os = "macos")]
+pub fn cpal_input_names() -> Result<Vec<String>, SystemTapError> {
+    let host = cpal::default_host();
+    let devices = host
+        .input_devices()
+        .map_err(|_| SystemTapError::NoTapAvailable)?;
+    Ok(devices
+        .filter_map(|device| device.description().ok())
+        .map(|description| description.name().to_owned())
+        .collect())
+}
+
 /// In-memory backend for tests and for hosts without tap support.
 /// Never touches the OS; failures are injected explicitly.
 #[derive(Clone, Debug, Default)]
@@ -730,6 +891,123 @@ mod tests {
     }
 
     #[test]
+    fn device_delta_detects_set_changes_order_insensitively() {
+        let names = |list: &[&str]| list.iter().map(ToString::to_string).collect::<Vec<_>>();
+        assert!(!super::detect_device_delta(&names(&[]), &names(&[])));
+        assert!(!super::detect_device_delta(
+            &names(&["mic", "tap"]),
+            &names(&["tap", "mic"])
+        ));
+        assert!(super::detect_device_delta(
+            &names(&["mic"]),
+            &names(&["mic", "tap"])
+        ));
+        assert!(super::detect_device_delta(
+            &names(&["mic", "tap"]),
+            &names(&["mic"])
+        ));
+        assert!(super::detect_device_delta(
+            &names(&["mic"]),
+            &names(&["speakers"])
+        ));
+    }
+
+    #[test]
+    fn sleep_gap_needs_tenfold_overshoot() {
+        use std::time::Duration;
+        assert_eq!(
+            super::detect_sleep_gap(Duration::from_secs(1), Duration::from_millis(1500)),
+            None
+        );
+        assert_eq!(
+            super::detect_sleep_gap(Duration::from_secs(1), Duration::from_secs(10)),
+            Some(10)
+        );
+        assert_eq!(
+            super::detect_sleep_gap(Duration::from_secs(2), Duration::from_secs(3600)),
+            Some(3600)
+        );
+    }
+
+    #[test]
+    fn lifecycle_signals_map_to_accepted_events() {
+        assert_eq!(
+            super::event_for_lifecycle_signal(&super::TapLifecycleSignal::DevicesChanged),
+            CaptureEvent::Interrupted(HealthReason::RouteChanged)
+        );
+        assert_eq!(
+            super::event_for_lifecycle_signal(&super::TapLifecycleSignal::WakeNotified(42)),
+            CaptureEvent::Interrupted(HealthReason::ProcessInterrupted)
+        );
+    }
+
+    #[test]
+    fn lifecycle_signals_drive_session_without_refusal() {
+        let backend = two_target_backend();
+        let mut session = CaptureSession::new(SESSION);
+        assert!(session.apply(CaptureEvent::Prepare).is_ok());
+        let selected = select_system_input(&backend, None).expect("target");
+        assert!(session.attach(selected.descriptor(SESSION)).is_ok());
+        assert!(session.apply(CaptureEvent::SourcesReady).is_ok());
+        assert!(
+            session
+                .apply(super::event_for_lifecycle_signal(
+                    &super::TapLifecycleSignal::DevicesChanged
+                ))
+                .is_ok()
+        );
+        assert!(session.apply(CaptureEvent::ResumeRequested).is_ok());
+        assert!(session.apply(CaptureEvent::RecoveryConfirmed).is_ok());
+        assert!(
+            session
+                .apply(super::event_for_lifecycle_signal(
+                    &super::TapLifecycleSignal::WakeNotified(300)
+                ))
+                .is_ok()
+        );
+        assert!(session.apply(CaptureEvent::ResumeRequested).is_ok());
+        assert!(session.apply(CaptureEvent::RecoveryConfirmed).is_ok());
+    }
+
+    #[test]
+    fn lifecycle_watch_reports_scripted_delta_then_stops() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let calls = Arc::new(AtomicUsize::new(0));
+        let lister = {
+            let calls = Arc::clone(&calls);
+            move || {
+                let n = calls.fetch_add(1, Ordering::SeqCst);
+                if n == 0 {
+                    Ok(vec!["mic".to_owned()])
+                } else {
+                    Ok(vec!["mic".to_owned(), "agg".to_owned()])
+                }
+            }
+        };
+        let (tx, rx) = std::sync::mpsc::channel();
+        let watch = super::LifecycleWatch::spawn(std::time::Duration::from_millis(100), lister, tx);
+        let signal = rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .expect("scripted device delta surfaces");
+        assert_eq!(signal, super::TapLifecycleSignal::DevicesChanged);
+        drop(watch);
+    }
+
+    #[test]
+    fn lifecycle_watch_stays_quiet_on_stable_routes() {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let watch = super::LifecycleWatch::spawn(
+            std::time::Duration::from_millis(100),
+            || Ok(vec!["mic".to_owned()]),
+            tx,
+        );
+        std::thread::sleep(std::time::Duration::from_millis(350));
+        assert!(rx.try_recv().is_err());
+        drop(watch);
+    }
+
+    #[test]
     fn assemble_faults_classify_as_route_events_without_detail_loss() {
         let error = SystemTapError::TapFault(TapStage::Assemble);
         assert!(matches!(
@@ -902,6 +1180,26 @@ mod live_tests {
                 assert!(session.apply(CaptureEvent::RetryRequested).is_ok());
             }
         }
+    }
+
+    #[test]
+    fn live_lifecycle_watch_runs_against_real_routes() {
+        if std::env::var("HIMSAT_LIVE_TAP_TEST").is_err() {
+            return;
+        }
+        let (tx, rx) = std::sync::mpsc::channel();
+        let watch = super::LifecycleWatch::spawn(
+            std::time::Duration::from_millis(100),
+            super::cpal_input_names,
+            tx,
+        );
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        drop(watch);
+        let mut drained = 0_u32;
+        while rx.try_recv().is_ok() {
+            drained += 1;
+        }
+        assert!(drained < 100, "watch spammed signals on stable routes");
     }
 
     #[test]
