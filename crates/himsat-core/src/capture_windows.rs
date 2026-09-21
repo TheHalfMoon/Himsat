@@ -1,13 +1,13 @@
 //! 008A Windows microphone adapter core over an injected audio backend.
 //!
 //! Portable selection, identity, and fault-classification logic for the
-//! Windows microphone pathway. The closed cpal/WASAPI binding arrives in
-//! the next grain behind this trait, so nothing here touches the OS: the
-//! core already drives the closed 006A session machine without ever
-//! producing a refused transition, and maps every Windows fault class
-//! onto the portable 006A/006B surface. Because the core is portable it
-//! compiles and is tested on every CI host, which is what keeps the
-//! mapping proven before any Windows-only byte exists.
+//! Windows microphone pathway, plus the closed cpal/WASAPI binding
+//! behind `cfg(target_os = "windows")`. The portable core drives the
+//! closed 006A session machine without ever producing a refused
+//! transition and maps every Windows fault class onto the portable
+//! 006A/006B surface; because that core is portable it compiles and is
+//! tested on every CI host, so the mapping stays proven independently of
+//! the OS binding, which is exercised only on Windows.
 //!
 //! Windows differs materially from the macOS pathway: endpoint
 //! identity is an OS endpoint identifier rather than a display name,
@@ -360,6 +360,207 @@ pub fn device_info(
     }
 }
 
+/// cpal trait imports for the 008A OS binding (Windows only).
+#[cfg(target_os = "windows")]
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
+/// Classifies a cpal error kind plus the stage it occurred in. Pure, so
+/// it is unit-tested on the Windows CI host without audio hardware;
+/// every Windows-specific classifier difference is recorded here.
+#[cfg(target_os = "windows")]
+#[must_use]
+pub fn classify_error(kind: cpal::ErrorKind, stage: StreamStage) -> WindowsMicError {
+    match kind {
+        cpal::ErrorKind::PermissionDenied => WindowsMicError::PermissionDenied,
+        cpal::ErrorKind::DeviceBusy => WindowsMicError::ExclusiveModeConflict,
+        cpal::ErrorKind::DeviceNotAvailable => WindowsMicError::EndpointUnavailable,
+        cpal::ErrorKind::HostUnavailable => WindowsMicError::AudioServiceUnavailable,
+        cpal::ErrorKind::DeviceChanged => WindowsMicError::RouteRerouted,
+        // Format negotiation, resource exhaustion, stream invalidation,
+        // xruns, and backend-specific failures stay stream faults at the
+        // stage they occurred; the OS detail keeps the distinction.
+        _ => WindowsMicError::StreamFault(stage),
+    }
+}
+
+/// Maps a cpal sample format into the modelled portable set. `None`
+/// means the format is not one this grain captures, so the endpoint is
+/// reported without a preferred configuration and capture is refused
+/// there rather than silently converted.
+#[cfg(target_os = "windows")]
+#[must_use]
+pub const fn portable_sample_format(format: cpal::SampleFormat) -> Option<SampleFormat> {
+    match format {
+        cpal::SampleFormat::F32 => Some(SampleFormat::F32),
+        cpal::SampleFormat::I16 => Some(SampleFormat::I16),
+        cpal::SampleFormat::U16 => Some(SampleFormat::U16),
+        _ => None,
+    }
+}
+
+/// Reads a cpal supported configuration into the portable form.
+#[cfg(target_os = "windows")]
+fn config_from_supported(supported: &cpal::SupportedStreamConfig) -> Option<DeviceConfig> {
+    let format = portable_sample_format(supported.sample_format())?;
+    let config = supported.config();
+    Some(DeviceConfig {
+        channels: config.channels,
+        sample_rate_hz: config.sample_rate,
+        format,
+    })
+}
+
+/// cpal-backed implementation of [`MicrophoneBackend`]: the 008A OS
+/// binding. Enumeration and default queries only probe; nothing streams
+/// until [`open_f32_input_stream`] builds and plays.
+#[cfg(target_os = "windows")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CpalMicrophoneBackend;
+
+/// Resolves the OS default input endpoint id, if the OS names one.
+#[cfg(target_os = "windows")]
+fn cpal_default_id(host: &cpal::Host) -> Option<String> {
+    host.default_input_device()
+        .and_then(|device| device.id().ok())
+        .map(|id| id.id().to_owned())
+}
+
+/// Reads one enumerated device. Endpoints whose id cannot be resolved
+/// are skipped: without a stable id the adapter cannot address the
+/// endpoint or derive honest identity, and a name-keyed fallback would
+/// silently merge distinct endpoints that share a display name.
+#[cfg(target_os = "windows")]
+fn cpal_device_info(device: &cpal::Device, default_id: Option<&str>) -> Option<InputDeviceInfo> {
+    let device_id = device.id().ok()?.id().to_owned();
+    let name = device
+        .description()
+        .map(|description| description.name().to_owned())
+        .unwrap_or_default();
+    let preferred_config = device
+        .default_input_config()
+        .ok()
+        .as_ref()
+        .and_then(config_from_supported);
+    Some(InputDeviceInfo {
+        is_default: default_id == Some(device_id.as_str()),
+        device_id,
+        name,
+        preferred_config,
+    })
+}
+
+#[cfg(target_os = "windows")]
+impl MicrophoneBackend for CpalMicrophoneBackend {
+    fn input_devices(&self) -> Result<Vec<InputDeviceInfo>, WindowsMicError> {
+        let host = cpal::default_host();
+        let default_id = cpal_default_id(&host);
+        let devices = host
+            .input_devices()
+            .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+        let mut out = Vec::new();
+        for device in devices {
+            if let Some(info) = cpal_device_info(&device, default_id.as_deref()) {
+                out.push(info);
+            }
+        }
+        Ok(out)
+    }
+
+    fn default_input_id(&self) -> Option<String> {
+        cpal_default_id(&cpal::default_host())
+    }
+}
+
+/// Live cpal input stream. Dropping stops capture: callers must drive
+/// `StopRequested`/`StopCompleted` through the session machine first so
+/// a drop is never a silent stop.
+#[cfg(target_os = "windows")]
+pub struct LiveMicStream {
+    stream: cpal::Stream,
+    device_id: String,
+    config: DeviceConfig,
+}
+
+#[cfg(target_os = "windows")]
+impl LiveMicStream {
+    /// OS endpoint id of the streaming device.
+    #[must_use]
+    pub fn device_id(&self) -> &str {
+        &self.device_id
+    }
+
+    /// Configuration the stream was built with.
+    #[must_use]
+    pub const fn config(&self) -> DeviceConfig {
+        self.config
+    }
+
+    /// Pauses frame delivery without tearing down, for the
+    /// `Interrupted` state. Failures classify as play-stage faults.
+    pub fn pause(&self) -> Result<(), WindowsMicError> {
+        self.stream
+            .pause()
+            .map_err(|error| classify_error(error.kind(), StreamStage::Play))
+    }
+
+    /// Resumes a paused stream, for the `Recovering` state.
+    pub fn resume(&self) -> Result<(), WindowsMicError> {
+        self.stream
+            .play()
+            .map_err(|error| classify_error(error.kind(), StreamStage::Play))
+    }
+}
+
+/// Opens an F32 input stream on the named endpoint and starts it
+/// flowing. Frames arrive on the cpal audio thread via `on_frames`;
+/// faults arrive via `on_error` already classified, with the OS detail
+/// string for telemetry. Non-F32 default configurations are refused as
+/// build faults (format negotiation widens only with Gate E evidence,
+/// never by silent conversion).
+#[cfg(target_os = "windows")]
+pub fn open_f32_input_stream(
+    device_id: &str,
+    mut on_frames: impl FnMut(&[f32]) + Send + 'static,
+    mut on_error: impl FnMut(WindowsMicError, String) + Send + 'static,
+) -> Result<LiveMicStream, WindowsMicError> {
+    let host = cpal::default_host();
+    let mut found = host
+        .input_devices()
+        .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+    let device = found
+        .find(|candidate| candidate.id().is_ok_and(|id| id.id() == device_id))
+        .ok_or(WindowsMicError::EndpointUnavailable)?;
+    let supported = device
+        .default_input_config()
+        .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+    if supported.sample_format() != cpal::SampleFormat::F32 {
+        return Err(WindowsMicError::StreamFault(StreamStage::Build));
+    }
+    let config = config_from_supported(&supported)
+        .ok_or(WindowsMicError::StreamFault(StreamStage::Build))?;
+    let stream = device
+        .build_input_stream(
+            supported.config(),
+            move |frames: &[f32], _info: &cpal::InputCallbackInfo| {
+                on_frames(frames);
+            },
+            move |error| {
+                let detail = error.to_string();
+                on_error(classify_error(error.kind(), StreamStage::Play), detail);
+            },
+            None,
+        )
+        .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+    stream
+        .play()
+        .map_err(|error| classify_error(error.kind(), StreamStage::Play))?;
+    Ok(LiveMicStream {
+        stream,
+        device_id: device_id.to_owned(),
+        config,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -651,5 +852,146 @@ mod tests {
         unique.sort_unstable();
         unique.dedup();
         assert_eq!(unique.len(), classifiers.len());
+    }
+}
+
+/// Windows-only binding tests. Classification and format mapping are
+/// pure and therefore run without audio hardware; enumeration tolerates
+/// hosts with no endpoints; stream opening stays behind
+/// `HIMSAT_LIVE_MIC_TEST=1` so CI never touches capture hardware.
+#[cfg(all(test, target_os = "windows"))]
+mod windows_tests {
+    use super::{
+        CpalMicrophoneBackend, MicrophoneBackend, SampleFormat, StreamStage, WindowsMicError,
+        classify_error, open_f32_input_stream, portable_sample_format, select_input,
+    };
+
+    #[test]
+    fn cpal_kinds_classify_deterministically() {
+        assert_eq!(
+            classify_error(cpal::ErrorKind::PermissionDenied, StreamStage::Build),
+            WindowsMicError::PermissionDenied
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::DeviceBusy, StreamStage::Play),
+            WindowsMicError::ExclusiveModeConflict
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::DeviceNotAvailable, StreamStage::Play),
+            WindowsMicError::EndpointUnavailable
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::HostUnavailable, StreamStage::Build),
+            WindowsMicError::AudioServiceUnavailable
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::DeviceChanged, StreamStage::Play),
+            WindowsMicError::RouteRerouted
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::UnsupportedConfig, StreamStage::Build),
+            WindowsMicError::StreamFault(StreamStage::Build)
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::Xrun, StreamStage::Play),
+            WindowsMicError::StreamFault(StreamStage::Play)
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::Other, StreamStage::Build),
+            WindowsMicError::StreamFault(StreamStage::Build)
+        );
+    }
+
+    #[test]
+    fn only_modelled_sample_formats_map() {
+        assert_eq!(
+            portable_sample_format(cpal::SampleFormat::F32),
+            Some(SampleFormat::F32)
+        );
+        assert_eq!(
+            portable_sample_format(cpal::SampleFormat::I16),
+            Some(SampleFormat::I16)
+        );
+        assert_eq!(
+            portable_sample_format(cpal::SampleFormat::U16),
+            Some(SampleFormat::U16)
+        );
+        assert_eq!(portable_sample_format(cpal::SampleFormat::I32), None);
+        assert_eq!(portable_sample_format(cpal::SampleFormat::F64), None);
+        assert_eq!(portable_sample_format(cpal::SampleFormat::U8), None);
+        assert_eq!(portable_sample_format(cpal::SampleFormat::I24), None);
+    }
+
+    #[test]
+    fn cpal_enumeration_never_panics_and_selects_consistently() {
+        let backend = CpalMicrophoneBackend;
+        match backend.input_devices() {
+            Ok(devices) => {
+                let selected = select_input(&backend, None);
+                if devices.is_empty() {
+                    assert!(selected.is_err());
+                } else {
+                    let selected = selected.expect("non-empty enumeration selects");
+                    let descriptor = selected.descriptor(himsat_events::SessionId::new(3));
+                    assert!(!descriptor.label().is_empty());
+                    assert!(devices.iter().all(|info| !info.device_id.is_empty()));
+                }
+            }
+            Err(error) => {
+                assert!(
+                    matches!(
+                        error,
+                        WindowsMicError::NoInputDevices | WindowsMicError::AudioServiceUnavailable
+                    ),
+                    "enumeration fails only as absence or service unavailability"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn cpal_default_id_agrees_with_selection() {
+        let backend = CpalMicrophoneBackend;
+        if backend.default_input_id().is_some() {
+            assert!(select_input(&backend, None).is_ok());
+        }
+    }
+
+    #[test]
+    fn live_stream_open_reports_frames_or_classified_fault() {
+        if std::env::var("HIMSAT_LIVE_MIC_TEST").is_err() {
+            return;
+        }
+        let backend = CpalMicrophoneBackend;
+        let selected = select_input(&backend, None).expect("live test needs an endpoint");
+        assert!(!selected.info.device_id.is_empty());
+        match open_f32_input_stream(
+            &selected.info.device_id,
+            move |_frames: &[f32]| {},
+            move |_error, _detail| {},
+        ) {
+            Ok(stream) => {
+                assert_eq!(stream.device_id(), selected.info.device_id);
+                assert!(stream.config().sample_rate_hz > 0);
+                assert!(stream.config().channels > 0);
+                assert_eq!(stream.config().format, SampleFormat::F32);
+                assert!(stream.pause().is_ok());
+                assert!(stream.resume().is_ok());
+                drop(stream);
+            }
+            Err(error) => {
+                assert!(
+                    matches!(
+                        error,
+                        WindowsMicError::PermissionDenied
+                            | WindowsMicError::ExclusiveModeConflict
+                            | WindowsMicError::EndpointUnavailable
+                            | WindowsMicError::AudioServiceUnavailable
+                            | WindowsMicError::StreamFault(_)
+                    ),
+                    "live open failed with an unexpected classification"
+                );
+            }
+        }
     }
 }

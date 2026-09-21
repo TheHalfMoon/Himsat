@@ -43,6 +43,17 @@
 - [x] J005 Derive the portable 006B degradation reason from the same taxonomy, with a test asserting the event mapping and the health mapping cannot drift.
 - [x] J006 Prove privacy revocation surfaces through `HealthMonitor` as a `ReasonChanged` edge instead of a silent stop.
 - [x] J007 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
-- [ ] J008 Exact-head qualify grain 1: pull-request CI and R3 SUCCESS with all three Rust platform jobs green.
-- [ ] J009 Reconcile and merge under expected-head protection, then record grain 1 merge truth.
-- [ ] J010 Promote the next authorized leaf: the Windows cpal/WASAPI binding over this core (`CpalMicrophoneBackend`, `LiveMicStream`, `open_f32_input_stream`, cpal error-kind and sample-format mapping, Windows-only tests).
+- [x] J008 Exact-head qualify grain 1: PR #207 head `9e7237f21b6fd8f0aa906a303bc8924c66884b2f` passed pull-request CI `35652021251` and R3 `35652021195` on attempt 1, with `Rust / ubuntu-latest` 7m30s, `Rust / macos-latest` 8m1s, and `Rust / windows-latest` 17m29s all SUCCESS (compile, `clippy -D warnings`, 16 tests each).
+- [x] J009 Reconcile and merge under expected-head protection: zero submitted reviews, zero review threads, OCR delegation ledger `5767157896` (2/2 reviewable files, 3 markdown exclusions stated, 2 findings repaired forward in `9e7237f`), `MERGEABLE`/`CLEAN`. Canonical merge `6532f9747a0bd65b11d2d5541482097bd2e2144c`, parents `c1ad38d` + `9e7237f`, merge tree `0b452816c9818229bcf1a33d4ebaab067314d059` equal to the accepted head tree, signature verified, post-merge CI `35654462537` / R3 `35654462544` SUCCESS.
+- [x] J010 Promote the next authorized leaf: the Windows cpal/WASAPI binding over this core. `NEXT_IMPLEMENTATION_LEAF = SPEC_008_WINDOWS_WASAPI_BINDING_GRAIN`.
+
+## Implementation — 008A grain 2 (cpal/WASAPI microphone binding)
+
+- [x] K001 Implement `classify_error` over cpal `ErrorKind` with the stage carried into fallbacks, `portable_sample_format`, and `config_from_supported` inside `cfg(target_os = "windows")`.
+- [x] K002 Implement `CpalMicrophoneBackend` over `cpal::default_host()` with `cpal_default_id` and `cpal_device_info`; endpoints whose id cannot be resolved are skipped rather than name-keyed.
+- [x] K003 Implement `LiveMicStream` (`device_id`, `config`, `pause`, `resume`) and `open_f32_input_stream`, which resolves by endpoint id, refuses non-F32 defaults as build faults, and never silently converts.
+- [x] K004 Keep the audio callback to a single borrowed-frame forward with no allocation, locking, I/O, logging, or inference in the adapter.
+- [x] K005 Add the five Windows-only tests, including the hardware-free classifier and format-mapping tests and the `HIMSAT_LIVE_MIC_TEST=1` env-gated live opener that is NOT RUN in CI.
+- [x] K006 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
+- [ ] K007 Exact-head qualify grain 2: pull-request CI and R3 SUCCESS with the `windows-latest` Rust job green.
+- [ ] K008 Reconcile and merge under expected-head protection, then record grain 2 merge truth and promote the next authorized leaf (008C lifecycle and evidence matrix scoping, or 008B loopback ordering, per live canonical state).
