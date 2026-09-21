@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_SHAPING_IN_PROGRESS
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_SHAPING_QUALIFIED
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,7 +219,7 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_008_SHAPING
+NEXT_IMPLEMENTATION_LEAF = SPEC_008_FIRST_IMPLEMENTATION_GRAIN
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
@@ -427,8 +427,16 @@ SPEC_007_LEAF_DISPOSITIONS = B007A_CANONICAL_CLOSED_B007B_CANONICAL_CLOSED_B007C
 SPEC_007_SHAPING_QUALIFIED = 61a300c844befe273c3a89577a485f89087812be_CI_35278832383_R3_35278832399_SUCCESS
 SPEC_007C_SHAPING_QUALIFIED = 8d379af2042cf23ea4da1f70e03f9a7675296fb0_CI_35315392601_R3_35315392695_SUCCESS
 SPEC_007_PLATFORM_SCOPE = MACOS_ONLY_DARWIN_ARM64_EVIDENCED
-SPEC_008_SHAPING = AUTHORIZED_AFTER_THIS_CLOSEOUT_QUALIFIES
-SPEC_008_SHAPING_STATUS = IN_PROGRESS_THIS_UNIT
+SPEC_008_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_FA797A8
+SPEC_008_SHAPING_PREMERGE_CI = 35629526180_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008_SHAPING_PREMERGE_R3 = 35629526000_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008_SHAPING_CANONICAL_MERGE = fa797a8288f26e98c5460e8f766f2acb44957101
+SPEC_008_SHAPING_MERGE_PARENT_1 = c96abba6ed5cd760611d0f407e7c3a8df9fb1879
+SPEC_008_SHAPING_MERGE_PARENT_2 = 3338fd0df0e15f42725b4b11e2ce8a92cde176cf
+SPEC_008_SHAPING_MERGE_TREE = dd3a009266b0770a5a83f8a3864533ae2d26af2f_EQUALS_ACCEPTED_TREE
+SPEC_008_SHAPING_POSTMERGE_CI = 35631397479_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008_SHAPING_POSTMERGE_R3 = 35631396992_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008_SHAPING_REVIEW_RECONCILIATION = OCR_DELEGATED_ZERO_REVIEWABLE_DOCS_ONLY_NO_BLOCKING_FINDING
 SPEC_008_PLATFORM_SCOPE = WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
@@ -1301,8 +1309,8 @@ qualifies.
 
 ## Specification 008 shaping (Windows capture)
 
-Specification 008 shaping is in progress against the live canonical
-`main` at the 007 closeout merge
+Specification 008 shaping is `SHAPING_QUALIFIED` against the live
+canonical `main` at the 007 closeout merge
 `c96abba6ed5cd760611d0f407e7c3a8df9fb1879` (post-merge CI
 `35627161924` / R3 `35627161891` SUCCESS). The shaping packet
 (`spec.md`/`plan.md`/`tasks.md`) binds the same portable 006A session
@@ -1320,10 +1328,21 @@ byte changes.
 
 008's platform claim is Windows-only and must be evidenced on
 `windows-latest`; it never generalizes macOS (007) behavior to Windows
-or the reverse, and it narrows no shared 006 contract. If this shaping
-packet later becomes exact-head qualified, expected-head merged, exact
-parent/tree verified, and post-merge CI/R3 qualified, 008 implementation
-grains (candidate 008A/008B/008C, re-bounded after shaping) become the
-authorized implementation work. 008 implementation is unauthorized until
-then, and Specification 009 (Linux capture) shaping remains
-unauthorized until 008 is itself `CLOSED_CANONICAL`.
+or the reverse, and it narrows no shared 006 contract. The shaping
+packet is exact-head qualified (pull-request CI
+`35629526180` / R3 `35629526000` SUCCESS), expected-head merged
+(canonical merge `fa797a8288f26e98c5460e8f766f2acb44957101`, parents
+`c96abba` + `3338fd0`, merge-tree-equal), and post-merge qualified
+(push CI `35631397479` / R3 `35631396992` SUCCESS), so the 008
+implementation grains (candidate 008A/008B/008C, re-bounded after
+shaping) are now the authorized implementation work.
+`NEXT_IMPLEMENTATION_LEAF = SPEC_008_FIRST_IMPLEMENTATION_GRAIN`.
+
+The first 008 implementation grain (candidate 008A, Windows microphone
+pathway) requires a bounded dependency-adoption step: adding the
+already-registered `cpal 0.18.2` (registry 211) to the
+`cfg(target_os = "windows")` target with its closed provenance/closure
+entries under the same 004P-style adoption gate precedent used for
+007A/007B, before any Windows adapter code is written. Specification 009
+(Linux capture) shaping remains unauthorized until 008 is itself
+`CLOSED_CANONICAL`.
