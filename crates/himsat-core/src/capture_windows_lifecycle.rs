@@ -47,13 +47,12 @@ pub enum WindowsLifecycleSignal {
 /// row of the evidence matrix is unit-testable without hardware.
 #[must_use]
 pub fn detect_endpoint_delta(before: &[String], after: &[String]) -> bool {
-    if before.len() != after.len() {
-        return true;
-    }
     let mut previous: Vec<&str> = before.iter().map(String::as_str).collect();
     let mut current: Vec<&str> = after.iter().map(String::as_str).collect();
     previous.sort_unstable();
+    previous.dedup();
     current.sort_unstable();
+    current.dedup();
     previous != current
 }
 
