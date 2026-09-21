@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_005_CLOSED_CANONICAL_SPEC_006_CLOSED_CANONICAL_RECONCILIATION_IN_PROGRESS
+PROGRAM_STATE = SPEC_006_CLOSED_CANONICAL_SPEC_007C_CLOSED_CANONICAL_SPEC_007_CLOSEOUT_IN_PROGRESS
 ACTIVE_SPECIFICATION = 004-vault-key-crypto
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,9 +219,9 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_007_SHAPING
+NEXT_IMPLEMENTATION_LEAF = SPEC_007_CLOSEOUT_RECONCILIATION
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
-PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_007
+PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_007_CLOSEOUT
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
 SPEC_005_SHAPING_PREMERGE_CI = 35094188292_SUCCESS_PULL_REQUEST_ATTEMPT_1
 SPEC_005_SHAPING_PREMERGE_R3 = 35094188252_SUCCESS_PULL_REQUEST_ATTEMPT_1
@@ -384,6 +384,43 @@ B007B2_POSTMERGE_R3 = 35309850870_SUCCESS_PUSH_ATTEMPT_1
 B007B2_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_TWO_BOT_COMMENTS_ZERO_THREADS_CUBIC_SKIPPING_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 B007B_AGGREGATE_EVIDENCE = 007b-system-tap-final-evidence.md_CANONICAL_QUALIFIED_PENDING_THIS_RECONCILIATION_MERGE
 B007B_DISPOSITION = CANONICAL_CLOSED
+B007C1_ACCEPTED_HEAD = d6527dd6796414c9b4cd978af8425bc4538bced7
+B007C1_ACCEPTED_TREE = 90ac76347bda08f09de3d9705689e0cb5b1d1aec
+B007C1_PREMERGE_CI = 35321568922_SUCCESS_PULL_REQUEST_ATTEMPT_1
+B007C1_PREMERGE_R3 = 35321568928_SUCCESS_PULL_REQUEST_ATTEMPT_1
+B007C1_CANONICAL_MERGE = f52ff0856b8cea0fbc28f94715a797e8bf24a6db
+B007C1_MERGE_PARENT_1 = 08f2d9aa130784626ccbefffd012ac5a817d2103
+B007C1_MERGE_PARENT_2 = d6527dd6796414c9b4cd978af8425bc4538bced7
+B007C1_MERGE_TREE = 90ac76347bda08f09de3d9705689e0cb5b1d1aec_EQUALS_ACCEPTED_TREE
+B007C1_POSTMERGE_CI = 35323542302_SUCCESS_PUSH_ATTEMPT_1
+B007C1_POSTMERGE_R3 = 35323542345_SUCCESS_PUSH_ATTEMPT_1
+B007C1_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_NO_BLOCKING_FINDING
+B007C2_ACCEPTED_HEAD = 50603568a3185733c50ff18d2fe972dd7b08fa15
+B007C2_ACCEPTED_TREE = deada7297782a7bf8e4e0987b00cdca6b6ecb374
+B007C2_PREMERGE_CI = 35325695878_SUCCESS_PULL_REQUEST_ATTEMPT_1
+B007C2_PREMERGE_R3 = 35325695881_SUCCESS_PULL_REQUEST_ATTEMPT_1
+B007C2_CANONICAL_MERGE = 8b6c619750646c454fa754671c9eb3d34114b28c
+B007C2_MERGE_PARENT_1 = f52ff0856b8cea0fbc28f94715a797e8bf24a6db
+B007C2_MERGE_PARENT_2 = 50603568a3185733c50ff18d2fe972dd7b08fa15
+B007C2_MERGE_TREE = deada7297782a7bf8e4e0987b00cdca6b6ecb374_EQUALS_ACCEPTED_TREE
+B007C2_POSTMERGE_CI = 35327258174_SUCCESS_PUSH_ATTEMPT_1
+B007C2_POSTMERGE_R3 = 35327258212_SUCCESS_PUSH_ATTEMPT_1
+B007C2_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_NO_BLOCKING_FINDING
+B007C3_ACCEPTED_HEAD = 65aa2d623ab9edb4e7d1b7f7250a825ddb9a2c4d
+B007C3_ACCEPTED_TREE = 8a5153610a0b9a17d9de0f2cc6e8eebf2503ac07
+B007C3_PREMERGE_CI = 35329269388_SUCCESS_PULL_REQUEST_ATTEMPT_1
+B007C3_PREMERGE_R3 = 35329269420_SUCCESS_PULL_REQUEST_ATTEMPT_1
+B007C3_CANONICAL_MERGE = 9b2268f5164592ee961780a5580478ab6d6f0f5e
+B007C3_MERGE_PARENT_1 = 8b6c619750646c454fa754671c9eb3d34114b28c
+B007C3_MERGE_PARENT_2 = 65aa2d623ab9edb4e7d1b7f7250a825ddb9a2c4d
+B007C3_MERGE_TREE = 8a5153610a0b9a17d9de0f2cc6e8eebf2503ac07_EQUALS_ACCEPTED_TREE
+B007C3_FIRST_POSTMERGE_CI = 35618685760_CANCELLED_BY_CONCURRENCY_ATTEMPT_1_SUPERSEDED_BY_35618918438
+B007C3_FIRST_POSTMERGE_R3 = 35618685873_CANCELLED_BY_CONCURRENCY_ATTEMPT_1_SUPERSEDED_BY_35618918612
+B007C3_POSTMERGE_CI = 35618918438_SUCCESS_PUSH_ATTEMPT_1
+B007C3_POSTMERGE_R3 = 35618918612_SUCCESS_PUSH_ATTEMPT_1
+B007C3_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
+B007C_AGGREGATE_EVIDENCE = 007c-system-tap-streaming-final-evidence.md_CANONICAL_QUALIFIED_PENDING_THIS_RECONCILIATION_MERGE
+B007C_DISPOSITION = CANONICAL_CLOSED
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1145,6 +1182,70 @@ Q009 remains UNSATISFIED. Repository-owner evidence, implementation tests, CI/R3
   -> C001-C005 Specification 004 closeout     BLOCKED_PENDING_QUALIFICATION
   -> Specification 005                        BLOCKED_PENDING_SPEC_004_CLOSEOUT
 ```
+
+## Canonical B007C implementation and Specification 007 closeout state
+
+The bounded B007C lineage is PR #196 through PR #199 and culminates
+in canonical merge `9b2268f5164592ee961780a5580478ab6d6f0f5e`. Grain
+1 (PR #196/#197), aggregate first-audio streaming, accepted head
+`d6527dd6796414c9b4cd978af8425bc4538bced7` with tree
+`90ac76347bda08f09de3d9705689e0cb5b1d1aec`, passed pull-request CI
+`35321568922` and R3 `35321568928`, merged as
+`f52ff0856b8cea0fbc28f94715a797e8bf24a6db` (`08f2d9a` + `d6527dd`,
+tree-equal), and passed push CI `35323542302` / R3 `35323542345` on
+attempt 1. Grain 2 (PR #197/#198), polling lifecycle observation,
+accepted head `50603568a3185733c50ff18d2fe972dd7b08fa15` with tree
+`deada7297782a7bf8e4e0987b00cdca6b6ecb374`, passed pull-request CI
+`35325695878` and R3 `35325695881`, merged as
+`8b6c619750646c454fa754671c9eb3d34114b28c` (`f52ff08` + `5060356`,
+tree-equal), and passed push CI `35327258174` / R3 `35327258212` on
+attempt 1. Grain 3 (PR #199), sustained-flow loss accounting,
+accepted head `65aa2d623ab9edb4e7d1b7f7250a825ddb9a2c4d` with tree
+`8a5153610a0b9a17d9de0f2cc6e8eebf2503ac07`, passed pull-request CI
+`35329269388` and R3 `35329269420` on attempt 1 with all eleven CI
+jobs green.
+
+The observed guarded merge used `expected_head_sha =
+65aa2d623ab9edb4e7d1b7f7250a825ddb9a2c4d` with
+`merge_method = merge`; GitHub returned canonical merge
+`9b2268f5164592ee961780a5580478ab6d6f0f5e`, parents
+`8b6c619750646c454fa754671c9eb3d34114b28c` +
+`65aa2d623ab9edb4e7d1b7f7250a825ddb9a2c4d`, and merge tree
+`8a5153610a0b9a17d9de0f2cc6e8eebf2503ac07`, exactly matching the
+accepted head tree. GitHub reports the merge signature
+verified/valid. The first push-triggered post-merge pair
+(CI `35618685760` / R3 `35618685873`) was cancelled by the workflow
+concurrency group when a newer push run was created on the same SHA;
+the superseding push-triggered CI `35618918438` and R3 `35618918612`
+on the same exact `9b2268f` are the controlling post-merge
+qualification (B007GATEFIX supersede precedent: superseded-cancelled,
+never a failure).
+
+The accepted B007C scope is bounded: the sanctioned streaming path
+(tap → private aggregate device → cpal F32 input; zero unsafe, every
+FFI sample crossing inside the already-closed cidre 0.29.0 / cpal
+0.18.2 bindings); polling lifecycle observation (device-delta and
+sleep-gap signals mapped onto untouched 006 events); and saturating
+sustained-flow loss accounting reconciled against wall clock over
+settled windows. The 007B streaming-sanction residual is closed by
+evidence, not by redefinition (no safe IOProc sample view exists in
+cidre 0.29.0; the aggregate route avoids the unsafe dereference
+entirely). `007c-system-tap-streaming-final-evidence.md` is the
+controlling B007C evidence record.
+
+This reconciliation may close B007C only for the bounded streaming
+and lifecycle qualification actually proven: four env-gated live
+tests on darwin/arm64 plus 25 portable function-level tests over the
+closed 006 contract. It does not claim a multi-hour endurance run,
+live OS end-to-end actuation of every adversarial row, non-F32
+negotiation, or journal sink wiring (a 007 closeout boundary
+decision). If this reconciliation itself later becomes exact-head
+qualified, expected-head merged, exact parent/tree verified, and
+post-merge CI/R3 qualified, the next authorized node is the
+Specification 007 closeout reconciliation (B007 → SPEC_007
+`CLOSED_CANONICAL`). Specification 008 shaping and all
+release/FIPS/compliance claims remain unauthorized until that
+closeout qualifies.
 
 ## Residual blockers and non-claims
 
