@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_GRAIN1_CANONICAL_QUALIFIED_GRAIN2_PENDING_THIS_UNIT_QUALIFICATION
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_COMPLETE_008B_GRAIN1_PENDING_THIS_UNIT_QUALIFICATION
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,7 +219,7 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_008_NEXT_LEAF_AFTER_WASAPI_BINDING_QUALIFICATION
+NEXT_IMPLEMENTATION_LEAF = SPEC_008B_WINDOWS_LOOPBACK_BINDING_GRAIN
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
@@ -474,9 +474,25 @@ SPEC_008A_GRAIN1_POSTMERGE_CI = 35654462537_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008A_GRAIN1_POSTMERGE_R3 = 35654462544_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008A_GRAIN1_PLATFORM_JOBS = UBUNTU_7M30S_MACOS_8M1S_WINDOWS_17M29S_ALL_SUCCESS
 SPEC_008A_GRAIN1_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_OCR_DELEGATED_TWO_FINDINGS_REPAIRED_FORWARD
-SPEC_008A_GRAIN2_BINDING_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008A_GRAIN2_BINDING_STATE = CANONICAL_QUALIFIED
 SPEC_008A_GRAIN2_BINDING_EVIDENCE = 008a-windows-wasapi-binding-evidence.md
 SPEC_008A_GRAIN2_LIVE_TEST = NOT_RUN_IN_CI_ENV_GATED_HIMSAT_LIVE_MIC_TEST
+SPEC_008A_GRAIN2_ACCEPTED_HEAD = efacffe69561d482c44d206dc90f8dd3546a8848
+SPEC_008A_GRAIN2_PREMERGE_CI = 35656490885_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008A_GRAIN2_PREMERGE_R3 = 35656490720_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008A_GRAIN2_CANONICAL_MERGE = 5787979e6dc62c7a4454c83aadbdc77623a3fe3a
+SPEC_008A_GRAIN2_MERGE_PARENT_1 = 6532f9747a0bd65b11d2d5541482097bd2e2144c
+SPEC_008A_GRAIN2_MERGE_PARENT_2 = efacffe69561d482c44d206dc90f8dd3546a8848
+SPEC_008A_GRAIN2_MERGE_TREE = 475fdcdd71e19b9cc2749785b66131ce29b7ae1f_EQUALS_ACCEPTED_TREE
+SPEC_008A_GRAIN2_POSTMERGE_CI = 35658997556_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008A_GRAIN2_POSTMERGE_R3 = 35658997511_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008A_GRAIN2_PLATFORM_JOBS = UBUNTU_7M45S_MACOS_7M28S_WINDOWS_17M49S_ALL_SUCCESS
+SPEC_008A_GRAIN2_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_OCR_DELEGATED_NO_BLOCKING_FINDING
+SPEC_008A_DISPOSITION = CANONICAL_CLOSED_MICROPHONE_PATHWAY_CORE_AND_BINDING
+SPEC_008B_GRAIN1_CORE_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008B_GRAIN1_CORE_EVIDENCE = 008b-system-audio-core-evidence.md
+SPEC_008B_LOOPBACK_MECHANISM_EVIDENCE = CPAL_0.18.2_AUDCLNT_STREAMFLAGS_LOOPBACK_ON_RENDER_ENDPOINT
+SPEC_008B_WINDOWS_RUNTIME_EVIDENCE = NONE_NO_WINDOWS_DEVICE_OPENED
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1528,8 +1544,42 @@ changes in this grain.
 The five Windows-only tests include hardware-free classifier and
 format-mapping coverage and an env-gated live opener that is **NOT RUN**
 in CI; the live path therefore carries no CI evidence, and no Windows
-runtime, first-audio, loopback, or Gate E claim is made. If this grain is
-exact-head qualified, reconciled, expected-head merged, exact-parent/tree
-verified, and post-merge CI/R3 qualified, the next authorized leaf is
-re-bounded against then-live canonical state (008C lifecycle and
-evidence-matrix scoping, or 008B loopback ordering).
+runtime, first-audio, loopback, or Gate E claim is made.
+
+## Specification 008A closure and 008B grain 1 (Windows system-audio core)
+
+Grain 2 is `CANONICAL_QUALIFIED`: PR #208 accepted head
+`efacffe69561d482c44d206dc90f8dd3546a8848` passed pre-merge CI
+`35656490885` / R3 `35656490720` on attempt 1, where
+`Rust / windows-latest` (job `106521341028`, 17m49s) compiled the
+cpal/WASAPI binding for the first time anywhere alongside ubuntu (7m45s)
+and macOS (7m28s), merged as
+`5787979e6dc62c7a4454c83aadbdc77623a3fe3a` with parents `6532f97` +
+`efacffe`, merge tree `475fdcdd71e19b9cc2749785b66131ce29b7ae1f` equal to
+the accepted head tree, signature verified, and passed push-triggered CI
+`35658997556` / R3 `35658997511`. 008A (Windows microphone pathway core
+and binding) is therefore `CANONICAL_CLOSED` for its bounded CI scope
+only: no Windows runtime evidence exists and
+`SPEC_008_PLATFORM_SCOPE` stays `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
+
+Re-bounding against live canonical state (no conflicting open pull
+request; issues #13/#14/#17/#125 carry no 008 authority) makes 008B the
+next dependency-authorized leaf. Grain 1 adds the portable system-audio
+core in `capture_windows_system_audio.rs`: render-endpoint identity with
+its own domain tag, `SourceKind::SystemAudio` descriptors, selection
+precedence, the system-audio fault taxonomy, the 006A start/runtime
+mappings, and the 006B reason with a no-drift test. The OS-sanctioned
+mechanism is recorded from the pinned binding rather than assumed:
+`build_input_stream_raw_inner` sets `AUDCLNT_STREAMFLAGS_LOOPBACK` when a
+render endpoint is opened as an input stream, `supports_input()` is
+capture-only so 008A enumeration cannot see render endpoints, and
+`default_input_config()` fails on render endpoints so the loopback
+configuration must come from `default_output_config()`.
+
+No device is opened and no audio is captured, so no Windows runtime,
+loopback, content-policy, or Gate E claim is made.
+`008b-system-audio-core-evidence.md` is the controlling record. If this
+grain qualifies, the next authorized leaf is the loopback binding:
+`CpalLoopbackBackend`, `LiveLoopbackStream`, `open_f32_loopback_stream`,
+the cpal error-kind classifier with a no-drift test against the
+microphone classifier, and the Windows-only tests.

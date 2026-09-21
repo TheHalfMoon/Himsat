@@ -55,5 +55,18 @@
 - [x] K004 Keep the audio callback to a single borrowed-frame forward with no allocation, locking, I/O, logging, or inference in the adapter.
 - [x] K005 Add the five Windows-only tests, including the hardware-free classifier and format-mapping tests and the `HIMSAT_LIVE_MIC_TEST=1` env-gated live opener that is NOT RUN in CI.
 - [x] K006 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
-- [ ] K007 Exact-head qualify grain 2: pull-request CI and R3 SUCCESS with the `windows-latest` Rust job green.
-- [ ] K008 Reconcile and merge under expected-head protection, then record grain 2 merge truth and promote the next authorized leaf (008C lifecycle and evidence matrix scoping, or 008B loopback ordering, per live canonical state).
+- [x] K007 Exact-head qualify grain 2: PR #208 head `efacffe69561d482c44d206dc90f8dd3546a8848` passed pull-request CI `35656490885` and R3 `35656490720` on attempt 1; `Rust / windows-latest` (job `106521341028`, 17m49s) was the first compile of the binding anywhere, alongside ubuntu 7m45s and macOS 7m28s.
+- [x] K008 Reconcile and merge under expected-head protection: zero submitted reviews, zero review threads, OCR delegation ledger `5767673392` (1/1 reviewable file, 3 markdown exclusions stated, no blocking finding), `MERGEABLE`/`CLEAN`. Canonical merge `5787979e6dc62c7a4454c83aadbdc77623a3fe3a`, parents `6532f97` + `efacffe`, merge tree `475fdcdd71e19b9cc2749785b66131ce29b7ae1f` equal to the accepted head tree, signature verified, post-merge CI `35658997556` / R3 `35658997511` SUCCESS.
+
+## Implementation — 008B grain 1 (Windows system-audio adapter core)
+
+- [x] L001 Re-bind the next leaf against live canonical state: 008A is complete (core + binding canonical-qualified), so the next dependency-authorized leaf is 008B (OS-sanctioned WASAPI loopback), with no conflicting open PR or issue.
+- [x] L002 Declare the portable core in `crates/himsat-core/src/capture_windows_system_audio.rs` and register the module; no OS call and no `cpal` reference in this grain.
+- [x] L003 Record the OS-sanctioned loopback evidence from the pinned binding: `build_input_stream_raw_inner` sets `AUDCLNT_STREAMFLAGS_LOOPBACK` for a render endpoint, `supports_input()` is capture-only (so 008A enumeration cannot see render endpoints), and `default_input_config()` errors on render endpoints so the loopback configuration must come from `default_output_config()`.
+- [x] L004 Model render-endpoint identity on the OS endpoint id with a separate identity domain, `SourceKind::SystemAudio` descriptors, and `loopback_config: Option<DeviceConfig>` instead of a mislabelled format.
+- [x] L005 Define the system-audio fault taxonomy and map every class onto the closed 006A machine for start and runtime, keeping a reroute non-interrupting and proving no mapping produces a refused transition.
+- [x] L006 Derive the portable 006B reason from the same taxonomy with a no-drift test, and prove an exclusivity conflict surfaces through `HealthMonitor`.
+- [x] L007 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
+- [ ] L008 Exact-head qualify grain 1: pull-request CI and R3 SUCCESS with all three Rust platform jobs green.
+- [ ] L009 Reconcile and merge under expected-head protection, then record grain 1 merge truth.
+- [ ] L010 Promote the loopback binding grain: `CpalLoopbackBackend`, `LiveLoopbackStream`, `open_f32_loopback_stream`, the cpal error-kind classifier with a no-drift test against the microphone classifier, and the Windows-only tests.
