@@ -125,6 +125,9 @@ pub mod capture_system_audio;
 /// 008A Windows microphone adapter core over an injected audio backend.
 pub mod capture_windows;
 
+/// 008B Windows system-audio loopback adapter core over an injected backend.
+pub mod capture_windows_system_audio;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 
