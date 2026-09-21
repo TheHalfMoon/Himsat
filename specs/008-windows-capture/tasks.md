@@ -67,6 +67,15 @@
 - [x] L005 Define the system-audio fault taxonomy and map every class onto the closed 006A machine for start and runtime, keeping a reroute non-interrupting and proving no mapping produces a refused transition.
 - [x] L006 Derive the portable 006B reason from the same taxonomy with a no-drift test, and prove an exclusivity conflict surfaces through `HealthMonitor`.
 - [x] L007 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
-- [ ] L008 Exact-head qualify grain 1: pull-request CI and R3 SUCCESS with all three Rust platform jobs green.
-- [ ] L009 Reconcile and merge under expected-head protection, then record grain 1 merge truth.
-- [ ] L010 Promote the loopback binding grain: `CpalLoopbackBackend`, `LiveLoopbackStream`, `open_f32_loopback_stream`, the cpal error-kind classifier with a no-drift test against the microphone classifier, and the Windows-only tests.
+- [x] L008 Exact-head qualify grain 1: PR #209 head `1adf8df2042fb6f8e2e41076ad65a0cd3b5f1761` passed pull-request CI `35660734731` and R3 `35660734833` on attempt 1, with ubuntu 9m54s, macOS 5m20s, and windows 18m9s all SUCCESS.
+- [x] L009 Reconcile and merge under expected-head protection: zero submitted reviews, zero review threads, OCR delegation ledger `5768157619` (2/2 reviewable files, 3 markdown exclusions stated, no blocking finding), `MERGEABLE`/`CLEAN`. Canonical merge `f69ada64895d68779276d7eb6660564c6825aaa8`, parents `5787979` + `1adf8df`, merge tree `a15c1ad3d31e534200e7cfafb9a8fc29a3329433` equal to the accepted head tree, signature verified, post-merge CI `35662990699` / R3 `35662990678` SUCCESS.
+- [x] L010 Promote the loopback binding grain: `CpalLoopbackBackend`, `LiveLoopbackStream`, `open_f32_loopback_stream`, the cpal error-kind classifier with a no-drift test against the microphone classifier, and the Windows-only tests. `NEXT_IMPLEMENTATION_LEAF = SPEC_008B_WINDOWS_LOOPBACK_BINDING_GRAIN`.
+
+## Implementation — 008B grain 2 (cpal/WASAPI loopback binding)
+
+- [x] M001 Implement `classify_error`, `config_from_supported`, `CpalLoopbackBackend`, `cpal_default_endpoint_id`, and `cpal_endpoint_info` inside `cfg(target_os = "windows")`, taking the loopback configuration from `default_output_config()`.
+- [x] M002 Implement `LiveLoopbackStream` and `open_f32_loopback_stream`: resolve the render endpoint by id, open it as an input stream so the closed binding applies `AUDCLNT_STREAMFLAGS_LOOPBACK`, refuse non-F32 mix formats as build faults, and keep the callback to a single borrowed-frame forward.
+- [x] M003 Add the five Windows-only tests, including the no-drift classifier guard against the microphone adapter and the `HIMSAT_LIVE_LOOPBACK_TEST=1` env-gated live opener that is NOT RUN in CI.
+- [x] M004 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
+- [ ] M005 Exact-head qualify grain 2: pull-request CI and R3 SUCCESS with the `windows-latest` Rust job green.
+- [ ] M006 Reconcile and merge under expected-head protection, then record grain 2 merge truth and promote 008C (lifecycle and evidence matrix).
