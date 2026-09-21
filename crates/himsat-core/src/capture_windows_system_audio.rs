@@ -1,10 +1,10 @@
 //! 008B Windows system-audio adapter core over an injected loopback backend.
 //!
 //! Portable render-endpoint selection, identity, and fault-classification
-//! logic for the Windows system-audio pathway. The closed cpal/WASAPI
-//! loopback binding arrives in the next grain behind this trait, so
-//! nothing here touches the OS, and the portable core is proven on every
-//! CI host before any Windows-only byte exists.
+//! logic for the Windows system-audio pathway, plus the closed cpal/WASAPI
+//! loopback binding behind `cfg(target_os = "windows")`. The portable core
+//! is proven on every CI host independently of the binding, which is
+//! exercised only on Windows.
 //!
 //! The pathway is the OS-sanctioned WASAPI loopback mechanism only: the
 //! adapter opens a *render* endpoint as a capture stream, and the closed
@@ -317,6 +317,195 @@ pub fn endpoint_info(
     }
 }
 
+/// cpal trait imports for the 008B OS binding (Windows only).
+#[cfg(target_os = "windows")]
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
+/// Classifies a cpal error kind plus the stage it occurred in for the
+/// loopback pathway. Pure, so it is unit-tested on the Windows CI host
+/// without audio hardware; a test also forbids drift from the
+/// microphone adapter's classification of the same kinds.
+#[cfg(target_os = "windows")]
+#[must_use]
+pub fn classify_error(kind: cpal::ErrorKind, stage: StreamStage) -> WindowsSystemAudioError {
+    match kind {
+        cpal::ErrorKind::PermissionDenied => WindowsSystemAudioError::PermissionDenied,
+        cpal::ErrorKind::DeviceBusy => WindowsSystemAudioError::ExclusiveModeConflict,
+        cpal::ErrorKind::DeviceNotAvailable => WindowsSystemAudioError::EndpointUnavailable,
+        cpal::ErrorKind::HostUnavailable => WindowsSystemAudioError::AudioServiceUnavailable,
+        cpal::ErrorKind::DeviceChanged => WindowsSystemAudioError::RouteRerouted,
+        _ => WindowsSystemAudioError::StreamFault(stage),
+    }
+}
+
+/// Reads a cpal supported configuration into the portable form through
+/// the shared sample-format mapping.
+#[cfg(target_os = "windows")]
+fn config_from_supported(supported: &cpal::SupportedStreamConfig) -> Option<DeviceConfig> {
+    let format = crate::capture_windows::portable_sample_format(supported.sample_format())?;
+    let config = supported.config();
+    Some(DeviceConfig {
+        channels: config.channels,
+        sample_rate_hz: config.sample_rate,
+        format,
+    })
+}
+
+/// cpal-backed implementation of [`LoopbackBackend`]: the 008B OS
+/// binding over the render endpoints of the default host.
+#[cfg(target_os = "windows")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct CpalLoopbackBackend;
+
+/// Resolves the OS default render endpoint id, if the OS names one.
+#[cfg(target_os = "windows")]
+fn cpal_default_endpoint_id(host: &cpal::Host) -> Option<String> {
+    host.default_output_device()
+        .and_then(|device| device.id().ok())
+        .map(|id| id.id().to_owned())
+}
+
+/// Reads one render endpoint. The loopback configuration is the
+/// endpoint's default *output* configuration, because the closed binding
+/// documents that a shared-mode loopback stream on a render endpoint
+/// delivers the render mix format. Endpoints whose id cannot be resolved
+/// are skipped rather than name-keyed.
+#[cfg(target_os = "windows")]
+fn cpal_endpoint_info(
+    device: &cpal::Device,
+    default_id: Option<&str>,
+) -> Option<RenderEndpointInfo> {
+    let endpoint_id = device.id().ok()?.id().to_owned();
+    let name = device
+        .description()
+        .map(|description| description.name().to_owned())
+        .unwrap_or_default();
+    let loopback_config = device
+        .default_output_config()
+        .ok()
+        .as_ref()
+        .and_then(config_from_supported);
+    Some(RenderEndpointInfo {
+        is_default: default_id == Some(endpoint_id.as_str()),
+        endpoint_id,
+        name,
+        loopback_config,
+    })
+}
+
+#[cfg(target_os = "windows")]
+impl LoopbackBackend for CpalLoopbackBackend {
+    fn render_endpoints(&self) -> Result<Vec<RenderEndpointInfo>, WindowsSystemAudioError> {
+        let host = cpal::default_host();
+        let default_id = cpal_default_endpoint_id(&host);
+        let devices = host
+            .output_devices()
+            .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+        let mut out = Vec::new();
+        for device in devices {
+            if let Some(info) = cpal_endpoint_info(&device, default_id.as_deref()) {
+                out.push(info);
+            }
+        }
+        Ok(out)
+    }
+
+    fn default_render_endpoint_id(&self) -> Option<String> {
+        cpal_default_endpoint_id(&cpal::default_host())
+    }
+}
+
+/// Live cpal loopback stream over a render endpoint. Dropping stops
+/// capture: callers must drive `StopRequested`/`StopCompleted` through
+/// the session machine first so a drop is never a silent stop.
+#[cfg(target_os = "windows")]
+pub struct LiveLoopbackStream {
+    stream: cpal::Stream,
+    endpoint_id: String,
+    config: DeviceConfig,
+}
+
+#[cfg(target_os = "windows")]
+impl LiveLoopbackStream {
+    /// OS endpoint id of the looped-back render endpoint.
+    #[must_use]
+    pub fn endpoint_id(&self) -> &str {
+        &self.endpoint_id
+    }
+
+    /// Configuration the loopback stream was built with.
+    #[must_use]
+    pub const fn config(&self) -> DeviceConfig {
+        self.config
+    }
+
+    /// Pauses frame delivery without tearing down.
+    pub fn pause(&self) -> Result<(), WindowsSystemAudioError> {
+        self.stream
+            .pause()
+            .map_err(|error| classify_error(error.kind(), StreamStage::Play))
+    }
+
+    /// Resumes a paused stream.
+    pub fn resume(&self) -> Result<(), WindowsSystemAudioError> {
+        self.stream
+            .play()
+            .map_err(|error| classify_error(error.kind(), StreamStage::Play))
+    }
+}
+
+/// Opens an F32 loopback stream on the named render endpoint and starts
+/// it flowing. The closed binding sets the WASAPI loopback flag itself
+/// for a render endpoint, so this is the OS-sanctioned loopback path with
+/// no private API and no entitlement escape. Frames arrive via
+/// `on_frames`; faults arrive via `on_error` already classified, with the
+/// OS detail string for telemetry. Non-F32 render formats are refused as
+/// build faults (format negotiation widens only with Gate E evidence,
+/// never by silent conversion).
+#[cfg(target_os = "windows")]
+pub fn open_f32_loopback_stream(
+    endpoint_id: &str,
+    mut on_frames: impl FnMut(&[f32]) + Send + 'static,
+    mut on_error: impl FnMut(WindowsSystemAudioError, String) + Send + 'static,
+) -> Result<LiveLoopbackStream, WindowsSystemAudioError> {
+    let host = cpal::default_host();
+    let mut found = host
+        .output_devices()
+        .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+    let device = found
+        .find(|candidate| candidate.id().is_ok_and(|id| id.id() == endpoint_id))
+        .ok_or(WindowsSystemAudioError::EndpointUnavailable)?;
+    let supported = device
+        .default_output_config()
+        .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+    if supported.sample_format() != cpal::SampleFormat::F32 {
+        return Err(WindowsSystemAudioError::StreamFault(StreamStage::Build));
+    }
+    let config = config_from_supported(&supported)
+        .ok_or(WindowsSystemAudioError::StreamFault(StreamStage::Build))?;
+    let stream = device
+        .build_input_stream(
+            supported.config(),
+            move |frames: &[f32], _info: &cpal::InputCallbackInfo| {
+                on_frames(frames);
+            },
+            move |error| {
+                let detail = error.to_string();
+                on_error(classify_error(error.kind(), StreamStage::Play), detail);
+            },
+            None,
+        )
+        .map_err(|error| classify_error(error.kind(), StreamStage::Build))?;
+    stream
+        .play()
+        .map_err(|error| classify_error(error.kind(), StreamStage::Play))?;
+    Ok(LiveLoopbackStream {
+        stream,
+        endpoint_id: endpoint_id.to_owned(),
+        config,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -598,5 +787,135 @@ mod tests {
         unique.sort_unstable();
         unique.dedup();
         assert_eq!(unique.len(), classifiers.len());
+    }
+}
+
+/// Windows-only binding tests. Classification is pure and runs without
+/// audio hardware, and one test forbids drift from the microphone
+/// adapter's classification of the same cpal kinds. Stream opening stays
+/// behind `HIMSAT_LIVE_LOOPBACK_TEST=1` so CI never captures audio.
+#[cfg(all(test, target_os = "windows"))]
+mod windows_tests {
+    use super::{
+        CpalLoopbackBackend, LoopbackBackend, StreamStage, WindowsSystemAudioError, classify_error,
+        open_f32_loopback_stream, select_loopback_input,
+    };
+    use crate::capture_windows::{SampleFormat, classify_error as classify_microphone_error};
+
+    fn kinds() -> Vec<cpal::ErrorKind> {
+        vec![
+            cpal::ErrorKind::PermissionDenied,
+            cpal::ErrorKind::DeviceBusy,
+            cpal::ErrorKind::DeviceNotAvailable,
+            cpal::ErrorKind::HostUnavailable,
+            cpal::ErrorKind::DeviceChanged,
+            cpal::ErrorKind::UnsupportedConfig,
+            cpal::ErrorKind::StreamInvalidated,
+            cpal::ErrorKind::Xrun,
+            cpal::ErrorKind::Other,
+        ]
+    }
+
+    #[test]
+    fn loopback_classification_agrees_with_the_microphone_adapter() {
+        for kind in kinds() {
+            for stage in [StreamStage::Build, StreamStage::Play] {
+                assert_eq!(
+                    classify_error(kind, stage).classifier(),
+                    classify_microphone_error(kind, stage).classifier(),
+                    "Windows adapters classify {kind:?} differently at {stage:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn loopback_classification_carries_the_stage_on_fallbacks() {
+        assert_eq!(
+            classify_error(cpal::ErrorKind::UnsupportedConfig, StreamStage::Build),
+            WindowsSystemAudioError::StreamFault(StreamStage::Build)
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::Xrun, StreamStage::Play),
+            WindowsSystemAudioError::StreamFault(StreamStage::Play)
+        );
+        assert_eq!(
+            classify_error(cpal::ErrorKind::DeviceChanged, StreamStage::Play),
+            WindowsSystemAudioError::RouteRerouted
+        );
+    }
+
+    #[test]
+    fn cpal_enumeration_never_panics_and_selects_consistently() {
+        let backend = CpalLoopbackBackend;
+        match backend.render_endpoints() {
+            Ok(endpoints) => {
+                let selected = select_loopback_input(&backend, None);
+                if endpoints.is_empty() {
+                    assert!(selected.is_err());
+                } else {
+                    let selected = selected.expect("non-empty enumeration selects");
+                    let descriptor = selected.descriptor(himsat_events::SessionId::new(4));
+                    assert!(!descriptor.label().is_empty());
+                    assert!(endpoints.iter().all(|info| !info.endpoint_id.is_empty()));
+                }
+            }
+            Err(error) => {
+                assert!(
+                    matches!(
+                        error,
+                        WindowsSystemAudioError::NoRenderEndpoints
+                            | WindowsSystemAudioError::AudioServiceUnavailable
+                    ),
+                    "enumeration fails only as absence or service unavailability"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn cpal_default_endpoint_agrees_with_selection() {
+        let backend = CpalLoopbackBackend;
+        if backend.default_render_endpoint_id().is_some() {
+            assert!(select_loopback_input(&backend, None).is_ok());
+        }
+    }
+
+    #[test]
+    fn live_loopback_open_reports_frames_or_classified_fault() {
+        if std::env::var("HIMSAT_LIVE_LOOPBACK_TEST").is_err() {
+            return;
+        }
+        let backend = CpalLoopbackBackend;
+        let selected = select_loopback_input(&backend, None).expect("live test needs an endpoint");
+        assert!(!selected.info.endpoint_id.is_empty());
+        match open_f32_loopback_stream(
+            &selected.info.endpoint_id,
+            move |_frames: &[f32]| {},
+            move |_error, _detail| {},
+        ) {
+            Ok(stream) => {
+                assert_eq!(stream.endpoint_id(), selected.info.endpoint_id);
+                assert!(stream.config().sample_rate_hz > 0);
+                assert!(stream.config().channels > 0);
+                assert_eq!(stream.config().format, SampleFormat::F32);
+                assert!(stream.pause().is_ok());
+                assert!(stream.resume().is_ok());
+                drop(stream);
+            }
+            Err(error) => {
+                assert!(
+                    matches!(
+                        error,
+                        WindowsSystemAudioError::PermissionDenied
+                            | WindowsSystemAudioError::ExclusiveModeConflict
+                            | WindowsSystemAudioError::EndpointUnavailable
+                            | WindowsSystemAudioError::AudioServiceUnavailable
+                            | WindowsSystemAudioError::StreamFault(_)
+                    ),
+                    "live loopback open failed with an unexpected classification"
+                );
+            }
+        }
     }
 }
