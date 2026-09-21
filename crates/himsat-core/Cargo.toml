@@ -30,6 +30,7 @@ security-framework = { version = "=3.7.0", default-features = false, features = 
 secret-service = { version = "=5.2.0", default-features = false, features = ["rt-tokio-crypto-rust"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+cpal = { version = "=0.18.2", default-features = false }
 windows-acl = { version = "=0.3.0" }
 fs_at = { version = "=0.2.1" }
 windows-permissions = { version = "=0.2.4" }

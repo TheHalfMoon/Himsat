@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_SHAPING_QUALIFIED
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_DEPENDENCY_ADOPTION_PENDING_THIS_UNIT_QUALIFICATION
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,7 +219,7 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_008_FIRST_IMPLEMENTATION_GRAIN
+NEXT_IMPLEMENTATION_LEAF = SPEC_008_WINDOWS_MICROPHONE_IMPLEMENTATION_GRAIN
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
@@ -438,6 +438,13 @@ SPEC_008_SHAPING_POSTMERGE_CI = 35631397479_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008_SHAPING_POSTMERGE_R3 = 35631396992_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008_SHAPING_REVIEW_RECONCILIATION = OCR_DELEGATED_ZERO_REVIEWABLE_DOCS_ONLY_NO_BLOCKING_FINDING
 SPEC_008_PLATFORM_SCOPE = WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE
+SPEC_008A_DEPENDENCY_ADOPTION_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008A_DEPENDENCY_ADOPTION_DEPENDENCY = cpal_0.18.2_WINDOWS_TARGET_EDGE_ONLY
+SPEC_008A_DEPENDENCY_ADOPTION_REGISTRY = 211_UNCHANGED_CPAL_ALREADY_REGISTERED
+SPEC_008A_DEPENDENCY_ADOPTION_LOCK_DELTA = NONE
+SPEC_008A_DEPENDENCY_ADOPTION_WASAPI_EVIDENCE = CPAL_0.18.2_INDEX_METADATA_WINDOWS_0.62_NONOPTIONAL_NO_ASIO
+SPEC_008A_DEPENDENCY_ADOPTION_EVIDENCE = 008a-windows-cpal-adoption-evidence.md
+SPEC_008_WINDOWS_MICROPHONE_GRAIN_STATE = BOUND_NEXT_PENDING_ADOPTION_QUALIFICATION
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1346,3 +1353,72 @@ entries under the same 004P-style adoption gate precedent used for
 007A/007B, before any Windows adapter code is written. Specification 009
 (Linux capture) shaping remains unauthorized until 008 is itself
 `CLOSED_CANONICAL`.
+
+## Specification 008 implementation — 008A Windows `cpal` dependency adoption (pending this unit's qualification)
+
+This unit re-verified live canonical truth before changing anything:
+`origin/main = 57efb2e3c5ef34d8205babae68121c13c609519c` (PR #203,
+parents `fa797a8288f26e98c5460e8f766f2acb44957101` +
+`bed24a72e5eaeb3afa2c9f45e9671562aa9794c2`, merge tree
+`5910a44e1600690722d0f95efd5e62c6795de873` equal to the accepted head
+tree, signature present), with push-triggered post-merge CI
+`35635478204` and R3 `35635480708` SUCCESS on attempt 1. Open PRs
+against `main` are only the historical 004A review-only PRs (#12, #18,
+#24, #25, #27); open issues #13, #14, #17, #125 carry no 008
+implementation authority. This matches
+`SPEC_008_SHAPING_STATUS = SHAPING_QUALIFIED` and makes the 008
+implementation grains the authorized work.
+
+The bounded adoption admits the already-registered `cpal =0.18.2` to the
+Windows target only:
+
+```toml
+[target.'cfg(target_os = "windows")'.dependencies]
+cpal = { version = "=0.18.2", default-features = false }
+```
+
+with the matching `EXPECTED_WINDOWS_DIRECT` expectation added to
+`tools/004p_dependency_closure.py`. The change is closed by the same gate
+precedent as 007A/007B: the registry already carries
+`cargo-cpal-0.18.2` (Apache-2.0, `RustAudio/cpal` at
+`e1612d5d98152f8dc2a62e1b51ef7cbf4f7f26b7`, checksum
+`6f02e8d0327b42d3e2e4ab2119af397344eb9fc54a34bf0ddeaa1277af8681f1`), so
+this unit adds no registry, notice, SBOM, workflow, or `Cargo.lock` byte:
+the external-package count stays 211, the provider count stays 41, and
+`cargo metadata --locked` succeeds against the existing lockfile.
+
+The Windows backend is evidenced from immutable crates.io index metadata
+rather than assumed: cpal 0.18.2 declares `default = []`, depends
+non-optionally on `windows ^0.62` (Win32_Media, Win32_Media_Audio,
+Win32_Media_KernelStreaming, Win32_Media_Multimedia,
+Win32_Devices_Properties, Win32_System_Com_StructuredStorage,
+Win32_System_Threading, Win32_System_Performance, Win32_Security,
+Win32_System_SystemServices, Win32_System_Variant,
+Win32_UI_Shell_PropertiesSystem, Win32_Foundation) plus
+`windows-core ^0.62`, and leaves `asio-sys`, `audio_thread_priority`,
+`jack`, and `num-traits` disabled. Local
+`cargo tree --locked --target x86_64-pc-windows-msvc -p cpal` resolves
+exactly that subtree, and every crate in it was already locked and
+registered. No ASIO SDK, no realtime priority helper, and no private-API
+path is pulled in by this edge.
+
+Local gates on the candidate head: `004P P005/P006 CLOSURE PASS`,
+`PROVENANCE V2 PASS`, `GENERATED OUTPUTS PASS`, `cargo metadata
+--locked` exit 0, `cargo fmt --all -- --check` clean. Windows
+compilation, clippy, and tests are **not** claimed from this
+workstation: it has no MSVC linker, so Windows build/test evidence comes
+from the `windows-latest` CI job on the exact head and from the
+push-triggered runs on the canonical merge SHA.
+`008a-windows-cpal-adoption-evidence.md` is the controlling record for
+this unit.
+
+If this adoption unit is exact-head qualified, reconciled, expected-head
+merged, exact-parent/tree verified, and post-merge CI/R3 qualified, then
+`SPEC_008A_DEPENDENCY_ADOPTION_STATE` becomes `CANONICAL_QUALIFIED` at
+its recorded merge SHA and the next authorized node is the Windows
+microphone implementation grain: `capture_windows.rs` over the closed
+cpal binding, mapped onto the untouched 006A/006B/006C contracts.
+`SPEC_008_PLATFORM_SCOPE` stays
+`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`; system-audio loopback (008B),
+the lifecycle/evidence matrix (008C), Specification 009, and all
+release/FIPS/compliance claims remain unauthorized.
