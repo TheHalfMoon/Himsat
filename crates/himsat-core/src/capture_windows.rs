@@ -133,6 +133,9 @@ impl WindowsMicError {
 /// Backend contract the OS binding implements.
 pub trait MicrophoneBackend {
     /// Lists currently usable input devices, each with its endpoint id.
+    /// A backend must never report an empty endpoint id: identity derives
+    /// from it, so empty ids would collide into one source. The OS
+    /// binding skips any endpoint whose id it cannot resolve.
     fn input_devices(&self) -> Result<Vec<InputDeviceInfo>, WindowsMicError>;
 
     /// OS endpoint id of the default input, when the OS names one.
@@ -425,10 +428,13 @@ mod tests {
     }
 
     #[test]
-    fn stable_ids_are_domain_separated_from_other_source_kinds() {
-        let id = stable_source_id("x");
-        assert_ne!(id, super::stable_source_id(""));
-        assert_ne!(id, himsat_events::SourceId::new(0));
+    fn stable_ids_are_domain_separated_from_the_macos_adapter() {
+        // The same endpoint/device string must not collide across the two
+        // platform adapters, because the domain tag is part of the hash.
+        assert_ne!(
+            stable_source_id("shared-name"),
+            crate::capture_macos::stable_source_id("shared-name")
+        );
     }
 
     #[test]
