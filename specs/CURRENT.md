@@ -3,8 +3,8 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_006_CLOSED_CANONICAL_SPEC_007C_CLOSED_CANONICAL_SPEC_007_CLOSEOUT_IN_PROGRESS
-ACTIVE_SPECIFICATION = 004-vault-key-crypto
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_SHAPING_AUTHORIZED
+ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
 SPEC_002_DISPOSITION = CLOSED_CANONICAL
@@ -219,9 +219,9 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_007_CLOSEOUT_RECONCILIATION
+NEXT_IMPLEMENTATION_LEAF = SPEC_008_SHAPING
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
-PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_007_CLOSEOUT
+PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
 SPEC_005_SHAPING_PREMERGE_CI = 35094188292_SUCCESS_PULL_REQUEST_ATTEMPT_1
 SPEC_005_SHAPING_PREMERGE_R3 = 35094188252_SUCCESS_PULL_REQUEST_ATTEMPT_1
@@ -421,6 +421,13 @@ B007C3_POSTMERGE_R3 = 35618918612_SUCCESS_PUSH_ATTEMPT_1
 B007C3_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 B007C_AGGREGATE_EVIDENCE = 007c-system-tap-streaming-final-evidence.md_CANONICAL_QUALIFIED_PENDING_THIS_RECONCILIATION_MERGE
 B007C_DISPOSITION = CANONICAL_CLOSED
+SPEC_007_DISPOSITION = CLOSED_CANONICAL_IF_THIS_CLOSEOUT_RECONCILIATION_QUALIFIES
+SPEC_007_CLOSEOUT_EVIDENCE = 007-macos-capture-closeout-final-evidence.md_CANONICAL_QUALIFIED_PENDING_THIS_CLOSEOUT_MERGE
+SPEC_007_LEAF_DISPOSITIONS = B007A_CANONICAL_CLOSED_B007B_CANONICAL_CLOSED_B007C_CANONICAL_CLOSED
+SPEC_007_SHAPING_QUALIFIED = 61a300c844befe273c3a89577a485f89087812be_CI_35278832383_R3_35278832399_SUCCESS
+SPEC_007C_SHAPING_QUALIFIED = 8d379af2042cf23ea4da1f70e03f9a7675296fb0_CI_35315392601_R3_35315392695_SUCCESS
+SPEC_007_PLATFORM_SCOPE = MACOS_ONLY_DARWIN_ARM64_EVIDENCED
+SPEC_008_SHAPING = AUTHORIZED_AFTER_THIS_CLOSEOUT_QUALIFIES
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1255,3 +1262,37 @@ closeout qualifies.
 - Specification 005 remains blocked pending genuine Specification 004 `CLOSED_CANONICAL` closeout.
 - No new donor/dependency adoption is authorized by this reconciliation.
 - No release, FIPS, compliance, universal app-exclusive, universal user-presence, universal atomic-anchor, or universal hardware-backed claim is authorized.
+
+## Specification 007 closeout reconciliation
+
+Specification 007 (macOS capture) satisfies its closeout rule and is
+`CLOSED_CANONICAL_IF_THIS_CLOSEOUT_RECONCILIATION_QUALIFIES`. The
+lineage is: reviewed shaping `61a300c844befe273c3a89577a485f89087812be`
+(PR #183; pre-merge CI `35277118177` / R3 `35277118298`; post-merge CI
+`35278832383` / R3 `35278832399`) plus the 007C shaping amendment
+`8d379af2042cf23ea4da1f70e03f9a7675296fb0` (PR #195; post-merge CI
+`35315392601` / R3 `35315392695`); three bounded implementation leaves
+B007A (microphone, PR #185/#189 with the B007 gate saga), B007B
+(system tap, PR #191-193), and B007C (system-tap streaming and
+lifecycle, PR #196-199 plus the reconciliation PR #200 at canonical
+merge `2c6dd53dfd8a5b27c1d7ea4bae0475da6f3fb5b4`); reconciliation per
+leaf; expected-head merges with merge-tree equality throughout; and
+post-merge CI/R3 SUCCESS on every canonical merge SHA.
+`007-macos-capture-closeout-final-evidence.md` is the controlling
+closeout record and carries the full per-merge ledger, the acceptance
+proof, and the honesty bounds.
+
+The 007 platform claim is macOS-only, evidenced on darwin/arm64; no
+universal audio-access, multi-hour endurance, or journal-sink-wiring
+claim is made. The accepted macOS dependency edges are cpal `=0.18.2`
+and cidre `=0.29.0` (registry 211), both adopted under bounded
+adoption gates with full closure/provenance evidence; no donor code
+was copied. This closeout changes no product code or dependency byte
+and does not silently repair the carried CI flake.
+
+If this closeout reconciliation later becomes exact-head qualified,
+expected-head merged, exact parent/tree verified, and post-merge
+CI/R3 qualified, Specification 008 (Windows capture) shaping becomes
+the next authorized node. Specification 008 implementation, release,
+FIPS, and compliance claims remain unauthorized until 008 shaping
+qualifies.
