@@ -667,6 +667,78 @@ impl Drop for LifecycleWatch {
     }
 }
 
+/// Sustained-flow loss account for a running tap stream
+/// (007C-3). Counts callbacks, frames, and stream errors
+/// against wall-clock expectation so a long session reconciles
+/// to zero unexplained loss. Portable data; the owner feeds it
+/// from the stream callbacks. All counters saturate instead of
+/// wrapping: an overflowed account reports saturation, never a
+/// smaller loss than reality.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct StreamLossAccount {
+    callbacks: u64,
+    frames: u64,
+    stream_errors: u32,
+    saturated: bool,
+}
+
+impl StreamLossAccount {
+    /// Records one callback delivering `frames` samples.
+    pub fn note_callback(&mut self, frames: usize) {
+        let frames = u64::try_from(frames).unwrap_or(u64::MAX);
+        match (
+            self.callbacks.checked_add(1),
+            self.frames.checked_add(frames),
+        ) {
+            (Some(callbacks), Some(total)) => {
+                self.callbacks = callbacks;
+                self.frames = total;
+            }
+            _ => self.saturated = true,
+        }
+    }
+
+    /// Records one stream error callback.
+    pub fn note_stream_error(&mut self) {
+        self.stream_errors = self.stream_errors.saturating_add(1);
+    }
+
+    /// Frames the wall clock expects at `sample_rate_hz` over
+    /// `elapsed`. Saturates instead of wrapping.
+    #[must_use]
+    pub fn expected_frames(sample_rate_hz: u32, elapsed: std::time::Duration) -> u64 {
+        u64::from(sample_rate_hz).saturating_mul(elapsed.as_secs())
+            + u64::from(sample_rate_hz).saturating_mul(u64::from(elapsed.subsec_millis())) / 1_000
+    }
+
+    /// True when every expected frame arrived with no stream
+    /// error and no saturation. Short windows under-count by
+    /// design (a partial callback is still in flight), so callers
+    /// compare over settled windows only.
+    #[must_use]
+    pub fn reconciles(&self, expected: u64) -> bool {
+        !self.saturated && self.stream_errors == 0 && self.frames >= expected
+    }
+
+    /// Callback count observed.
+    #[must_use]
+    pub const fn callbacks(&self) -> u64 {
+        self.callbacks
+    }
+
+    /// Frame count observed.
+    #[must_use]
+    pub const fn frames(&self) -> u64 {
+        self.frames
+    }
+
+    /// Stream-error count observed.
+    #[must_use]
+    pub const fn stream_errors(&self) -> u32 {
+        self.stream_errors
+    }
+}
+
 /// cpal device-name lister for the production watch (macOS).
 /// Unusable routes are skipped, never faulted: a momentarily
 /// undescribable device is not a route change.
@@ -1008,6 +1080,30 @@ mod tests {
     }
 
     #[test]
+    fn loss_account_reconciles_exact_flow_and_flags_gaps() {
+        use std::time::Duration;
+        assert_eq!(
+            super::StreamLossAccount::expected_frames(48_000, Duration::from_secs(2)),
+            96_000
+        );
+        assert_eq!(
+            super::StreamLossAccount::expected_frames(48_000, Duration::from_millis(1500)),
+            72_000
+        );
+        let mut account = super::StreamLossAccount::default();
+        account.note_callback(512);
+        account.note_callback(512);
+        assert_eq!(account.callbacks(), 2);
+        assert_eq!(account.frames(), 1024);
+        assert_eq!(account.stream_errors(), 0);
+        assert!(account.reconciles(1024));
+        assert!(!account.reconciles(1025));
+        account.note_stream_error();
+        assert_eq!(account.stream_errors(), 1);
+        assert!(!account.reconciles(1024));
+    }
+
+    #[test]
     fn assemble_faults_classify_as_route_events_without_detail_loss() {
         let error = SystemTapError::TapFault(TapStage::Assemble);
         assert!(matches!(
@@ -1200,6 +1296,72 @@ mod live_tests {
             drained += 1;
         }
         assert!(drained < 100, "watch spammed signals on stable routes");
+    }
+
+    #[test]
+    fn live_sustained_tap_flow_reconciles_against_wall_clock() {
+        if std::env::var("HIMSAT_LIVE_TAP_TEST").is_err() {
+            return;
+        }
+        let (frames_tx, frames_rx) = std::sync::mpsc::channel::<usize>();
+        let (errors_tx, errors_rx) = std::sync::mpsc::channel::<()>();
+        let stream = match super::open_aggregate_tap_stream(
+            move |frames| {
+                let _ = frames_tx.send(frames.len());
+            },
+            move |_error, _detail| {
+                let _ = errors_tx.send(());
+            },
+        ) {
+            Ok(stream) => stream,
+            Err((error, detail)) => {
+                assert!(!detail.is_empty());
+                let mut session = CaptureSession::new(SESSION);
+                assert!(session.apply(CaptureEvent::Prepare).is_ok());
+                assert!(session.apply(event_for_tap_start_failure(&error)).is_ok());
+                return;
+            }
+        };
+        let rate = stream.config.sample_rate_hz;
+        let window = std::time::Duration::from_secs(5);
+        let deadline = std::time::Instant::now() + window;
+        let mut account = super::StreamLossAccount::default();
+        let mut max_callback = 0_usize;
+        let mut first_at: Option<std::time::Instant> = None;
+        let mut last_at = std::time::Instant::now();
+        while std::time::Instant::now() < deadline {
+            match frames_rx.recv_timeout(std::time::Duration::from_millis(300)) {
+                Ok(len) => {
+                    let now = std::time::Instant::now();
+                    first_at.get_or_insert(now);
+                    last_at = now;
+                    max_callback = max_callback.max(len);
+                    account.note_callback(len);
+                }
+                Err(_) => break,
+            }
+        }
+        let errors = errors_rx.try_iter().count();
+        for _ in 0..errors {
+            account.note_stream_error();
+        }
+        drop(stream);
+        let first = first_at.expect("sustained flow delivered callbacks");
+        let settled = last_at - first;
+        let expected = super::StreamLossAccount::expected_frames(rate, settled);
+        let tolerance = u64::try_from(max_callback).unwrap_or(u64::MAX);
+        assert_eq!(
+            account.stream_errors(),
+            0,
+            "stream errors during sustained flow"
+        );
+        assert!(
+            account.frames() + tolerance >= expected,
+            "unexplained loss: frames={} expected={} tolerance={}",
+            account.frames(),
+            expected,
+            tolerance
+        );
     }
 
     #[test]
