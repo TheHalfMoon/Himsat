@@ -27,7 +27,22 @@
 - [x] I004 Prove the WASAPI backend subset from immutable crates.io index metadata (`default = []`; non-optional `windows ^0.62` with the Win32_Media* features and `windows-core ^0.62`; ASIO/JACK/`audio_thread_priority`/`num-traits` disabled) and from `cargo tree --target x86_64-pc-windows-msvc -p cpal`.
 - [x] I005 Record that no `Cargo.lock`, registry, notice, SBOM, or workflow byte changes: 211 external packages, 41 provider packages, unchanged.
 - [x] I006 Run the local gates: `004p_dependency_closure.py`, `provenance_gate.py validate`, `provenance_gate.py check-generated`, `cargo metadata --locked`, `cargo fmt --check`.
-- [ ] I007 Exact-head qualify the adoption head: pull-request CI and R3 SUCCESS with the `windows-latest` Rust job green.
-- [ ] I008 Reconcile diff/reviews/threads/`main`/mergeability; billing-blocked/skipped/absent review output is not PASS.
-- [ ] I009 Merge under explicit expected-head protection; verify parents, tree equality, and signature.
-- [ ] I010 Require post-merge CI and R3 SUCCESS on the exact canonical merge, then record the adoption merge truth and promote the Windows microphone implementation grain.
+- [x] I007 Exact-head qualify the adoption head: PR #206 head `f0009d0eceee7d5d1d0acc507122686215ab5b6b` passed pull-request CI `35646948025` and R3 `35646948045` on attempt 1, with `Rust / windows-latest` SUCCESS (17m42s).
+  - Supersede record: PR #204 head `66ea9815c40c70e42663c775e1337502cf55e076` was never mergeable because a pull request's recorded comparison base cannot follow a base-branch move; its windows CI `35641324753` / job `106471568452` still proved the Windows build, lint, test, and dependency-closure steps SUCCESS on the identical content. It was closed unmerged, not deleted.
+- [x] I008 Reconcile diff/reviews/threads/`main`/mergeability: zero submitted reviews (CodeRabbit "manual review required for this OSS repository", cubic skipping), zero review threads, OCR delegation ledger comment `5765808063`, `MERGEABLE`/`CLEAN`, proof verdict `REVIEW` with the single manifest reason and `DIFFCIPLINE B008A DEPENDENCY EXCEPTION PASS`.
+- [x] I009 Merge under explicit expected-head protection (`expected_head_sha = f0009d0eceee7d5d1d0acc507122686215ab5b6b`, `merge_method = merge`): canonical merge `c1ad38d2dd151ceb0139ec7fd7caf2c4a337ed4c`, parents `c2b4bb54cb72014d3784d925d7e4433783b0a18b` + `f0009d0eceee7d5d1d0acc507122686215ab5b6b`, merge tree `a79615b1508cb2543ee81678175c793a1a49694a` equal to the accepted head tree, signature verified.
+- [x] I010 Post-merge qualification on the exact canonical merge: push CI `35649474044` SUCCESS and R3 `35649473639` SUCCESS, both attempt 1. `SPEC_008A_DEPENDENCY_ADOPTION_STATE = CANONICAL_QUALIFIED`.
+- [x] I011 Trusted-base mechanism: the Diffcipline adoption gate had to authorize the manifest-change diff from its own immutable base. PR #205 (merge `c2b4bb54cb72014d3784d925d7e4433783b0a18b`, pre-merge CI `35643377757` / R3 `35643377577`, post-merge CI `35645592708` / R3 `35645592747`) added the pinned B008A exception; the candidate then qualified from that base.
+
+## Implementation — 008A grain 1 (Windows microphone adapter core)
+
+- [x] J001 Declare the portable core in `crates/himsat-core/src/capture_windows.rs` and register the module in `crates/himsat-core/src/lib.rs`; no OS call and no `cpal` reference in this grain.
+- [x] J002 Model Windows endpoint identity on the OS endpoint id (not the display name) and derive stable 003 source identity from it; report `preferred_config` as `Option` instead of mislabelling an unmodelled format.
+- [x] J003 Define the Windows fault taxonomy (absence, stream fault build/play, privacy denial, exclusive-mode conflict, endpoint unavailable, audio-service unavailable, route rerouted) with stable classifier strings.
+- [x] J004 Map every fault class onto the closed 006A machine for start and runtime, keeping the runtime mapping non-interrupting for a reroute and proving the mapping never produces a refused transition.
+- [x] J005 Derive the portable 006B degradation reason from the same taxonomy, with a test asserting the event mapping and the health mapping cannot drift.
+- [x] J006 Prove privacy revocation surfaces through `HealthMonitor` as a `ReasonChanged` edge instead of a silent stop.
+- [x] J007 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
+- [ ] J008 Exact-head qualify grain 1: pull-request CI and R3 SUCCESS with all three Rust platform jobs green.
+- [ ] J009 Reconcile and merge under expected-head protection, then record grain 1 merge truth.
+- [ ] J010 Promote the next authorized leaf: the Windows cpal/WASAPI binding over this core (`CpalMicrophoneBackend`, `LiveMicStream`, `open_f32_input_stream`, cpal error-kind and sample-format mapping, Windows-only tests).
