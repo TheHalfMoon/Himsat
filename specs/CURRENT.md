@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_SHAPING_AUTHORIZED
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_SHAPING_IN_PROGRESS
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -428,6 +428,8 @@ SPEC_007_SHAPING_QUALIFIED = 61a300c844befe273c3a89577a485f89087812be_CI_3527883
 SPEC_007C_SHAPING_QUALIFIED = 8d379af2042cf23ea4da1f70e03f9a7675296fb0_CI_35315392601_R3_35315392695_SUCCESS
 SPEC_007_PLATFORM_SCOPE = MACOS_ONLY_DARWIN_ARM64_EVIDENCED
 SPEC_008_SHAPING = AUTHORIZED_AFTER_THIS_CLOSEOUT_QUALIFIES
+SPEC_008_SHAPING_STATUS = IN_PROGRESS_THIS_UNIT
+SPEC_008_PLATFORM_SCOPE = WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1296,3 +1298,32 @@ CI/R3 qualified, Specification 008 (Windows capture) shaping becomes
 the next authorized node. Specification 008 implementation, release,
 FIPS, and compliance claims remain unauthorized until 008 shaping
 qualifies.
+
+## Specification 008 shaping (Windows capture)
+
+Specification 008 shaping is in progress against the live canonical
+`main` at the 007 closeout merge
+`c96abba6ed5cd760611d0f407e7c3a8df9fb1879` (post-merge CI
+`35627161924` / R3 `35627161891` SUCCESS). The shaping packet
+(`spec.md`/`plan.md`/`tasks.md`) binds the same portable 006A session
+machine, 006B health telemetry, and 006C checkpoint discipline to
+Windows: microphone capture and OS-sanctioned WASAPI loopback
+system-audio capture through the already-closed `cpal` binding, Windows
+endpoint enumeration/selection/identity/fault classification, the
+microphone-privacy and shared/exclusive-mode lifecycle mapped onto
+006A states and typed reasons, and the endpoint-change / device-change
+/ interruption / long-session / storage-pressure evidence matrix under
+Gate E. It adopts no donor code and adds no dependency in shaping. The
+shaping packet admits `specs/008-windows-capture/**` to the forward-only
+Diffcipline scope authorization plus this ledger update; no product
+byte changes.
+
+008's platform claim is Windows-only and must be evidenced on
+`windows-latest`; it never generalizes macOS (007) behavior to Windows
+or the reverse, and it narrows no shared 006 contract. If this shaping
+packet later becomes exact-head qualified, expected-head merged, exact
+parent/tree verified, and post-merge CI/R3 qualified, 008 implementation
+grains (candidate 008A/008B/008C, re-bounded after shaping) become the
+authorized implementation work. 008 implementation is unauthorized until
+then, and Specification 009 (Linux capture) shaping remains
+unauthorized until 008 is itself `CLOSED_CANONICAL`.
