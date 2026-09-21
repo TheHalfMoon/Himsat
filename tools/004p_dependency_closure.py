@@ -56,6 +56,7 @@ EXPECTED_LINUX_DIRECT: dict[str, dict[str, Any]] = {
 
 EXPECTED_WINDOWS_TARGET = 'cfg(target_os = "windows")'
 EXPECTED_WINDOWS_DIRECT: dict[str, dict[str, Any]] = {
+    "cpal": {"version": "=0.18.2", "default-features": False},
     "windows-acl": {"version": "=0.3.0"},
     "fs_at": {"version": "=0.2.1"},
     "windows-permissions": {"version": "=0.2.4"},
