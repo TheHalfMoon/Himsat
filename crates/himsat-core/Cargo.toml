@@ -36,3 +36,4 @@ fs_at = { version = "=0.2.1" }
 windows-permissions = { version = "=0.2.4" }
 windows-dpapi = { version = "=0.2.0" }
 winsafe = { version = "=0.0.29", default-features = false, features = ["advapi"] }
+
