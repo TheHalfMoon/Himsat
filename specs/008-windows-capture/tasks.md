@@ -77,5 +77,16 @@
 - [x] M002 Implement `LiveLoopbackStream` and `open_f32_loopback_stream`: resolve the render endpoint by id, open it as an input stream so the closed binding applies `AUDCLNT_STREAMFLAGS_LOOPBACK`, refuse non-F32 mix formats as build faults, and keep the callback to a single borrowed-frame forward.
 - [x] M003 Add the five Windows-only tests, including the no-drift classifier guard against the microphone adapter and the `HIMSAT_LIVE_LOOPBACK_TEST=1` env-gated live opener that is NOT RUN in CI.
 - [x] M004 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
-- [ ] M005 Exact-head qualify grain 2: pull-request CI and R3 SUCCESS with the `windows-latest` Rust job green.
-- [ ] M006 Reconcile and merge under expected-head protection, then record grain 2 merge truth and promote 008C (lifecycle and evidence matrix).
+- [x] M005 Exact-head qualify grain 2: PR #210 head `9a255fe1e7aee9bf5020e3e719c577ed1d3ee54f` passed pull-request CI `35664665709` and R3 `35664665774` on attempt 1; `Rust / windows-latest` (job `106547614597`, 17m17s) was the first compile of the loopback binding anywhere, alongside ubuntu 8m20s and macOS 5m42s.
+- [x] M006 Reconcile and merge under expected-head protection: zero submitted reviews, zero review threads, OCR delegation ledger `5768598946` (1/1 reviewable file, 3 markdown exclusions stated, no blocking finding), `MERGEABLE`/`CLEAN`. Canonical merge `39685d482127c967f7b140b3696e265ed9db13a0`, parents `f69ada6` + `9a255fe`, merge tree `f7105d8c6106ba5b075f485b14071feb2f81b2ba` equal to the accepted head tree, signature verified, post-merge CI `35666124736` / R3 `35666124738` SUCCESS.
+
+## Implementation — 008C grain 1 (Windows lifecycle observation and loss accounting)
+
+- [x] N001 Add `capture_windows_lifecycle.rs` with endpoint-change and suspend/resume signals, order- and duplicate-insensitive endpoint detection, overflow-checked sleep-gap detection, and the polling watch that stops on drop, channel error, or lister failure.
+- [x] N002 Map lifecycle signals onto the closed 006A machine (`EndpointsChanged -> Interrupted(RouteChanged)`, `WakeNotified -> Interrupted(ProcessInterrupted)`) and prove both are accepted by a flowing session built through the 008A selection path.
+- [x] N003 Add the saturating stream loss account with `expected_frames`, `reconciles`, `unexplained_shortfall`, and a cross-implementation test asserting identical semantics with the closed macOS account for the same scripted sequence.
+- [x] N004 Record the evidence-matrix status honestly: pure detection/mapping/accounting proven here, while live endpoint change, real suspend/resume, multi-hour capture, live privacy toggling, and live exclusive-mode contention remain UNPROVEN.
+- [x] N005 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
+- [ ] N006 Exact-head qualify grain 1: pull-request CI and R3 SUCCESS with all three Rust platform jobs green.
+- [ ] N007 Reconcile and merge under expected-head protection, then record grain 1 merge truth.
+- [ ] N008 Re-bound the next leaf against live canonical state (storage-pressure refusal policy and checkpoint cadence, or the runtime evidence matrix, per live authority).

@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_COMPLETE_008B_GRAIN2_PENDING_THIS_UNIT_QUALIFICATION
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_COMPLETE_008B_COMPLETE_008C_GRAIN1_PENDING_THIS_UNIT_QUALIFICATION
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,7 +219,7 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_008C_WINDOWS_LIFECYCLE_EVIDENCE_MATRIX_GRAIN
+NEXT_IMPLEMENTATION_LEAF = SPEC_008C_NEXT_LEAF_AFTER_LIFECYCLE_QUALIFICATION
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
@@ -504,10 +504,25 @@ SPEC_008B_GRAIN1_POSTMERGE_CI = 35662990699_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008B_GRAIN1_POSTMERGE_R3 = 35662990678_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008B_GRAIN1_PLATFORM_JOBS = UBUNTU_9M54S_MACOS_5M20S_WINDOWS_18M9S_ALL_SUCCESS
 SPEC_008B_GRAIN1_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_OCR_DELEGATED_NO_BLOCKING_FINDING
-SPEC_008B_GRAIN2_BINDING_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008B_GRAIN2_BINDING_STATE = CANONICAL_QUALIFIED
 SPEC_008B_GRAIN2_BINDING_EVIDENCE = 008b-windows-loopback-binding-evidence.md
 SPEC_008B_GRAIN2_LIVE_TEST = NOT_RUN_IN_CI_ENV_GATED_HIMSAT_LIVE_LOOPBACK_TEST
-SPEC_008C_STATE = BOUND_NEXT_PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008B_GRAIN2_ACCEPTED_HEAD = 9a255fe1e7aee9bf5020e3e719c577ed1d3ee54f
+SPEC_008B_GRAIN2_PREMERGE_CI = 35664665709_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008B_GRAIN2_PREMERGE_R3 = 35664665774_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008B_GRAIN2_CANONICAL_MERGE = 39685d482127c967f7b140b3696e265ed9db13a0
+SPEC_008B_GRAIN2_MERGE_PARENT_1 = f69ada64895d68779276d7eb6660564c6825aaa8
+SPEC_008B_GRAIN2_MERGE_PARENT_2 = 9a255fe1e7aee9bf5020e3e719c577ed1d3ee54f
+SPEC_008B_GRAIN2_MERGE_TREE = f7105d8c6106ba5b075f485b14071feb2f81b2ba_EQUALS_ACCEPTED_TREE
+SPEC_008B_GRAIN2_POSTMERGE_CI = 35666124736_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008B_GRAIN2_POSTMERGE_R3 = 35666124738_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008B_GRAIN2_PLATFORM_JOBS = UBUNTU_8M20S_MACOS_5M42S_WINDOWS_17M17S_ALL_SUCCESS
+SPEC_008B_GRAIN2_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_OCR_DELEGATED_NO_BLOCKING_FINDING
+SPEC_008B_DISPOSITION = CANONICAL_CLOSED_SYSTEM_AUDIO_PATHWAY_CORE_AND_BINDING
+SPEC_008C_GRAIN1_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008C_GRAIN1_EVIDENCE = 008c-windows-lifecycle-core-evidence.md
+SPEC_008C_EVIDENCE_MATRIX_STATUS = PORTABLE_DETECTION_MAPPING_ACCOUNTING_PROVEN_RUNTIME_ROWS_UNPROVEN
+SPEC_008C_RUNTIME_ROWS_UNPROVEN = ENDPOINT_CHANGE,SUSPEND_RESUME,MULTI_HOUR_CAPTURE,LIVE_PRIVACY_TOGGLE,LIVE_EXCLUSIVE_CONTENTION
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1624,6 +1639,36 @@ No manifest, lockfile, workflow, dependency, or donor byte changes. The
 env-gated live loopback opener is **NOT RUN** in CI, so this grain carries
 no Windows runtime, loopback-capture, protected-content, or Gate E
 evidence; a real Windows endpoint is required for that.
-`SPEC_008_PLATFORM_SCOPE` stays
-`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`, and if this grain qualifies the
-next authorized leaf is 008C (Windows lifecycle and evidence matrix).
+
+## Specification 008B closure and 008C grain 1 (Windows lifecycle and loss accounting)
+
+Grain 2 is `CANONICAL_QUALIFIED`: PR #210 accepted head
+`9a255fe1e7aee9bf5020e3e719c577ed1d3ee54f` passed pre-merge CI
+`35664665709` / R3 `35664665774` on attempt 1 with ubuntu (8m20s), macOS
+(5m42s), and Windows (17m17s) all SUCCESS, merged as
+`39685d482127c967f7b140b3696e265ed9db13a0` with parents `f69ada6` +
+`9a255fe`, merge tree `f7105d8c6106ba5b075f485b14071feb2f81b2ba` equal to
+the accepted head tree, signature verified, and passed push-triggered CI
+`35666124736` / R3 `35666124738`. 008B (Windows system-audio pathway core
+and loopback binding) is therefore `CANONICAL_CLOSED` for its bounded CI
+scope: the loopback mechanism is implemented through the closed binding's
+`AUDCLNT_STREAMFLAGS_LOOPBACK` path, and no loopback stream has been
+opened anywhere, so no Windows runtime or Gate E claim exists.
+
+008C grain 1 adds `capture_windows_lifecycle.rs`: endpoint-change and
+suspend/resume signals, order- and duplicate-insensitive endpoint
+detection, overflow-checked sleep-gap detection, a polling watch that
+stops on drop, channel error, or lister failure (and emits **no** signal
+when the lister fails, so an unreadable endpoint list is never reported as
+a route change), the 006A mapping for both signals, and a saturating
+sustained-flow loss account with `unexplained_shortfall` so a long-session
+row can name the missing frames. The Windows account is asserted to have
+identical semantics to the closed macOS account for the same scripted
+callback sequence, so the two platform implementations cannot drift.
+
+The evidence matrix is therefore half proven and half explicitly open:
+detection, mapping, and accounting are proven on every CI host, while live
+endpoint change, real suspend/resume, multi-hour capture, live privacy
+toggling, and live exclusive-mode contention remain `UNPROVEN` because
+they need real Windows hardware. `SPEC_008_PLATFORM_SCOPE` stays
+`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
