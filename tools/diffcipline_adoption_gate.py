@@ -172,6 +172,21 @@ B007B_EXPECTED_BLOBS = {
 }
 B007B_EXPECTED_FILES = set(B007B_EXPECTED_BLOBS)
 
+B008A_PRECONDITION_BASE = "57efb2e3c5ef34d8205babae68121c13c609519c"
+B008A_TRUSTED_BASE_DELTA = {"tools/diffcipline_adoption_gate.py"}
+B008A_EXPECTED_ADDED_LINES = 300
+B008A_EXPECTED_DELETED_LINES = 2
+B008A_EXPECTED_BLOBS = {
+    "crates/himsat-core/Cargo.toml": "368946b3458be2f3ceddf5ef339af64642420c07",
+    "specs/008-windows-capture/008a-windows-cpal-adoption-evidence.md": (
+        "fbca656fcadf19a78b002135b6add7cca785e6d5"
+    ),
+    "specs/008-windows-capture/tasks.md": "8c9e93f64dbf250c0518ba5a5f9540a1368b5c3d",
+    "specs/CURRENT.md": "582bbf6a7257311fbe0701418893bb339f85c99c",
+    "tools/004p_dependency_closure.py": "7ed08829691efd63715d793f3fb330be6680a160",
+}
+B008A_EXPECTED_FILES = set(B008A_EXPECTED_BLOBS)
+
 EXPECTED_ADOPTION_FILES = {
     ".diffcipline.toml",
     ".github/workflows/ci.yml",
@@ -1097,6 +1112,107 @@ def check_b007b_exception(args: argparse.Namespace, proof: dict[str, Any]) -> in
     return 0
 
 
+def b008a_trusted_base(base: str) -> bool:
+    """Accept only the canonical B008A gate successor or its immediate merge parent.
+
+    Pull-request qualification requires current canonical main to be the trusted
+    gate-hardening merge. Push-triggered qualification after the guarded B008A
+    adoption merge accepts that same trusted gate merge as the first parent of
+    current canonical main. The trusted gate merge itself must have the exact
+    B008A precondition as first parent and change only this gate path.
+    """
+
+    try:
+        canonical_main = git("rev-parse", "refs/remotes/origin/main^{commit}")
+        if base != canonical_main:
+            canonical_parent_row = git("rev-list", "--parents", "-n", "1", canonical_main).split()
+            if len(canonical_parent_row) != 3 or canonical_parent_row[1] != base:
+                return False
+        base_parent_row = git("rev-list", "--parents", "-n", "1", base).split()
+        if len(base_parent_row) != 3 or base_parent_row[1] != B008A_PRECONDITION_BASE:
+            return False
+        raw = git("diff", "--no-renames", "--name-only", B008A_PRECONDITION_BASE, base)
+    except subprocess.CalledProcessError:
+        return False
+    paths = [line for line in raw.splitlines() if line]
+    return set(paths) == B008A_TRUSTED_BASE_DELTA and len(paths) == len(B008A_TRUSTED_BASE_DELTA)
+
+
+def check_b008a_exception(args: argparse.Namespace, proof: dict[str, Any]) -> int:
+    """Accept only the pinned B008A Windows-target cpal dependency adoption.
+
+    B008A admits the already-registered `cpal 0.18.2` to the
+    `cfg(target_os = "windows")` target of `himsat-core` for the 008A Windows
+    microphone pathway. The crate and its entire Windows subtree were already
+    locked and registered by the macOS adoption, so this leaf changes exactly
+    one manifest line plus the 004P closure expectation and governance records:
+    there is no lockfile change, and the manifest-change reason is therefore
+    the only ordinary-policy reason. The exact five-file candidate, its line
+    counts, and every candidate blob are pinned, so this exception cannot
+    authorize any later dependency or oversized diff.
+    """
+
+    if args.exit_code != 1 or proof.get("verdict") != "REVIEW":
+        return fail(
+            f"unexpected B008A non-PASS result: exit={args.exit_code} verdict={proof.get('verdict')}"
+        )
+
+    try:
+        actual_files, actual_added, actual_deleted = actual_git_diff(args.base)
+    except (subprocess.CalledProcessError, ValueError) as exc:
+        return fail(f"cannot reconcile actual B008A Git diff: {exc}")
+
+    if set(actual_files) != B008A_EXPECTED_FILES or len(actual_files) != len(B008A_EXPECTED_FILES):
+        return fail("actual B008A Git changed-path set is not exact")
+
+    files = proof.get("files")
+    if not isinstance(files, list) or files != actual_files:
+        return fail("B008A Diffcipline proof path list does not equal the actual Git diff")
+    if set(files) != B008A_EXPECTED_FILES or len(files) != len(B008A_EXPECTED_FILES):
+        return fail("B008A exception changed-path set is not exact")
+
+    if proof.get("changed_files") != len(B008A_EXPECTED_FILES):
+        return fail("B008A Diffcipline changed-file count is not exact")
+    if actual_added != B008A_EXPECTED_ADDED_LINES or proof.get("added_lines") != actual_added:
+        return fail("B008A added-line count is not exact")
+    if actual_deleted != B008A_EXPECTED_DELETED_LINES or proof.get("deleted_lines") != actual_deleted:
+        return fail("B008A deleted-line count is not exact")
+    if actual_added > POLICY_MAX_ADDED_LINES:
+        return fail("B008A dependency leaf unexpectedly exceeds ordinary line bounds")
+
+    expected_reasons = {"dependency manifest changed: crates/himsat-core/Cargo.toml"}
+    reasons = proof.get("reasons")
+    if not isinstance(reasons, list) or set(reasons) != expected_reasons or len(reasons) != 1:
+        return fail(f"unexpected B008A Diffcipline reason set: {reasons!r}")
+    if proof.get("scope_violations") != []:
+        return fail("B008A scope violations cannot be excepted")
+
+    verification = proof.get("verification")
+    if not isinstance(verification, list) or not verification:
+        return fail("B008A verification evidence is missing")
+    for result in verification:
+        if not isinstance(result, dict) or result.get("state") != "PASS":
+            return fail(f"B008A verification is not PASS: {result!r}")
+
+    try:
+        for path, expected in B008A_EXPECTED_BLOBS.items():
+            actual = git("rev-parse", f"HEAD:{path}")
+            if actual != expected:
+                return fail(
+                    f"B008A candidate artifact blob drift: {path} expected {expected} got {actual}"
+                )
+    except subprocess.CalledProcessError as exc:
+        return fail(f"cannot resolve B008A candidate artifact blob from HEAD: {exc}")
+
+    print("DIFFCIPLINE B008A DEPENDENCY EXCEPTION PASS")
+    print(f"base={args.base}")
+    print(f"risk={args.risk}")
+    print(f"changed_files={len(actual_files)}")
+    print(f"added_lines={actual_added}")
+    print(f"deleted_lines={actual_deleted}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--proof", type=Path, required=True)
@@ -1138,6 +1254,14 @@ def main() -> int:
     # + lockfile reasons only).
     if b007b_trusted_base(args.base):
         return check_b007b_exception(args, proof)
+
+    # B008A admits the already-registered cpal 0.18.2 to the Windows target for
+    # the 008A Windows microphone pathway. The crate and its whole Windows
+    # subtree were already locked and registered by the macOS adoption, so the
+    # exception pins the exact five-file candidate and accepts REVIEW with the
+    # manifest-change reason only (no lockfile reason).
+    if b008a_trusted_base(args.base):
+        return check_b008a_exception(args, proof)
 
     # B006A adopts the intra-workspace himsat-events dependency for the 006A
     # capture session (zero external packages, zero transitive dependencies).
