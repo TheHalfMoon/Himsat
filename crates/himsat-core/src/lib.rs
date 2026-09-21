@@ -128,6 +128,9 @@ pub mod capture_windows;
 /// 008B Windows system-audio loopback adapter core over an injected backend.
 pub mod capture_windows_system_audio;
 
+/// 008C Windows capture lifecycle observation and sustained-flow loss accounting.
+pub mod capture_windows_lifecycle;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 
