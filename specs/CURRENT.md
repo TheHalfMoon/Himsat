@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_ADOPTION_CANONICAL_QUALIFIED_GRAIN1_PENDING_THIS_UNIT_QUALIFICATION
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_GRAIN1_CANONICAL_QUALIFIED_GRAIN2_PENDING_THIS_UNIT_QUALIFICATION
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,7 +219,7 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_008_WINDOWS_WASAPI_BINDING_GRAIN
+NEXT_IMPLEMENTATION_LEAF = SPEC_008_NEXT_LEAF_AFTER_WASAPI_BINDING_QUALIFICATION
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
@@ -460,9 +460,23 @@ B008A_GATE_HARDENING_PREMERGE_CI = 35643377757_SUCCESS_PULL_REQUEST_ATTEMPT_1
 B008A_GATE_HARDENING_PREMERGE_R3 = 35643377577_SUCCESS_PULL_REQUEST_ATTEMPT_1
 B008A_GATE_HARDENING_POSTMERGE_CI = 35645592708_SUCCESS_PUSH_ATTEMPT_1
 B008A_GATE_HARDENING_POSTMERGE_R3 = 35645592747_SUCCESS_PUSH_ATTEMPT_1
-SPEC_008A_GRAIN1_CORE_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008A_GRAIN1_CORE_STATE = CANONICAL_QUALIFIED
 SPEC_008A_GRAIN1_CORE_EVIDENCE = 008a-windows-microphone-core-evidence.md
 SPEC_008A_GRAIN1_WINDOWS_RUNTIME_EVIDENCE = NONE_NO_WINDOWS_DEVICE_OPENED
+SPEC_008A_GRAIN1_ACCEPTED_HEAD = 9e7237f21b6fd8f0aa906a303bc8924c66884b2f
+SPEC_008A_GRAIN1_PREMERGE_CI = 35652021251_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008A_GRAIN1_PREMERGE_R3 = 35652021195_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008A_GRAIN1_CANONICAL_MERGE = 6532f9747a0bd65b11d2d5541482097bd2e2144c
+SPEC_008A_GRAIN1_MERGE_PARENT_1 = c1ad38d2dd151ceb0139ec7fd7caf2c4a337ed4c
+SPEC_008A_GRAIN1_MERGE_PARENT_2 = 9e7237f21b6fd8f0aa906a303bc8924c66884b2f
+SPEC_008A_GRAIN1_MERGE_TREE = 0b452816c9818229bcf1a33d4ebaab067314d059_EQUALS_ACCEPTED_TREE
+SPEC_008A_GRAIN1_POSTMERGE_CI = 35654462537_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008A_GRAIN1_POSTMERGE_R3 = 35654462544_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008A_GRAIN1_PLATFORM_JOBS = UBUNTU_7M30S_MACOS_8M1S_WINDOWS_17M29S_ALL_SUCCESS
+SPEC_008A_GRAIN1_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_OCR_DELEGATED_TWO_FINDINGS_REPAIRED_FORWARD
+SPEC_008A_GRAIN2_BINDING_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008A_GRAIN2_BINDING_EVIDENCE = 008a-windows-wasapi-binding-evidence.md
+SPEC_008A_GRAIN2_LIVE_TEST = NOT_RUN_IN_CI_ENV_GATED_HIMSAT_LIVE_MIC_TEST
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1473,9 +1487,49 @@ mappings from drifting.
 
 No Windows runtime, first-audio, or Gate E claim is made: no device was
 opened, and `SPEC_008_PLATFORM_SCOPE` stays
-`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`. If this grain qualifies, the next
-authorized node is grain 2: the cpal/WASAPI binding
-(`CpalMicrophoneBackend`, `LiveMicStream`, `open_f32_input_stream`, the
-cpal error-kind classifier and sample-format mapping, plus Windows-only
-tests) over this core. 008B, 008C, Specification 009, and all
-release/FIPS/compliance claims remain unauthorized.
+`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`. 008B, 008C, Specification 009,
+and all release/FIPS/compliance claims remain unauthorized.
+
+## Specification 008A grain 2 (cpal/WASAPI microphone binding)
+
+Grain 1 (the portable adapter core) is `CANONICAL_QUALIFIED`: PR #207
+accepted head `9e7237f21b6fd8f0aa906a303bc8924c66884b2f` passed pre-merge
+CI `35652021251` / R3 `35652021195` on attempt 1 with all three Rust
+platform jobs SUCCESS (ubuntu 7m30s, macOS 8m1s, Windows 17m29s —
+compile, `clippy -D warnings`, and the 16 portable tests on each), merged
+as `6532f9747a0bd65b11d2d5541482097bd2e2144c` with parents `c1ad38d` +
+`9e7237f`, merge tree `0b452816c9818229bcf1a33d4ebaab067314d059` equal
+to the accepted head tree, signature verified, and passed push-triggered
+CI `35654462537` / R3 `35654462544`. OCR delegation found two items
+(an undocumented endpoint-id contract and a weak identity test); both
+were repaired forward in `9e7237f`, not silently.
+
+This unit then adds the grain-2 binding: the Windows half of
+`capture_windows.rs` over the already-adopted `cpal =0.18.2` edge —
+`classify_error` over cpal `ErrorKind`, `portable_sample_format`,
+`config_from_supported`, `CpalMicrophoneBackend`, `LiveMicStream`
+(`pause`/`resume`), and `open_f32_input_stream`, which resolves by
+endpoint id, refuses non-F32 defaults as build faults, and never
+converts silently. Endpoints whose id cannot be resolved are skipped
+rather than name-keyed, because a name key would merge distinct
+endpoints sharing a friendly name.
+
+The Windows-specific fault classes come from the binding's own HRESULT
+mapping, recorded exactly in `008a-windows-wasapi-binding-evidence.md`:
+`AUDCLNT_E_DEVICE_IN_USE` is the shared/exclusive-mode conflict,
+`AUDCLNT_E_DEVICE_INVALIDATED` and `AUDCLNT_E_ENDPOINT_CREATE_FAILED` are
+endpoint loss, `AUDCLNT_E_SERVICE_NOT_RUNNING` is service
+unavailability, and microphone privacy denial is distinct from all of
+them. The adapter's audio callback only forwards the borrowed frame
+slice: no allocation, lock, I/O, logging, or inference runs in the
+real-time context. No manifest, lockfile, workflow, or dependency byte
+changes in this grain.
+
+The five Windows-only tests include hardware-free classifier and
+format-mapping coverage and an env-gated live opener that is **NOT RUN**
+in CI; the live path therefore carries no CI evidence, and no Windows
+runtime, first-audio, loopback, or Gate E claim is made. If this grain is
+exact-head qualified, reconciled, expected-head merged, exact-parent/tree
+verified, and post-merge CI/R3 qualified, the next authorized leaf is
+re-bounded against then-live canonical state (008C lifecycle and
+evidence-matrix scoping, or 008B loopback ordering).
