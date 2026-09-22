@@ -87,6 +87,17 @@
 - [x] N003 Add the saturating stream loss account with `expected_frames`, `reconciles`, `unexplained_shortfall`, and a cross-implementation test asserting identical semantics with the closed macOS account for the same scripted sequence.
 - [x] N004 Record the evidence-matrix status honestly: pure detection/mapping/accounting proven here, while live endpoint change, real suspend/resume, multi-hour capture, live privacy toggling, and live exclusive-mode contention remain UNPROVEN.
 - [x] N005 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
-- [ ] N006 Exact-head qualify grain 1: pull-request CI and R3 SUCCESS with all three Rust platform jobs green.
-- [ ] N007 Reconcile and merge under expected-head protection, then record grain 1 merge truth.
-- [ ] N008 Re-bound the next leaf against live canonical state (storage-pressure refusal policy and checkpoint cadence, or the runtime evidence matrix, per live authority).
+- [x] N006 Exact-head qualify grain 1: PR #211 head `91d32333c5bda1bd4744418e750112410321169a` passed pull-request CI `35668523429` and R3 `35668523396` on attempt 1 (ubuntu 7m28s, macOS 5m16s, windows 17m46s). The first head `1bfc956` failed CI on a candidate-introduced duplicate-endpoint defect; the failure is preserved in run `35667753768` and was repaired forward before this qualification.
+- [x] N007 Reconcile and merge under expected-head protection: zero submitted reviews, zero review threads, OCR delegation ledger `5768971850`, failure-and-repair record comment `5769088242`, `MERGEABLE`/`CLEAN`. Canonical merge `89934e0efa38416c14018acded7e07be21657109`, parents `39685d4` + `91d3233`, merge tree `d2211751631c10993f568012d1ab519fa01edefe` equal to the accepted head tree, signature verified, post-merge CI `35669970610` / R3 `35669970649` SUCCESS.
+- [x] N008 Re-bound the next leaf against live canonical state: the remaining portable 008C work is the storage/queue admission policy and the checkpoint cadence window. Every runtime evidence row needs real Windows hardware.
+
+## Implementation — 008C grain 2 (Windows admission policy and checkpoint cadence)
+
+- [x] O001 Add `capture_windows_pressure.rs` with caller-supplied `StorageBudgets`, explicit `RefusalReason` classes, and a pure `decide_admission` over the closed 006B `classify_storage`/`queue_full`.
+- [x] O002 Keep warn-level pressure a degradation rather than a refusal, report critical-storage-and-full-queue distinctly, and treat zero queue capacity as full.
+- [x] O003 Add `checkpoint_due` and `advance_cadence_window` over caller-stamped milliseconds, carrying the remainder so time that elapsed during a seal is never lost.
+- [x] O004 Add the matrix, zero-capacity, classifier, boundary, and saturation tests, including the re-derivation of the 006B classification beside every decision.
+- [x] O005 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree.
+- [ ] O006 Exact-head qualify grain 2: pull-request CI and R3 SUCCESS with all three Rust platform jobs green.
+- [ ] O007 Reconcile and merge under expected-head protection, then record grain 2 merge truth.
+- [ ] O008 Re-bound the next leaf against live canonical state. The remaining 008 work is the runtime evidence matrix (live endpoint change, real suspend/resume, multi-hour capture, live privacy toggle, live exclusive-mode contention, real storage-exhaustion refusal) plus journal-sink wiring; every runtime row needs real Windows hardware and is the current external blocker.
