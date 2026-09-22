@@ -1830,3 +1830,35 @@ runtime, loopback, first-audio, or Gate E claim is made, and
 payload-accumulation grain, Specification 009 shaping, and all release, FIPS,
 and compliance claims remain unauthorized until this grain is canonically
 qualified.
+
+## Specification 008D grain 1 qualification
+
+008D grain 1 is `CANONICAL_QUALIFIED`: PR #214 accepted head
+`5ec1422c52e3cd0430738de20a9c2659cda3d4b9` passed pull-request CI
+`35702886999` and R3 `35702886994` on attempt 1, with `Rust / ubuntu-latest`,
+`Rust / macos-latest`, and `Rust / windows-latest` all SUCCESS (compile,
+`clippy -D warnings`, and the full suite on each) alongside Diffcipline R2/R3,
+the negative controls, SpecGrain, and the provenance jobs. The first candidate
+head `97b57746c7982f33b659e8acf50fae3c9a295767` was superseded before
+qualification by the forward correction to the evidence record's statement of
+the 005A context-accessor limitation; its run `35702649640` was cancelled by
+the workflow concurrency group, not failed, and it stays in the branch
+history. Zero submitted reviews, zero review threads, OCR delegation ledger
+comment `5773404325` (2 of 5 files reviewable, the three markdown exclusions
+stated), `MERGEABLE`/`CLEAN`.
+
+The canonical merge is `86c2524fc2cf25deafa81a35f643ccbd13faf0f9` with parents
+`d2681ba6ed387dcab7ba1a99c470f65e996d4f24` +
+`5ec1422c52e3cd0430738de20a9c2659cda3d4b9`, merge tree
+`e385b1b3a9cd2bffbd3255fbde4956048ee1b89a` equal to the accepted head tree,
+signature verified by GitHub (`verified = true`, `reason = valid`), and
+push-triggered CI `35704745292` / R3 `35704745276` SUCCESS on that exact merge.
+
+`SPEC_008D_CHUNK_JOURNAL_COMMIT_STATE = CANONICAL_QUALIFIED`. `O009` is not
+closed: its second grain — captured payloads into sealed chunks under the
+owner's 005A sealer, the 008C admission policy, and the checkpoint cadence — is
+the promoted next leaf, `NEXT_IMPLEMENTATION_LEAF =
+SPEC_008E_PAYLOAD_ACCUMULATION_GRAIN`. `O008` remains blocked on real Windows
+hardware. No Windows runtime, Gate E, loopback, first-audio, release, FIPS, or
+compliance claim is made, and `SPEC_008_PLATFORM_SCOPE` stays
+`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
