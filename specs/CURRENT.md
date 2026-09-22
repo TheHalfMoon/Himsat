@@ -1911,3 +1911,15 @@ is now the only remaining Spec 008 frontier. Also recorded: PR #215 post-merge C
 first-audio, release, FIPS, or compliance claim is made, and
 `SPEC_008_PLATFORM_SCOPE` stays `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
 `NEXT_IMPLEMENTATION_LEAF = SPEC_008_GATE_E_RUNTIME_MATRIX_BLOCKED_ON_REAL_WINDOWS_HARDWARE`.
+
+## Specification 008E reconciliation closeout
+
+PR #217 (head `578668778cb208ef274b4077fcb8a4b9cfbd440c`, pull-request CI
+`35725256749` / R3 `35725256665` SUCCESS) merged as
+`a9912fc38b768b27ddb0559ad7d0ffbaf493c5ad` with parents `13d495fa` + `57866877`,
+merge tree `55d3645b4d8d0e86240112e1802b1e331230854f` equal to the accepted head
+tree, signature verified (`verified = true`, `reason = valid`), and push-triggered
+CI `35727109707` / R3 `35727109655` SUCCESS on that exact merge, with `Rust /
+ubuntu-latest`, `Rust / macos-latest`, and `Rust / windows-latest` all SUCCESS.
+`O009` remains CLOSED and `O008` remains the only Spec 008 frontier, blocked on real
+Windows hardware.
