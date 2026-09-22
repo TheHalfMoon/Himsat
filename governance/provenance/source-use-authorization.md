@@ -17,6 +17,27 @@ MODEL_DATA_ASSET_GATES_WAIVED = NO
 
 ## Founder attestation
 
+### 2026-09-22 GitHub-wide expansion
+
+The founder/user has additionally stated that Himsat has permission to copy and adapt **all source code available through the founder's GitHub access** for Himsat where technically useful.
+
+The connected GitHub inventory at this planning pass contained 36 founder-accessible repositories. This statement expands the permission-eligible source pool beyond the earlier repository-reference snapshot.
+
+This expansion is recorded as:
+
+    AUTHORIZATION_EXPANSION_DATE = 2026-09-22
+    AUTHORIZATION_EXPANSION_BASIS = FOUNDER_USER_ATTESTATION
+    EXPANDED_COVERAGE = ALL_SOURCE_CODE_AVAILABLE_THROUGH_FOUNDER_GITHUB_ACCESS_AT_UPDATE_TIME
+    INVENTORIED_REPOSITORY_COUNT = 36
+    PERMITTED_REUSE_MODES = REFERENCE | COPY | ADAPT | DEPEND | VENDOR
+    AUTOMATIC_ADOPTION = NO
+    ACTIVE_SPEC_AUTHORITY_CHANGED = NO
+    PROVENANCE_GATES_WAIVED = NO
+
+The expansion does not assert that every embedded third-party file, generated subtree, model, dataset, font, asset, binary, or transitive dependency is owned by the same rightsholder. Those materials remain independently subject to exact-path provenance, redistribution, notice, security, and model/data/asset gates.
+
+When a future adoption relies on this founder attestation rather than an ordinary compatible public license, the adoption record must identify the exact source path and the exact permission scope required for modification and redistribution.
+
 The project founder/user has explicitly stated that Himsat has permission to use the code/material from every source already recorded in the repository, including the sources most recently added through the Superwhisper/OpenSuperWhisper research.
 
 Himsat records that statement as project-level source-use authorization. Agents should no longer treat a source as unusable merely because an earlier Himsat planning document assumed that no additional permission existed.
