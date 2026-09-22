@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_IMPLEMENTATION_IN_PROGRESS_008A_COMPLETE_008B_COMPLETE_008C_GRAIN2_PENDING_THIS_UNIT_QUALIFICATION
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_PORTABLE_HALF_COMPLETE_BLOCKED_ON_REAL_WINDOWS_HARDWARE
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,7 +219,7 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_008C_RUNTIME_EVIDENCE_MATRIX_BLOCKED_ON_REAL_WINDOWS_HARDWARE
+NEXT_IMPLEMENTATION_LEAF = SPEC_008_RUNTIME_EVIDENCE_MATRIX_BLOCKED_ON_REAL_WINDOWS_HARDWARE
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
@@ -535,10 +535,27 @@ SPEC_008C_GRAIN1_POSTMERGE_CI = 35669970610_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008C_GRAIN1_POSTMERGE_R3 = 35669970649_SUCCESS_PUSH_ATTEMPT_1
 SPEC_008C_GRAIN1_PLATFORM_JOBS = UBUNTU_7M28S_MACOS_5M16S_WINDOWS_17M46S_ALL_SUCCESS
 SPEC_008C_GRAIN1_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_OCR_DELEGATED_CI_FAILURE_REPAIRED_FORWARD
-SPEC_008C_GRAIN2_PRESSURE_STATE = PENDING_THIS_UNIT_QUALIFICATION
+SPEC_008C_GRAIN2_PRESSURE_STATE = CANONICAL_QUALIFIED
 SPEC_008C_GRAIN2_PRESSURE_EVIDENCE = 008c-windows-admission-cadence-evidence.md
+SPEC_008C_GRAIN2_ACCEPTED_HEAD = 6fac1a67c7d3024122033c5b9ea96a0a7ec1b2b4
+SPEC_008C_GRAIN2_FAILED_HEAD = 7643f41a45bb5dc8fced5d00360cc322f252d4ac_PRESERVED_RUN_35671348004
+SPEC_008C_GRAIN2_PREMERGE_CI = 35671828438_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008C_GRAIN2_PREMERGE_R3 = 35671828495_SUCCESS_PULL_REQUEST_ATTEMPT_1
+SPEC_008C_GRAIN2_CANONICAL_MERGE = 0d231846b47f6315bc404915412174e5f222bd46
+SPEC_008C_GRAIN2_MERGE_PARENT_1 = 89934e0efa38416c14018acded7e07be21657109
+SPEC_008C_GRAIN2_MERGE_PARENT_2 = 6fac1a67c7d3024122033c5b9ea96a0a7ec1b2b4
+SPEC_008C_GRAIN2_MERGE_TREE = cec11f02d3faa7e901be88139e081901904dcd8b_EQUALS_ACCEPTED_TREE
+SPEC_008C_GRAIN2_POSTMERGE_CI = 35672704679_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008C_GRAIN2_POSTMERGE_R3 = 35672704691_SUCCESS_PUSH_ATTEMPT_1
+SPEC_008C_GRAIN2_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_OCR_DELEGATED_CI_COMPILE_FAILURE_REPAIRED_FORWARD
+SPEC_008C_DISPOSITION = CANONICAL_CLOSED_PORTABLE_HALF_RUNTIME_ROWS_UNPROVEN
 SPEC_008C_JOURNAL_SINK_WIRING = NOT_YET_WIRED_LATER_GRAIN
 SPEC_008_BLOCKER = REAL_WINDOWS_HARDWARE_FOR_GATE_E_RUNTIME_EVIDENCE
+SPEC_008_BLOCKER_CLASS = MANDATORY_PHYSICAL_HARDWARE_UNAVAILABLE
+SPEC_008_BLOCKER_ROWS = LIVE_ENDPOINT_CHANGE,REAL_SUSPEND_RESUME,MULTI_HOUR_CAPTURE,LIVE_PRIVACY_TOGGLE,LIVE_EXCLUSIVE_CONTENTION,REAL_STORAGE_EXHAUSTION_REFUSAL,LOOPBACK_FIRST_AUDIO
+SPEC_008_BLOCKER_OWNER = FOUNDER_OR_AUTHORIZED_WINDOWS_RUNNER
+SPEC_008_BLOCKER_NEXT_STEP_AFTER_UNBLOCK = RUN_THE_ENV_GATED_LIVE_TESTS_AND_THE_EVIDENCE_MATRIX_ON_REAL_WINDOWS_HARDWARE_THEN_CLOSE_SPEC_008
+SPEC_008_PLATFORM_SCOPE = WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE
 B005B1_ACCEPTED_HEAD = f13dbea3a20c0230b3e43e4eb6dea33f41ec177f
 B005B1_ACCEPTED_TREE = e4193cc44b36102b52804df87dec700a203b1a2e
 B005B1_PREMERGE_CI = 35197258314_SUCCESS_PULL_REQUEST_ON_RERUN
@@ -1708,3 +1725,70 @@ so time elapsed during a seal is never lost. With this grain the portable
 half of the 008 evidence matrix is complete; every remaining row —
 including a real storage-exhaustion refusal, which needs a real volume —
 requires actual Windows hardware interaction.
+
+## Specification 008 reconciliation and blocker packet
+
+008C grain 2 is `CANONICAL_QUALIFIED`: PR #212 accepted head
+`6fac1a67c7d3024122033c5b9ea96a0a7ec1b2b4` passed pre-merge CI
+`35671828438` / R3 `35671828495`, merged as
+`0d231846b47f6315bc404915412174e5f222bd46` with parents `89934e0` +
+`6fac1a6`, merge tree `cec11f02d3faa7e901be88139e081901904dcd8b` equal to
+the accepted head tree, signature verified, and passed push-triggered CI
+`35672704679` / R3 `35672704691`. The first head `7643f41` failed with a
+test-only compile defect ("no method named `dedup` found for array
+`[&str; 3]`", run `35671348004`), which is preserved and was repaired
+forward. Four units in this session therefore failed CI at least once and
+every one of those failures stayed visible: `35641324753` and
+`35645749583` (recorded base could not follow the trusted gate merge),
+`35667753768` (duplicate-endpoint comparison), and `35671348004`
+(array slice method). Nothing was rewritten and no evidence was deleted.
+
+Specification 008's portable half is now complete and canonically
+qualified: 008A microphone core and binding, 008B loopback core and
+binding, 008C lifecycle observation, loss accounting, admission policy,
+and checkpoint cadence, all CI-proven on ubuntu, macOS, and Windows with
+`clippy -D warnings`. The remaining 008 work is the runtime evidence
+matrix, and it is blocked on a real external resource.
+
+### Blocker packet — Spec 008 Gate E runtime evidence
+
+```text
+BLOCKER                 real Windows hardware interaction is unavailable to every
+                        runner this session can reach
+CLASS                   mandatory physical hardware unavailable (directive stop condition)
+AFFECTED SPEC/TASKS     008 (Gate E platform qualification); 008C tasks O008; every
+                        evidence-matrix row that needs a device, a suspend cycle, a real
+                        volume, or another application holding exclusive mode
+ROWS AFFECTED           live endpoint change (connect/disconnect, Bluetooth/USB),
+                        real suspend/resume, multi-hour capture, live microphone privacy
+                        toggle, live exclusive-mode contention, real storage-exhaustion
+                        refusal, loopback first-audio
+EVIDENCE OF BLOCK      (1) local workstation has no MSVC linker, so any build or test
+                        must run on CI; (2) CI runners are GitHub-hosted virtual machines
+                        with no audio endpoints and no suspend cycle, so the env-gated
+                        live tests (HIMSAT_LIVE_MIC_TEST=1, HIMSAT_LIVE_LOOPBACK_TEST=1)
+                        are NOT RUN and are not claimed; (3) no Windows hardware runner is
+                        attached to this session
+ALREADY ATTEMPTED       live tests written and env-gated rather than asserted in CI;
+                        portable detection/mapping/accounting/policy proven instead;
+                        dependency adoption and both pathway bindings implemented and
+                        qualified on the Windows CI toolchain
+WHY NOT AUTONOMOUS     Gate E requires a device, a power transition, a real volume, and a
+                        second process holding exclusive mode. None of these can be
+                        produced by source changes, mocks, or CI configuration, and the
+                        directive forbids claiming qualification without them
+SMALLEST FOUNDER ACTION exercise the env-gated live tests and the matrix rows on a real
+                        Windows machine (or attach an authorized Windows hardware runner),
+                        recording device/hardware/software versions, the exact head SHA,
+                        and per-row artifacts
+NEXT STEP AFTER UNBLOCK run the env-gated live tests and the evidence matrix on that
+                        hardware, record Gate E evidence, then close Specification 008 and
+                        begin Specification 009 (Linux capture) shaping
+ALSO UNAUTHORIZED       Specification 009 shaping, release, FIPS, and compliance claims
+                        until 008 is itself CLOSED_CANONICAL
+```
+
+Non-runtime work that remains but is not blocked: wiring captured frames
+and sealed checkpoints into the 005 journal sink, which is recorded as
+`SPEC_008C_JOURNAL_SINK_WIRING = NOT_YET_WIRED_LATER_GRAIN` and needs its
+own bounded grain rather than a silent extension of this one.
