@@ -23,17 +23,11 @@ This plan does not authorize:
 ## 3. Founder GitHub source-use expansion
 The founder has stated that Himsat may copy/adapt source code available through the founder's GitHub access. This expands the source pool for engineering evaluation, but does not make every source an automatic dependency.
 The selection rule remains:
-
 > **Use the smallest technically superior reusable part behind Himsat-owned contracts.**
-
 Exact source path, immutable revision, embedded third-party material, notices, model/data/asset rights, transitive dependencies, Himsat tests, and security qualification remain mandatory before adoption.
-
 ## 4. GitHub-wide source reconnaissance
-
 The connected GitHub inventory contained 36 founder-accessible repositories at this planning pass.
-
 ### 4.1 Directly relevant sources
-
 | Repository | Relevance to Local Decision Fabric | Reuse posture |
 | --- | --- | --- |
 | TheHalfMoon/kernux | Mature provider-neutral Decision Fabric plan: typed requests/results, calibration, abstention, deterministic eligibility, disagreement/escalation, local-only provider requirements | ADAPT architecture/contracts selectively |
@@ -51,11 +45,8 @@ The connected GitHub inventory contained 36 founder-accessible repositories at t
 | TheHalfMoon/Delethos | Independent delegation/review/isolation patterns | review isolation reference |
 | TheHalfMoon/HarnessMind | Local-first/no-cloud/no-telemetry and observable-facts discipline | observability reference |
 | TheHalfMoon/Paina | Evidence-backed policy-learning research direction | future research reference |
-
 ### 4.2 Adjacent or lower-direct-relevance repositories
-
 The following repositories were included in the GitHub-wide inventory and were checked for reusable direction, but no stronger Local Decision Fabric implementation donor was identified than the sources above during this pass:
-
 - TheHalfMoon/Fanatir
 - TheHalfMoon/Kodac
 - TheHalfMoon/Hikma
@@ -76,56 +67,35 @@ The following repositories were included in the GitHub-wide inventory and were c
 - TheHalfMoon/Zyara
 - TheHalfMoon/Balott
 - TheHalfMoon/acarat
-
 This classification is not a permanent rejection. If a future bounded unit identifies a better reusable component in any founder repository, it should be compared at that time.
-
 ### 4.3 Important source distinctions
-
 Do not conflate:
-
 - aayushch/laya: local-first event/action application architecture;
 - convaiinnovations/laya: Jev-like typed-decision model family.
-
 The second is the relevant model candidate for this plan.
-
 ## 5. Candidate model/provider pool
-
 ### 5.1 Primary specialized candidate — Laya
-
 convaiinnovations/laya is the first specialized candidate because current upstream metadata describes a compact text-classification / typed-decision model with calibrated-decision/routing/scoring intent.
-
 Observed planning facts must be reverified at adoption time:
-
 - approximately 421M parameters;
 - Apache-2.0 model repository metadata at the observed revision;
 - classification-oriented rather than free-form text generation;
 - intended bounded decision/scoring use.
-
 Himsat must independently prove its real artifact size, runtime compatibility, Arabic behavior, calibration, abstention, latency, memory, and offline packaging.
-
 ### 5.2 SemIf-style direct scoring
-
 TheoLeeCJ/SemIf is a strong algorithm/reference candidate for direct option-logit scoring from ordinary local models.
-
 Useful ideas:
-
 - avoid generating prose that is immediately reparsed;
 - score known options directly;
 - expose normalized probability/score semantics;
 - preserve a small deterministic interface;
 - support reusable prefixes/state;
 - keep calibration measurable.
-
 If SemIf code is adopted, use the smallest source subset required behind Himsat contracts.
-
 ### 5.3 Decider-style typed wire surface
-
 Mapika/decider is a useful candidate/reference for typed boolean/choice/score decision surfaces, option-cardinality handling, schema caching, and TypeSafe-compatible concepts.
-
 It is not architecture authority.
-
 ### 5.4 Compact general-model challengers
-
 The founder's commandMed research already identified low-resource candidates and artifact evidence useful for a Himsat tournament. Examples include:
 
 - IBM Granite 4.0 350M base with an observed official Q4_K_M artifact around 237 MB;
@@ -303,6 +273,24 @@ Platform acceleration should be optional:
 - Metal/CoreML/MLX-like path only when separately qualified;
 - CUDA/DirectML/etc. only as optional acceleration;
 - CPU remains the portable fallback inside LOCAL_ONLY policy.
+
+## 8.5 Total product resource budget and platform profiles
+
+Model bytes are not the whole cost. Qualification must measure the combined runtime + tokenizer + model + calibration + worker overhead.
+
+Planning targets:
+
+    DEFAULT_DECISION_SUBSYSTEM_INSTALL_TARGET <= 320 MiB
+    DEFAULT_DECISION_SUBSYSTEM_HARD_CAP       <= 450 MiB
+    DEFAULT_RUNTIME_BINARY_DELTA_TARGET       <= 32 MiB compressed where practical
+
+The normal installer should ship only one default decision runtime family. Challenger engines belong in qualification/dev packs unless they become the selected production path.
+
+Himsat also needs a local resource arbiter: decision inference must yield to recording/transcription when RAM, thermal, or CPU pressure would damage the primary capture path. The decision model may unload, abstain, or defer rather than jeopardize durable audio.
+
+Desktop and mobile packaging are separate qualification profiles. Do not assume the same model is suitable everywhere. A future mobile default should target <= 128 MiB model payload and must pass battery/thermal/background-memory evidence; until then mobile may use deterministic-only decisions or a separately qualified smaller provider.
+
+Raw audio should not enter the decision provider merely because it exists. Prefer bounded transcript/evidence features unless a future multimodal decision workload is separately authorized.
 
 ## 9. Preferred runtime strategy
 
