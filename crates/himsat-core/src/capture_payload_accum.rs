@@ -729,7 +729,7 @@ mod tests {
         ));
         assert!(matches!(
             tight.seal_next(nonce_for(2), seal_with_test_vrk),
-            Err(AccumError::PendingFull { .. })
+            Err(AccumError::EmptySeal)
         ));
         tight.note_committed().expect("drain one");
         tight
