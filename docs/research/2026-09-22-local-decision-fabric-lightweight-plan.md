@@ -1,24 +1,15 @@
 # Himsat Lightweight Local Decision Fabric Plan
-
 **Status:** planning amendment; no implementation authority  
 **Date:** 2026-09-22  
 **Founder direction:** ship a Jev-like typed-decision capability locally with Himsat, with no cloud inference and no hidden fallback, while keeping the application light.  
 **Current canonical implementation frontier:** Specification 008 remains open on real-Windows Gate E evidence. This document does not advance that frontier.
-
 ## 1. Purpose
-
 Himsat should gain a small, fast, local typed-decision subsystem for bounded classification, choice, ranking, scoring, abstention, and routing. The subsystem should provide the useful engineering properties associated with Jev-style System One decision interfaces without creating a production dependency on hosted Jev, a cloud model API, or one donor model.
-
 The permanent product boundary is:
-
 > **Himsat owns the decision contract, policy, calibration requirements, authority boundary, provenance, and product behavior. Models are replaceable local providers.**
-
 The first implementation should be optimized for small install size, low memory, CPU-first execution, fast startup, predictable latency, and zero unexpected network egress.
-
 ## 2. Non-goals
-
 This plan does not authorize:
-
 - changing the active Specification 008 implementation frontier;
 - claiming Gate E Windows hardware qualification;
 - importing model weights into Git;
@@ -29,11 +20,8 @@ This plan does not authorize:
 - silently using cloud inference when a local model is unavailable;
 - selecting Laya or any other candidate before Himsat-owned qualification;
 - turning every classification into an AI call when deterministic code is sufficient.
-
 ## 3. Founder GitHub source-use expansion
-
 The founder has stated that Himsat may copy/adapt source code available through the founder's GitHub access. This expands the source pool for engineering evaluation, but does not make every source an automatic dependency.
-
 The selection rule remains:
 
 > **Use the smallest technically superior reusable part behind Himsat-owned contracts.**
