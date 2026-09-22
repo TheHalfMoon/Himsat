@@ -138,6 +138,10 @@ pub mod capture_windows_pressure;
 /// commit contract.
 pub mod capture_journal_commit;
 
+/// 008E bounded payload accumulation that produces the sealed chunks the
+/// 008D commit path appends to the 005 journal.
+pub mod capture_payload_accum;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 

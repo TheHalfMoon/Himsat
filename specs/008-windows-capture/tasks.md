@@ -117,6 +117,18 @@
 - [x] P009 Post-merge qualification on the exact canonical merge: push-triggered CI `35704745292` SUCCESS and R3 `35704745276` SUCCESS, both attempt 1. `SPEC_008D_CHUNK_JOURNAL_COMMIT_STATE = CANONICAL_QUALIFIED`.
 - [ ] Q001 Promote the next authorized leaf: the payload-accumulation grain that turns captured payloads into the `SealedChunk` values this grain commits, under the owner's 005A sealer, the 008C admission policy, and the checkpoint cadence. `NEXT_IMPLEMENTATION_LEAF = SPEC_008E_PAYLOAD_ACCUMULATION_GRAIN`. `O009` stays open until that grain is canonically qualified, and `O008` remains blocked on real Windows hardware.
 
+## Implementation — 008E payload accumulation (SealedChunk production)
+
+- [x] R001 Declare `crates/himsat-core/src/capture_payload_accum.rs` and register the module; it holds no key material, generates no nonce, reads no clock, and seals only through the owner-supplied 005A sealer.
+- [x] R002 Enforce the bounded real-time contract: `push` performs timestamp checks, one pure 008C admission decision, and bound checks before a single copy into the pre-reserved buffer; sealing and committing stay on the drain thread.
+- [x] R003 Seal the next contiguous chunk with owner-supplied nonces under the B203 lifecycle, verifying the envelope nonce and implied plaintext length before any index advances, and track sealed-but-uncommitted backpressure with `note_committed`.
+- [x] R004 Refuse `close` with `BufferedRemainder` or `PendingDrain` so no byte is silently lost; buffered-but-unsealed and sealed-but-uncommitted data stay volatile until the 008D commit.
+- [x] R005 Add the nine tests; every one seals through the real 005A path, and the round-trip test commits through the real 008D path and decrypts the exact quoted bytes.
+- [x] R006 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree (compilation and the suite are proven by exact-head CI because this workstation has no MSVC linker).
+- [ ] R007 Exact-head qualify the grain: PR head, pull-request CI, and R3 recorded once the candidate head is pushed.
+- [ ] R008 Reconcile and merge under explicit expected-head protection, then record the canonical merge, parents, merge-tree equality, and post-merge CI/R3.
+- [ ] R009 Close `O009` once both grains are canonically qualified: the 008D commit path plus this payload-accumulation grain. `O008` remains blocked on real Windows hardware.
+
 ## Specification 008 closeout state
 
 The portable half of Specification 008 is complete: 008A microphone core and binding, 008B loopback core and binding, 008C lifecycle observation, loss accounting, admission policy, and checkpoint cadence, each canonically qualified with green CI/R3 on ubuntu, macOS, and Windows. Specification 008 remains open because its closeout rule requires Gate E platform qualification, and Gate E requires the hardware interaction listed under O008.

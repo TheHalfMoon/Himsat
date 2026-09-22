@@ -1862,3 +1862,22 @@ SPEC_008E_PAYLOAD_ACCUMULATION_GRAIN`. `O008` remains blocked on real Windows
 hardware. No Windows runtime, Gate E, loopback, first-audio, release, FIPS, or
 compliance claim is made, and `SPEC_008_PLATFORM_SCOPE` stays
 `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
+
+## Specification 008E payload accumulation (candidate)
+
+This unit is the second half of `O009`: `crates/himsat-core/src/capture_payload_accum.rs`
+turns captured payload bytes into the `SealedChunk` values the 008D commit path appends,
+in contiguous 0-based order, with typed refusals and no silent frame loss.
+`push` is the only real-time method (timestamp checks, one pure 008C admission
+decision, and bound checks before a single copy into the pre-reserved buffer);
+`seal_next` runs on the owner drain thread through the owner-held 005A sealer under
+the 004 lease, with owner-supplied nonces under the B203 lifecycle, verifying the
+envelope nonce and implied plaintext length before any index advances; `close`
+refuses with buffered bytes or uncommitted chunks outstanding. The nine tests seal
+through the real 005A path, round-trip through the real 008D commit path, and
+decrypt the exact quoted bytes. `008e-payload-accumulation-evidence.md` is the
+controlling record. No Windows runtime, Gate E, loopback, first-audio, release,
+FIPS, or compliance claim is made, `SPEC_008_PLATFORM_SCOPE` stays
+`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`, and the 005A context-accessor limitation
+recorded in 008D carries over unchanged. `O009` stays open and `O008` stays blocked
+on real Windows hardware until this grain is canonically qualified.
