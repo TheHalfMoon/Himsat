@@ -461,6 +461,61 @@ Future action flow:
       -> execution
       -> reconciliation/evidence
 The decision provider never directly performs consequential external effects.
+## 41.1 Canonical request hashing and replay safety
+Decision request identity must be derived from a canonical serialization, not ad-hoc JSON formatting.
+Freeze:
+- field ordering and normalization rules; Unicode normalization policy; language-tag normalization; option ordering semantics; maximum serialized bytes; schema-version inclusion; evidence-reference ordering; digest algorithm.
+The request digest must exclude nondeterministic runtime fields such as wall-clock latency while including all fields that can change the semantic answer.
+A cached result is reusable only when request digest, engine identity, calibration identity, workload policy revision, and consequence class all match.
+No cache may cross vault/user/workspace boundaries unless the canonical scope identity is part of the cache key and policy explicitly permits it.
+## 41.2 Context minimization and sensitive-data boundary
+Decision providers receive the minimum bounded state required for the workload.
+Do not send raw audio when transcript/evidence features are sufficient.
+Do not copy full transcripts into generic model diagnostics.
+Before inference, callers should construct a typed DecisionContext containing only authorized fields and evidence references.
+Logs must redact user text by default. Error strings must not echo transcript/document content.
+Fixtures containing private user material are forbidden from public benchmark artifacts.
+## 41.3 Concurrency, backpressure, cancellation, and batching
+The router/runtime must define concurrency explicitly:
+- bounded request queue; bounded in-flight requests; cancellation propagation; deadline propagation; admission refusal under saturation; no unbounded retry; no starvation of recording/transcription work.
+Micro-batching is optional and may be used only after correctness is preserved across independently scored questions and latency deadlines.
+Batching must never cause one request's state/options to leak into another request.
+Worker termination must resolve every in-flight request as a typed failure or cancellation; no request may hang indefinitely.
+## 41.4 Cache and residency correctness
+If prepared model sessions or prefix caches are used:
+- cache identity includes exact engine/runtime/tokenizer/template identity; cache has a byte cap; cache is evictable; cache corruption fails closed; model update invalidates incompatible entries; logout/vault deletion clears scope-bound metadata.
+Do not claim secure physical erasure of SSD/model-cache blocks that the OS/filesystem cannot guarantee; promise logical deletion and key-based protection only where evidence supports it.
+## 41.5 Statistical qualification discipline
+Before primary tournament execution, freeze:
+- primary metrics; hard thresholds; sample-size rationale; confidence intervals or bootstrap method where applicable; tie handling; missing/error handling; language strata; noisy-transcript strata; OOD strata.
+Preserve every candidate result, including losses.
+Do not repeatedly tune on the held-out qualification set.
+Calibration fitting data and final evaluation data must be separated.
+If dataset size is too small for a strong superiority claim, qualify only the narrower supported claim.
+## 41.6 Reproducible build and artifact production
+Any model conversion/quantization pipeline must record:
+- source model revision; converter repository/revision; converter command/config; toolchain versions; deterministic seeds where relevant; produced artifact digest; tokenizer/config digests; quantization parameters; host architecture where material.
+If bit-for-bit reproducibility is not achievable, preserve the exact produced bytes and document the nondeterministic conversion boundary.
+Production installers must not build/convert model weights on the user's machine by default.
+## 41.7 Compatibility and schema migration
+Version independently:
+- DecisionRequest schema; DecisionResult schema; Decision Pack schema; worker IPC protocol; engine identity schema; calibration schema.
+Readers must reject unknown incompatible major versions and handle known older versions only through explicit migrations.
+A core app update must not silently activate a pack whose runtime contract is no longer qualified.
+A pack update must declare minimum/maximum compatible Himsat/runtime versions.
+## 41.8 User-facing failure semantics
+Normal product UX must distinguish:
+- model not installed; model loading; model unavailable; model corrupt; resource-pressure deferral; unsupported language/workload; abstention; local runtime failure.
+Do not collapse these into generic AI failed messages when actionable distinction exists.
+No failure state should imply that cloud fallback will occur.
+## 41.9 Security review focus
+R3 review for runtime/model adoption must explicitly inspect:
+- parser attack surface; unsafe/native code; custom ops; dynamic library loading; environment-variable control; writable search paths; DLL/shared-library hijack risk; symlink/reparse-point behavior; archive traversal; temporary-file permissions; worker IPC authentication/scope; denial-of-service via huge option/state payloads.
+A runtime that requires arbitrary remote code/custom model code is not default-eligible.
+## 41.10 No-gap readiness rule
+The plan is not considered implementation-ready merely because architecture prose exists.
+It is ready only when contracts, limits, evidence methods, failure semantics, source identities, qualification thresholds, rollback behavior, and per-grain exit evidence are explicit enough that implementation can proceed without reopening foundational design.
+
 ## 42. Future implementation grains
 ### LDF-01 — Contract foundation
 Implement:
