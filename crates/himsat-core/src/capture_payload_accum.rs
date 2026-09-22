@@ -191,8 +191,7 @@ impl PayloadAccum {
                 max_pending: 0,
             });
         }
-        let mut buffer = Vec::new();
-        buffer.reserve(config.max_chunk_bytes);
+        let mut buffer = Vec::with_capacity(config.max_chunk_bytes);
         Ok(Self {
             config,
             buffer,
@@ -252,13 +251,13 @@ impl PayloadAccum {
         if end_ms < start_ms {
             return Err(AccumError::TimestampRange { start_ms, end_ms });
         }
-        if let Some(stream_end) = self.stream_end_ms {
-            if start_ms < stream_end {
-                return Err(AccumError::TimestampRegression {
-                    start_ms,
-                    stream_end_ms: stream_end,
-                });
-            }
+        if let Some(stream_end) = self.stream_end_ms
+            && start_ms < stream_end
+        {
+            return Err(AccumError::TimestampRegression {
+                start_ms,
+                stream_end_ms: stream_end,
+            });
         }
         if let AdmissionDecision::Refuse(reason) =
             decide_admission(self.config.budgets, free_bytes, queue_depth)
