@@ -1923,3 +1923,40 @@ CI `35727109707` / R3 `35727109655` SUCCESS on that exact merge, with `Rust /
 ubuntu-latest`, `Rust / macos-latest`, and `Rust / windows-latest` all SUCCESS.
 `O009` remains CLOSED and `O008` remains the only Spec 008 frontier, blocked on real
 Windows hardware.
+
+## Local Decision Fabric planning closeout (PR220 + PR221)
+
+PR #220 (`docs: plan lightweight local decision fabric`) is `CANONICAL_MERGED`:
+accepted head `b60cf6b06b46867c58c007507eea68775b0af5eb`, canonical merge
+`b81bc374f0e2ad1d9f990b6ce9fc15c934b13db2`, push-triggered CI `35741609053`
+SUCCESS and R3 `35741609035` SUCCESS on that exact merge, with B404 Secret
+Service, Diffcipline R2, the provenance adversarial self-test plus
+ubuntu/macos/windows lanes, Rust on ubuntu/macos/windows, SpecGrain pinned
+source, and the negative controls all SUCCESS.
+
+PR #221 (`docs: make local decision fabric implementation-ready`) is
+`CANONICAL_QUALIFIED` and `CANONICAL_MERGED`: accepted head
+`e55123594bf29fba3717105b1fa1b68c7b9e4ab2` (665 additions, 0 deletions, 2
+files, inside the Diffcipline `max_added_lines = 900` bound) passed exact-head
+CI `35742459242` and R3 `35742459062` with all 11 CI jobs SUCCESS. Zero
+submitted reviews, zero review threads, only bot conversation comments;
+`MERGEABLE`/`CLEAN` at merge time. Alibaba open-code-review v1.12.9 delegation
+preview covers 0 of 2 files (both markdown `unsupported_ext`); both files were
+read and reviewed directly with no blocking finding and one non-blocking
+budget-restatement observation (reviewer ledger comment `5778766778`). Jev
+advisory was unavailable in-session (advisory-only, never a gate).
+
+The canonical merge is `c2671412ae995dcd5063eb153b514820d84d58ec` with parents
+`b81bc374f0e2ad1d9f990b6ce9fc15c934b13db2` +
+`e55123594bf29fba3717105b1fa1b68c7b9e4ab2`, merge tree
+`fb17a3edcd4040006152b25132688bf84f7dc2f2` equal to the accepted head tree,
+signature verified by GitHub (`verified = true`, `reason = valid`), and
+push-triggered CI `35744742958` / R3 `35744742582` SUCCESS on that exact merge.
+
+Both PRs are planning overlays only: the implementation-readiness packet freezes
+contract, pack, runtime, resource, qualification, security, test, and grain
+boundaries so a future authorized successor begins at LDF-01, and it creates no
+implementation authority. `ACTIVE_SPECIFICATION` stays `008-windows-capture`,
+`O009` stays CLOSED, `O008` remains the only Spec 008 frontier blocked on real
+Windows hardware, and `SPEC_008_PLATFORM_SCOPE` stays
+`WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
