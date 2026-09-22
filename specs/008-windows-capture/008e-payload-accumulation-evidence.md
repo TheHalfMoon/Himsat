@@ -38,19 +38,11 @@ seal_next     owner 005A sealer called once; nonce and length checked pre-advanc
 close         refuses with buffered bytes or uncommitted chunks outstanding
 ```
 
-1. `push` is the only real-time method: ordered checks plus one copy into the
-   pre-reserved buffer; sealing, committing, I/O, and telemetry never run in
-   the audio callback;
-2. admission reuses closed 008C `decide_admission`: warn degrades (surfaced by
-   the owner through 006B), critical storage or a full queue refuses with the
-   exact `RefusalReason`;
-3. the owner seals with its own 005A sealer under the 004 lease; nonces are
-   owner-supplied under the B203 lifecycle and never generated here;
-4. the envelope is verified (parser nonce equals the quoted nonce; length
-   equals buffered bytes plus 129) before any index advances, so a lying
-   sealer keeps the bytes for an honest retry instead of splitting the order;
-5. chunk indexes are a contiguous 0-based prefix; `close` refuses with
-   `BufferedRemainder` or `PendingDrain` rather than abandoning audio.
+1. `push` alone is real-time: checks plus one copy; sealing, committing, I/O, and telemetry stay on the drain thread;
+2. admission reuses closed 008C `decide_admission` with the exact `RefusalReason` on refusal;
+3. the owner seals under the 004 lease with B203-supplied nonces, never generated here;
+4. the envelope nonce and length verify before any index advances, so a lying sealer cannot split the order;
+5. indexes are a contiguous prefix from `starting_index`, and `close` refuses remainders rather than abandoning audio.
 
 ## Tests
 
@@ -63,6 +55,7 @@ seal_due_follows_size_and_cadence
 close_demands_an_empty_buffer_and_a_drained_queue
 a_lying_sealer_is_refused_without_losing_bytes
 every_sealed_envelope_decrypts_and_indexes_stay_contiguous
+resume_continues_from_the_replayed_prefix
 ```
 
 Every test seals through the real 005A `encrypt_media_chunk` path with a

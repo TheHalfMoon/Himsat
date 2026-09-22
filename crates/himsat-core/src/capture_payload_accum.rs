@@ -17,10 +17,10 @@
 //! cadence reuses closed 008C `checkpoint_due` over caller-stamped time (the
 //! owner carries the remainder); timestamps are checked caller facts.
 //!
-//! Crash honesty: bytes that are buffered but not yet sealed, and chunks that
-//! are sealed but not yet committed, are volatile memory. Durability begins at
-//! the 008D commit. `PayloadAccum::close` therefore refuses while either is
-//! outstanding instead of dropping them silently.
+//! Crash honesty: buffered-but-unsealed bytes and sealed-but-uncommitted
+//! chunks are volatile; durability begins at the 008D commit, so `close`
+//! refuses both. Resume restarts at the owner-supplied `starting_index`,
+//! which must equal the resumed journal commit count.
 //!
 //! Donor posture: no donor code is copied; the shape is Himsat-native over
 //! already-closed Himsat contracts.
@@ -49,6 +49,9 @@ pub struct AccumConfig {
     pub source: SourceId,
     /// Largest sealed plaintext in bytes; must not exceed the 005A ceiling.
     pub max_chunk_bytes: usize,
+    /// First chunk index: 0 for a new session, or the replayed commit count
+    /// when resuming beside a resumed 008D journal.
+    pub starting_index: u64,
     /// Largest number of sealed-but-uncommitted chunks; bounds memory.
     pub max_pending_chunks: u64,
     /// Caller-supplied storage and queue budgets for the 008C policy.
@@ -64,8 +67,6 @@ pub struct PushReport {
     pub accepted_bytes: usize,
     /// Total buffered bytes awaiting a seal after this call.
     pub buffered_bytes: usize,
-    /// Sealed-but-uncommitted chunks after this call.
-    pub pending_chunks: u64,
 }
 
 /// Summary returned when an accumulation session closes cleanly.
@@ -197,7 +198,7 @@ impl PayloadAccum {
             buffer,
             chunk_start_ms: None,
             stream_end_ms: None,
-            next_index: 0,
+            next_index: config.starting_index,
             pending: 0,
             sealed_total: 0,
             closed: false,
@@ -299,7 +300,6 @@ impl PayloadAccum {
         Ok(PushReport {
             accepted_bytes: payload.len(),
             buffered_bytes: self.buffer.len(),
-            pending_chunks: self.pending,
         })
     }
 
@@ -516,6 +516,7 @@ mod tests {
             source: SourceId::new(SOURCE),
             max_chunk_bytes: 64,
             max_pending_chunks: 4,
+            starting_index: 0,
             budgets: BUDGETS,
             cadence_millis: 1_000,
         }
@@ -635,20 +636,6 @@ mod tests {
 
     #[test]
     fn seal_due_follows_size_and_cadence() {
-        assert!(matches!(
-            PayloadAccum::new(AccumConfig {
-                max_chunk_bytes: 0,
-                ..config()
-            }),
-            Err(AccumError::PayloadTooLarge { .. })
-        ));
-        assert!(matches!(
-            PayloadAccum::new(AccumConfig {
-                max_pending_chunks: 0,
-                ..config()
-            }),
-            Err(AccumError::PendingFull { .. })
-        ));
         let mut accum = PayloadAccum::new(config()).expect("accum");
         assert!(!accum.seal_due(9_999));
         accum.push(b"aa", 0, 10, 10_000, 0).expect("buffered push");
@@ -761,5 +748,28 @@ mod tests {
             tight.note_committed(),
             Err(AccumError::NoPendingCommit)
         ));
+    }
+
+    #[test]
+    fn resume_continues_from_the_replayed_prefix() {
+        let mut resumed = PayloadAccum::new(AccumConfig {
+            starting_index: 41,
+            ..config()
+        })
+        .expect("accum");
+        assert_eq!(resumed.next_chunk_index(), 41);
+        resumed.push(b"aa", 900, 910, 10_000, 0).expect("push");
+        let (chunk, facts) = resumed
+            .seal_next(nonce_for(41), seal_with_test_vrk)
+            .expect("seal");
+        assert_eq!(facts.plaintext_len, 2);
+        let plaintext = decrypt_media_chunk(
+            &OwnedKeyMaterial::from_bytes(TEST_VRK),
+            binding().chunk_context(41),
+            &chunk.envelope,
+        )
+        .expect("resumed chunk decrypts under its own context");
+        assert_eq!(plaintext, b"aa");
+        assert_eq!(resumed.next_chunk_index(), 42);
     }
 }

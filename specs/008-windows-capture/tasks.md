@@ -123,7 +123,7 @@
 - [x] R002 Enforce the bounded real-time contract: `push` performs timestamp checks, one pure 008C admission decision, and bound checks before a single copy into the pre-reserved buffer; sealing and committing stay on the drain thread.
 - [x] R003 Seal the next contiguous chunk with owner-supplied nonces under the B203 lifecycle, verifying the envelope nonce and implied plaintext length before any index advances, and track sealed-but-uncommitted backpressure with `note_committed`.
 - [x] R004 Refuse `close` with `BufferedRemainder` or `PendingDrain` so no byte is silently lost; buffered-but-unsealed and sealed-but-uncommitted data stay volatile until the 008D commit.
-- [x] R005 Add the eight tests; every one seals through the real 005A path, and the round-trip test commits through the real 008D path and decrypts the exact quoted bytes.
+- [x] R005 Add the nine tests; every one seals through the real 005A path, and the round-trip test commits through the real 008D path and decrypts the exact quoted bytes.
 - [x] R006 Run the local gates: `cargo fmt --all -- --check`, provenance validate/check-generated, and the 004P closure on the candidate tree (compilation and the suite are proven by exact-head CI because this workstation has no MSVC linker).
 - [ ] R007 Exact-head qualify the grain: PR head, pull-request CI, and R3 recorded once the candidate head is pushed.
 - [ ] R008 Reconcile and merge under explicit expected-head protection, then record the canonical merge, parents, merge-tree equality, and post-merge CI/R3.

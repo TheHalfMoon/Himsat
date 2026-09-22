@@ -1873,7 +1873,7 @@ decision, and bound checks before a single copy into the pre-reserved buffer);
 `seal_next` runs on the owner drain thread through the owner-held 005A sealer under
 the 004 lease, with owner-supplied nonces under the B203 lifecycle, verifying the
 envelope nonce and implied plaintext length before any index advances; `close`
-refuses with buffered bytes or uncommitted chunks outstanding. The eight tests seal
+refuses with buffered bytes or uncommitted chunks outstanding. The nine tests seal
 through the real 005A path, round-trip through the real 008D commit path, and
 decrypt the exact quoted bytes. `008e-payload-accumulation-evidence.md` is the
 controlling record. No Windows runtime, Gate E, loopback, first-audio, release,
