@@ -84,8 +84,12 @@ decrypt test authenticates the exact bytes the journal quotes.
   `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
 - No real sealer binding: the 004 vault lease and the B203 nonce lifecycle are
   not wired here, and this module generates no nonce.
-- The 005A parser proves envelope structure, not the vault/session/index
-  binding inside the ciphertext; that binding is authenticated at decryption,
-  which is 005C reconciliation's job.
+- The closed 005A public parser proves envelope structure, the declared
+  plaintext length, and the quoted nonce, but it exposes no accessor for the
+  envelope's public vault/session/index header, so the commit path cannot fail
+  closed on a structurally valid envelope that was sealed for another context.
+  That binding is authenticated at decryption and reconciled by 005C; a public
+  005A context accessor would let a later grain refuse such an envelope before
+  the journal is touched, and no reviewed 005A byte is changed here to get one.
 - `O009` is not complete: payload accumulation into sealed chunks remains the
   next bounded grain.
