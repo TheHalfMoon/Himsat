@@ -153,6 +153,17 @@ This is a research/planning registry, not adoption authority. Founder source-use
 | `tonarino/webrtc-audio-processing` | DEPEND/COPY alternative | battle-tested WebRTC AudioProcessing wrapper | C++/system build complexity and native closure |
 | `thewh1teagle/vibe` / related local engine work | REFERENCE/COPY/ADAPT selective | media import, model lifecycle, transcription job isolation | exact current repository/revision/path must be reverified before adoption |
 | `EricLBuehler/mistral.rs` | DEPEND/COPY candidate | Rust-native local LLM inference | benchmark device/model support before choosing as primary |
+| `convaiinnovations/laya` | EXPERIMENT/DEPEND/ADAPT candidate | compact local typed decisions, routing, scoring, calibrated-choice research | model/runtime/quantization/Arabic calibration must be independently qualified; no hosted Jev dependency |
+| `TheoLeeCJ/SemIf` | COPY/ADAPT/REFERENCE candidate | direct option-logit scoring, shared-state reuse, calibration/evaluation patterns | Himsat owns request/result/authority contracts; adopt only the smallest useful paths |
+| `Mapika/decider` | COPY/ADAPT/REFERENCE candidate | typed boolean/choice/score decision surface and schema-caching ideas | provider only; never authority or policy |
+| `sonos/tract` / `tract-onnx` | DEPEND/COPY candidate | lightweight pure-Rust local ONNX baseline | exact Himsat MSRV/native closure and target-model compatibility required; no HTTP acquisition path |
+| `TheHalfMoon/MedScale` local Pack/ONNX runtime | COPY/ADAPT selective founder source | bounded verified-bytes ONNX execution, pack/provenance, no-HTTP tokenizer/runtime patterns | transplant only general-purpose runtime patterns; do not import clinical authority/domain semantics |
+| `TheHalfMoon/kernux` Decision Fabric | COPY/ADAPT selective founder source | provider-neutral DecisionRequest/DecisionResult, calibration, abstention, deterministic eligibility | Himsat-owned contracts remain authority |
+| `TheHalfMoon/Morize` typed-decision model | COPY/ADAPT selective founder source | confidence/abstention/reason-code/engine-identity semantics | memory-domain actions are not copied wholesale |
+| `TheHalfMoon/Inercative` harness routing | COPY/ADAPT selective founder source | deterministic-vs-decision-vs-generative split, fallback lineage, qualification metrics | software-builder authority model is not imported |
+| `TheHalfMoon/Golam` execution profiles | COPY/ADAPT selective founder source | model/runtime/quantization/device/warm-residency identity | Himsat retains local privacy and product lifecycle authority |
+| `TheHalfMoon/commandMed` ultra-compact model research | REFERENCE/COPY selective founder source | low-resource candidate identity, artifact provenance, quality-floor-then-size methodology | medical benchmark conclusions do not transfer to Himsat workloads |
+| `TheHalfMoon/Wispral` resource-tier qualification | REFERENCE/COPY selective founder source | COMPACT/BALANCED byte ceilings and preregistered runtime/model qualification | speech-specific quality conclusions do not transfer to decision workloads |
 | `ggml-org/llama.cpp` | DEPEND/VENDOR/COPY candidate | broad GGUF local inference compatibility | model licenses separate |
 | `Anush008/fastembed-rs` | DEPEND/COPY candidate | local embeddings/reranking | model licenses/cache integrity separately |
 | `sqlcipher/sqlcipher` | DEPEND/VENDOR/COPY candidate | encrypted SQLite | exact SQLCipher/native provider identity and notices remain mandatory |

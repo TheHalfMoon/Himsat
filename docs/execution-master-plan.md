@@ -462,6 +462,20 @@ The Superwhisper/OpenSuperWhisper research and the broader covered donor set exp
 **Home:** 011.  
 **Outcome candidate:** queryable model/provider routing by locality, language, streaming, diarization, resource, provenance, and Network Lock compatibility.
 
+### Local Decision Fabric
+
+**Dependencies:** 011 before model-pack/runtime adoption; 025 before evidence-sensitive decision uses; 027 for deep Intelligence/Himsat Brief integration.  
+**Outcome candidate:** provider-neutral, Jev-like bounded decisions that run fully locally, return typed calibrated results, support abstention, and never gain authority over deterministic policy, permissions, privacy, verification, or evidence truth.  
+**Default product posture:** a small Himsat Lite Decision Pack included with the offline-capable installer but versioned separately from the core binary, lazily loaded, CPU-capable, evictable under memory pressure, and removable without breaking deterministic core behavior.  
+**Primary candidate:** `convaiinnovations/laya`, contingent on exact artifact/runtime qualification.  
+**Challengers/references:** SemIf-style direct option scoring, Decider-style typed surfaces, compact general-model candidates already researched in founder repositories, and any stronger local provider found during shaping.  
+**Preferred first runtime experiment:** adapt the bounded local `tract-onnx` / no-HTTP artifact-execution patterns already proven in `TheHalfMoon/MedScale`, but only if exact Laya export/runtime equivalence is demonstrated.  
+**Lightweight planning targets:** default pack target <= 256 MiB, hard default cap <= 384 MiB, CPU baseline, no Python runtime in the normal product, one default model resident at most, no hidden model download during inference, no cloud fallback.  
+**Qualification:** Himsat-owned English/Arabic/code-switch fixtures, calibration/abstention/OOD evidence, package bytes, cold/warm latency, peak RAM, network-deny proof, crash/recovery, and exact model/runtime/calibration identity.  
+**Authority rule:** model output is advisory observation only; `CONFIDENCE != AUTHORITY`.  
+**Planning detail:** `docs/research/2026-09-22-local-decision-fabric-lightweight-plan.md`.  
+**Authority:** planning overlay only; it does not create a Grain or advance the active Specification 008 frontier.
+
 ### Input Control Layer
 
 **Home:** 015.  
