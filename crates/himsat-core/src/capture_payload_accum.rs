@@ -191,7 +191,7 @@ impl PayloadAccum {
                 max_pending: 0,
             });
         }
-        let mut buffer = Vec::with_capacity(config.max_chunk_bytes);
+        let buffer = Vec::with_capacity(config.max_chunk_bytes);
         Ok(Self {
             config,
             buffer,
