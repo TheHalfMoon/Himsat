@@ -474,6 +474,7 @@ The Superwhisper/OpenSuperWhisper research and the broader covered donor set exp
 **Qualification:** Himsat-owned English/Arabic/code-switch fixtures, calibration/abstention/OOD evidence, package bytes, cold/warm latency, peak RAM, network-deny proof, crash/recovery, and exact model/runtime/calibration identity.  
 **Authority rule:** model output is advisory observation only; `CONFIDENCE != AUTHORITY`.  
 **Planning detail:** `docs/research/2026-09-22-local-decision-fabric-lightweight-plan.md`.  
+**Implementation-readiness packet:** `docs/research/2026-09-22-local-decision-fabric-implementation-readiness.md`. This freezes future contract, pack, runtime, resource, qualification, security, test, and grain boundaries so an activated successor can begin at LDF-01 instead of repeating broad architecture research.  
 **Authority:** planning overlay only; it does not create a Grain or advance the active Specification 008 frontier.
 
 ### Input Control Layer
