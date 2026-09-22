@@ -101,7 +101,19 @@
 - [x] O006 Exact-head qualify grain 2: PR #212 head `6fac1a67c7d3024122033c5b9ea96a0a7ec1b2b4` passed pull-request CI `35671828438` and R3 `35671828495`. The first head `7643f41` failed with a test-only compile defect; the failure is preserved in run `35671348004` and repaired forward.
 - [x] O007 Reconcile and merge under expected-head protection: zero reviews, zero threads, OCR ledger `5769441108`, failure record `5769488372`, `MERGEABLE`/`CLEAN`. Canonical merge `0d231846b47f6315bc404915412174e5f222bd46`, parents `89934e0` + `6fac1a6`, merge tree `cec11f02d3faa7e901be88139e081901904dcd8b` equal to the accepted head tree, signature verified, post-merge CI `35672704679` / R3 `35672704691` SUCCESS.
 - [ ] O008 BLOCKED — runtime evidence matrix. Every remaining 008 row needs real Windows hardware interaction: live endpoint change (connect/disconnect, Bluetooth/USB), real suspend/resume, multi-hour capture, live microphone privacy toggle, live exclusive-mode contention, real storage-exhaustion refusal, and loopback first-audio. GitHub-hosted runners have no audio endpoints and no suspend cycle, and the local workstation cannot build, so the env-gated live tests (`HIMSAT_LIVE_MIC_TEST=1`, `HIMSAT_LIVE_LOOPBACK_TEST=1`) are NOT RUN and are not claimed. Blocker class: mandatory physical hardware unavailable. Owner: founder or an authorized Windows hardware runner. Next step after unblocking: run the env-gated tests and the matrix rows on that hardware, record Gate E evidence, then close Specification 008.
-- [ ] O009 NOT STARTED — journal-sink wiring of captured frames and sealed checkpoints into the 005 journal. Not blocked by hardware, but it needs its own bounded grain rather than a silent extension of 008C.
+- [ ] O009 IN PROGRESS — journal-sink wiring of captured frames and sealed checkpoints into the 005 journal. Not blocked by hardware. Split into two bounded grains under the 008 Diffcipline scope control (`max_added_lines = 900`): 008D (durable commit path for sealed chunks) and the payload-accumulation grain that produces those sealed chunks. `O009` closes only when both grains are canonically qualified.
+
+## Implementation — 008D grain 1 (durable commit path for sealed chunks)
+
+- [x] P001 Split `O009` into two bounded grains because a single grain exceeded `max_added_lines = 900`; the Spec 008 plan's Diffcipline scope control requires splitting rather than weakening bounds.
+- [x] P002 Declare `crates/himsat-core/src/capture_journal_commit.rs` and register the module; it holds no key material, generates no nonce, reads no clock, and writes only the caller's journal path.
+- [x] P003 Commit one sealed chunk as exactly one 005B commit record plus one 006C metadata entry, quoting the envelope's own nonce, the plaintext length its size implies, and the SHA-256 of the exact envelope bytes.
+- [x] P004 Refuse a malformed envelope, a nonce or length disagreement, and inverted timestamps before the journal is touched, and keep a contiguous 0-based chunk order across resume.
+- [x] P005 Poison the handle on a 005B failure instead of retrying the append, matching the closed 005B single-writer contract.
+- [x] P006 Add the seven tests; every one seals through the real 005A path, so each commit is bound to a real and decryptable envelope.
+- [ ] P007 Exact-head qualify grain 1: PR head, pull-request CI, and R3 recorded once the candidate head is pushed.
+- [ ] P008 Reconcile and merge under explicit expected-head protection, then record the canonical merge, parents, merge-tree equality, and post-merge CI/R3.
+- [ ] P009 Promote the next authorized leaf: the payload-accumulation grain that turns captured payloads into the `SealedChunk` values this grain commits, under the owner's sealer, 008C admission policy, and checkpoint cadence.
 
 ## Specification 008 closeout state
 

@@ -134,6 +134,10 @@ pub mod capture_windows_lifecycle;
 /// 008C Windows admission policy and checkpoint cadence over caller budgets.
 pub mod capture_windows_pressure;
 
+/// 008D durable commit path for sealed capture chunks over the closed 005
+/// commit contract.
+pub mod capture_journal_commit;
+
 /// B301 exact reviewed SQLCipher provider integration behind the B105 lease gate.
 pub mod vault_sqlcipher;
 
