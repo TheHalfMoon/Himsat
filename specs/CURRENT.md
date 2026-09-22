@@ -1881,3 +1881,33 @@ FIPS, or compliance claim is made, `SPEC_008_PLATFORM_SCOPE` stays
 `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`, and the 005A context-accessor limitation
 recorded in 008D carries over unchanged. `O009` stays open and `O008` stays blocked
 on real Windows hardware until this grain is canonically qualified.
+
+## Specification 008E qualification and O009 closeout
+
+008E is `CANONICAL_QUALIFIED`: PR #216 accepted head
+`9e097bac6c9b04112858f0c5ab2a68247a0dedf7` passed pull-request CI
+`35721295261` and R3 `35721295210` on attempt 1, with `Rust / ubuntu-latest`,
+`Rust / macos-latest`, and `Rust / windows-latest` all SUCCESS (compile,
+`clippy -D warnings`, and the full suite on each) alongside Diffcipline R2/R3,
+the negative controls, SpecGrain, and the provenance jobs. Preserved prior heads:
+`e60a3b6` superseded before any CI verdict (missing resume offset, 919 lines over
+the 900 bound); `6c4f9b3` failed CI with two clippy denies (run `35719201572`);
+`97a87ca` failed CI with `unused_mut` (run `35720018971`) and a wrong test
+expectation (run `35720464421`, macOS job). Zero submitted reviews, zero review
+threads, OCR delegation ledger `5775873476` (2 of 5 files reviewable, OCR v1.12.7
+reverified at review time), `MERGEABLE`/`CLEAN`.
+
+The canonical merge is `13d495fa6aee6ad73887441e735a85c9b8a7ac4e` with parents
+`ce31737f878cd0b90ac8c19656f8b88de6c96f35` +
+`9e097bac6c9b04112858f0c5ab2a68247a0dedf7`, merge tree
+`54f7333b1573bff27db7b5e41a39d8bd007aeefc` equal to the accepted head tree,
+signature verified by GitHub (`verified = true`, `reason = valid`), and
+push-triggered CI `35723436377` / R3 `35723436402` SUCCESS on that exact merge.
+
+`O009` is CLOSED: both grains canonically qualified (008D durable commit path plus
+008E payload accumulation). `O008` remains blocked on real Windows hardware, and it
+is now the only remaining Spec 008 frontier. Also recorded: PR #215 post-merge CI
+`35715860947` / R3 `35715861114` SUCCESS. No Windows runtime, Gate E, loopback,
+first-audio, release, FIPS, or compliance claim is made, and
+`SPEC_008_PLATFORM_SCOPE` stays `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
+`NEXT_IMPLEMENTATION_LEAF = SPEC_008_GATE_E_RUNTIME_MATRIX_BLOCKED_ON_REAL_WINDOWS_HARDWARE`.
