@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn refusal_reason_classifiers_are_stable_and_distinct() {
-        let classifiers = [
+        let classifiers: Vec<&str> = vec![
             RefusalReason::StorageCritical.classifier(),
             RefusalReason::QueueFull.classifier(),
             RefusalReason::StorageCriticalAndQueueFull.classifier(),
@@ -216,7 +216,7 @@ mod tests {
         assert_eq!(classifiers[0], "storage-critical");
         assert_eq!(classifiers[1], "queue-full");
         assert_eq!(classifiers[2], "storage-critical-and-queue-full");
-        let mut unique = classifiers;
+        let mut unique = classifiers.clone();
         unique.sort_unstable();
         unique.dedup();
         assert_eq!(unique.len(), 3);
