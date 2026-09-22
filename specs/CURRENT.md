@@ -1792,3 +1792,41 @@ Non-runtime work that remains but is not blocked: wiring captured frames
 and sealed checkpoints into the 005 journal sink, which is recorded as
 `SPEC_008C_JOURNAL_SINK_WIRING = NOT_YET_WIRED_LATER_GRAIN` and needs its
 own bounded grain rather than a silent extension of this one.
+
+## Specification 008D grain 1 — durable commit path for sealed chunks
+
+This unit re-verified live canonical truth before changing anything:
+`origin/main = d2681ba6ed387dcab7ba1a99c470f65e996d4f24` (PR #213, parents
+`0d231846b47f6315bc404915412174e5f222bd46` +
+`f245db8c9f56424d30925d028595f0c5835c959d`, merge tree
+`5fea14605e57cef045945029eed802180b40d45e`), with push-triggered CI
+`35674635497` and R3 `35674635576` SUCCESS on attempt 1, only the historical
+review-only 004A pull requests open, and no 008 work open. The Spec 008 ledger
+still records `O008` blocked on real Windows hardware and `O009` not started
+and not hardware-blocked.
+
+`O009` is therefore the next dependency-authorized unit, but one grain holding
+the commit path, the payload accumulator, and their tests exceeded the
+Diffcipline `max_added_lines = 900` bound. Under the 008 plan's Diffcipline
+scope control this unit splits `O009` into two bounded grains instead of
+weakening the bound: 008D (this grain) commits sealed chunks into the 005
+journal, and the payload-accumulation grain that produces those `SealedChunk`
+values follows as the promoted leaf.
+
+Grain 1 adds `capture_journal_commit.rs` over the closed 005A/005B/006C/003
+contracts: one sealed envelope plus its adapter facts become exactly one commit
+record and one 006C metadata entry, with the envelope accepted only by the
+closed 005A parser, the nonce and the implied plaintext length checked against
+the envelope itself, a contiguous 0-based chunk order that survives resume, and
+a poisoned handle on any 005B failure because a failed append must never be
+retried into a duplicate sequence. No key material, nonce generation, clock,
+network, device, or ambient authority is introduced, and the seven tests seal
+through the real 005A path so every commit under test is a real, decryptable
+envelope.
+
+`008d-chunk-journal-commit-evidence.md` is the controlling record. No Windows
+runtime, loopback, first-audio, or Gate E claim is made, and
+`SPEC_008_PLATFORM_SCOPE` stays `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`. The
+payload-accumulation grain, Specification 009 shaping, and all release, FIPS,
+and compliance claims remain unauthorized until this grain is canonically
+qualified.
