@@ -136,6 +136,18 @@ jobs:
           if ((Get-Content -LiteralPath (Join-Path $occupiedEvidenceDir 'preserved.txt') -Raw).Trim() -ne 'existing evidence') {
             throw 'Gate E runner modified existing evidence while refusing the directory.'
           }
+          $preflightEvidenceDir = Join-Path $env:RUNNER_TEMP 'himsat-gate-e-preflight'
+          & (Join-Path $out 'windows_gate_e.ps1') `
+            -TestBinary (Join-Path $out 'himsat-core-tests.exe') `
+            -ManifestPath (Join-Path $out 'manifest.json') `
+            -EvidenceDir $preflightEvidenceDir
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Gate E preflight failed on the generated Windows bundle.'
+          }
+          $preflight = Get-Content -LiteralPath (Join-Path $preflightEvidenceDir 'preflight.json') -Raw | ConvertFrom-Json
+          if ($preflight.source_sha -ne $candidate -or $preflight.live_smoke_requested) {
+            throw 'Gate E preflight record is not bound to the candidate without live capture.'
+          }
       - name: Upload Windows Gate E prebuilt bundle
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -62,9 +62,9 @@ Only after consent exists:
 
 This runs exactly:
 
-- `capture_windows::tests::live_stream_open_reports_frames_or_classified_fault`
+- `capture_windows::windows_tests::live_stream_open_reports_frames_or_classified_fault`
   with `HIMSAT_LIVE_MIC_TEST=1`;
-- `capture_windows_system_audio::tests::live_loopback_open_reports_frames_or_classified_fault`
+- `capture_windows_system_audio::windows_tests::live_loopback_open_reports_frames_or_classified_fault`
   with `HIMSAT_LIVE_LOOPBACK_TEST=1`.
 
 The runner writes the raw logs and a machine-readable result record.
