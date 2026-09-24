@@ -82,6 +82,68 @@ jobs:
       - name: Tests
         shell: bash
         run: cargo test --workspace --all-targets --locked
+      - name: Build Windows Gate E prebuilt bundle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidate = '${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}'
+          $out = Join-Path $env:RUNNER_TEMP 'himsat-gate-e'
+          $jsonl = Join-Path $env:RUNNER_TEMP 'himsat-gate-e-build.jsonl'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          cargo test -p himsat-core --lib --locked --no-run --message-format=json |
+            Tee-Object -FilePath $jsonl | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $records = Get-Content -LiteralPath $jsonl | ForEach-Object {
+            try { $_ | ConvertFrom-Json } catch { $null }
+          }
+          $artifact = $records |
+            Where-Object {
+              $_.reason -eq 'compiler-artifact' -and
+              $_.target.name -eq 'himsat_core' -and
+              $_.profile.test -eq $true -and
+              $_.executable
+            } |
+            Select-Object -Last 1
+          if (-not $artifact) { throw 'Unable to locate himsat-core test executable.' }
+          Copy-Item -LiteralPath $artifact.executable -Destination (Join-Path $out 'himsat-core-tests.exe')
+          Copy-Item -LiteralPath 'tools/windows_gate_e.ps1' -Destination (Join-Path $out 'windows_gate_e.ps1')
+          $digest = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $out 'himsat-core-tests.exe')).Hash.ToLowerInvariant()
+          [ordered]@{
+            schema = 'himsat-gate-e-bundle-v1'
+            source_sha = $candidate
+            test_binary = 'himsat-core-tests.exe'
+            test_binary_sha256 = $digest
+            rustc = (& rustc --version)
+            cargo = (& cargo --version)
+            generated_at_utc = [DateTimeOffset]::UtcNow.ToString('o')
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $out 'manifest.json') -Encoding utf8
+          $occupiedEvidenceDir = Join-Path $env:RUNNER_TEMP 'himsat-gate-e-occupied-evidence'
+          New-Item -ItemType Directory -Force -Path $occupiedEvidenceDir | Out-Null
+          Set-Content -LiteralPath (Join-Path $occupiedEvidenceDir 'preserved.txt') -Value 'existing evidence'
+          $nonemptyDirectoryRefused = $false
+          try {
+            & (Join-Path $out 'windows_gate_e.ps1') `
+              -TestBinary (Join-Path $out 'himsat-core-tests.exe') `
+              -ManifestPath (Join-Path $out 'manifest.json') `
+              -EvidenceDir $occupiedEvidenceDir
+          } catch {
+            $nonemptyDirectoryRefused = $_.Exception.Message -like 'Evidence directory is not empty*'
+          }
+          if (-not $nonemptyDirectoryRefused) {
+            throw 'Gate E runner did not refuse a non-empty evidence directory.'
+          }
+          if ((Get-Content -LiteralPath (Join-Path $occupiedEvidenceDir 'preserved.txt') -Raw).Trim() -ne 'existing evidence') {
+            throw 'Gate E runner modified existing evidence while refusing the directory.'
+          }
+      - name: Upload Windows Gate E prebuilt bundle
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: himsat-gate-e-windows-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/himsat-gate-e
+          if-no-files-found: error
+          retention-days: 14
       - name: Registered dependency closure invariant
         shell: bash
         run: |
