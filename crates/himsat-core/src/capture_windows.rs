@@ -571,9 +571,6 @@ mod tests {
     use crate::capture_health::{HealthChange, HealthMonitor, SignalSample};
     use crate::capture_session::{CaptureSession, CaptureState, SourceKind};
     use himsat_events::SessionId;
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::time::{Duration, Instant};
 
     const SESSION: SessionId = SessionId::new(8);
 
@@ -868,6 +865,9 @@ mod windows_tests {
         CpalMicrophoneBackend, MicrophoneBackend, SampleFormat, StreamStage, WindowsMicError,
         classify_error, open_f32_input_stream, portable_sample_format, select_input,
     };
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::{Duration, Instant};
 
     #[test]
     fn cpal_kinds_classify_deterministically() {

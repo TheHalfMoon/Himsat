@@ -517,9 +517,6 @@ mod tests {
     use crate::capture_health::{HealthChange, HealthMonitor, SignalSample};
     use crate::capture_session::{CaptureSession, CaptureState, SourceKind};
     use himsat_events::SessionId;
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::time::{Duration, Instant};
 
     const SESSION: SessionId = SessionId::new(9);
 
@@ -804,6 +801,9 @@ mod windows_tests {
         open_f32_loopback_stream, select_loopback_input,
     };
     use crate::capture_windows::{SampleFormat, classify_error as classify_microphone_error};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::{Duration, Instant};
 
     fn kinds() -> Vec<cpal::ErrorKind> {
         vec![
