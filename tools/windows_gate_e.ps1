@@ -60,8 +60,8 @@ if ($LASTEXITCODE -ne 0) {
     throw "Prebuilt test binary could not list tests."
 }
 
-$micTest = "capture_windows::tests::live_stream_open_reports_frames_or_classified_fault"
-$loopbackTest = "capture_windows_system_audio::tests::live_loopback_open_reports_frames_or_classified_fault"
+$micTest = "capture_windows::windows_tests::live_stream_open_reports_frames_or_classified_fault"
+$loopbackTest = "capture_windows_system_audio::windows_tests::live_loopback_open_reports_frames_or_classified_fault"
 
 $testList = Get-Content -LiteralPath $testListPath -Raw
 foreach ($required in @($micTest, $loopbackTest)) {
