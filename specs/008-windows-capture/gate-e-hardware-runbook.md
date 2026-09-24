@@ -36,6 +36,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 The preflight:
 
+- refuses a non-empty evidence directory so an earlier run cannot be overwritten;
 - verifies the binary SHA-256 against the manifest;
 - verifies the binary contains both env-gated live tests;
 - records Windows/PowerShell identity;

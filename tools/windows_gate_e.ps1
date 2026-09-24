@@ -17,7 +17,14 @@ if ($env:OS -ne "Windows_NT") {
     throw "Gate E hardware bundle must run on Windows."
 }
 
-New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
+if (Test-Path -LiteralPath $EvidenceDir) {
+    $existingEvidence = @(Get-ChildItem -LiteralPath $EvidenceDir -Force)
+    if ($existingEvidence.Count -ne 0) {
+        throw "Evidence directory is not empty. Preserve the existing run and choose a new evidence directory: $EvidenceDir"
+    }
+} else {
+    New-Item -ItemType Directory -Path $EvidenceDir | Out-Null
+}
 $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
 if (-not (Test-Path -LiteralPath $TestBinary)) {
     throw "Missing prebuilt test binary: $TestBinary"
