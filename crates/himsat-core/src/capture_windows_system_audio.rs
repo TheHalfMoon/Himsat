@@ -517,6 +517,9 @@ mod tests {
     use crate::capture_health::{HealthChange, HealthMonitor, SignalSample};
     use crate::capture_session::{CaptureSession, CaptureState, SourceKind};
     use himsat_events::SessionId;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::{Duration, Instant};
 
     const SESSION: SessionId = SessionId::new(9);
 
@@ -886,12 +889,19 @@ mod windows_tests {
         if std::env::var("HIMSAT_LIVE_LOOPBACK_TEST").is_err() {
             return;
         }
+        let strict = std::env::var("HIMSAT_GATE_E_REQUIRE_SIGNAL").is_ok();
         let backend = CpalLoopbackBackend;
         let selected = select_loopback_input(&backend, None).expect("live test needs an endpoint");
         assert!(!selected.info.endpoint_id.is_empty());
+        let non_silent_frames = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&non_silent_frames);
         match open_f32_loopback_stream(
             &selected.info.endpoint_id,
-            move |_frames: &[f32]| {},
+            move |frames: &[f32]| {
+                if frames.iter().any(|sample| sample.abs() > 0.000_01) {
+                    counter.fetch_add(frames.len(), Ordering::Relaxed);
+                }
+            },
             move |_error, _detail| {},
         ) {
             Ok(stream) => {
@@ -899,11 +909,36 @@ mod windows_tests {
                 assert!(stream.config().sample_rate_hz > 0);
                 assert!(stream.config().channels > 0);
                 assert_eq!(stream.config().format, SampleFormat::F32);
+                let deadline = Instant::now() + Duration::from_secs(10);
+                while non_silent_frames.load(Ordering::Relaxed) == 0 && Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(25));
+                }
+                let non_silent_frames = non_silent_frames.load(Ordering::Relaxed);
+                println!(
+                    "HIMSAT_GATE_E_RESULT={{\"path\":\"loopback\",\"outcome\":\"{}\",\"non_silent_frames\":{non_silent_frames}}}",
+                    if non_silent_frames == 0 {
+                        "silence"
+                    } else {
+                        "frames"
+                    }
+                );
+                if strict {
+                    assert!(non_silent_frames > 0, "loopback observed no signal");
+                }
                 assert!(stream.pause().is_ok());
                 assert!(stream.resume().is_ok());
                 drop(stream);
             }
             Err(error) => {
+                println!(
+                    "HIMSAT_GATE_E_RESULT={{\"path\":\"loopback\",\"outcome\":\"classified_fault\",\"classifier\":\"{}\"}}",
+                    error.classifier()
+                );
+                assert!(
+                    !strict,
+                    "loopback live open failed with {}",
+                    error.classifier()
+                );
                 assert!(
                     matches!(
                         error,
