@@ -67,9 +67,9 @@ This runs exactly:
 - `capture_windows_system_audio::windows_tests::live_loopback_open_reports_frames_or_classified_fault`
   with `HIMSAT_LIVE_LOOPBACK_TEST=1`.
 
-The runner writes the raw logs and a machine-readable result record.
+The runner also sets `HIMSAT_GATE_E_REQUIRE_SIGNAL=1`. Each probe has a 10-second signal window and must report at least one non-silent audio frame. Speak into the microphone and play a non-silent sound through the default Windows output while the command is running. Opening a stream, pausing/resuming it, or receiving silent callbacks is not a live-capture PASS.
 
-A failed live test is evidence and must be preserved. Do not repeatedly rerun and discard red evidence.
+The runner writes the raw logs and a machine-readable result record containing each path's outcome and non-silent-frame count. A classified open fault, silence timeout, or failed test is evidence and must be preserved. Do not repeatedly rerun and discard red evidence.
 
 ## Gate E matrix still required
 

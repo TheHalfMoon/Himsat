@@ -110,19 +110,43 @@ if ($sanitizedEndpoints.Count -eq 0) {
 
 $results = @()
 
+$env:HIMSAT_GATE_E_REQUIRE_SIGNAL = "1"
 $env:HIMSAT_LIVE_MIC_TEST = "1"
 $micLog = Join-Path $EvidenceDir "live-mic.txt"
 & $TestBinary $micTest --exact --nocapture *>&1 | Tee-Object -FilePath $micLog
 $micExit = $LASTEXITCODE
 Remove-Item Env:HIMSAT_LIVE_MIC_TEST -ErrorAction SilentlyContinue
-$results += [ordered]@{ test = $micTest; exit_code = $micExit; log = "live-mic.txt" }
+$micLogText = Get-Content -LiteralPath $micLog -Raw
+$micGateResult = if ($micLogText -match 'HIMSAT_GATE_E_RESULT=(\{[^\r\n]+\})') {
+    $Matches[1] | ConvertFrom-Json
+} else {
+    $null
+}
+$results += [ordered]@{
+    test = $micTest
+    exit_code = $micExit
+    log = "live-mic.txt"
+    gate_e_result = $micGateResult
+}
 
 $env:HIMSAT_LIVE_LOOPBACK_TEST = "1"
 $loopbackLog = Join-Path $EvidenceDir "live-loopback.txt"
 & $TestBinary $loopbackTest --exact --nocapture *>&1 | Tee-Object -FilePath $loopbackLog
 $loopbackExit = $LASTEXITCODE
 Remove-Item Env:HIMSAT_LIVE_LOOPBACK_TEST -ErrorAction SilentlyContinue
-$results += [ordered]@{ test = $loopbackTest; exit_code = $loopbackExit; log = "live-loopback.txt" }
+Remove-Item Env:HIMSAT_GATE_E_REQUIRE_SIGNAL -ErrorAction SilentlyContinue
+$loopbackLogText = Get-Content -LiteralPath $loopbackLog -Raw
+$loopbackGateResult = if ($loopbackLogText -match 'HIMSAT_GATE_E_RESULT=(\{[^\r\n]+\})') {
+    $Matches[1] | ConvertFrom-Json
+} else {
+    $null
+}
+$results += [ordered]@{
+    test = $loopbackTest
+    exit_code = $loopbackExit
+    log = "live-loopback.txt"
+    gate_e_result = $loopbackGateResult
+}
 
 Write-JsonFile (Join-Path $EvidenceDir "live-smoke.json") ([ordered]@{
     schema = "himsat-gate-e-live-smoke-v1"
