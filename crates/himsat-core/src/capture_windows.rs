@@ -1346,7 +1346,7 @@ mod windows_tests {
             generation: KeyGeneration::new(3).expect("test generation is non-zero"),
         };
         let mut journal =
-            ChunkJournal::create(&dir.join("session.jrn"), binding).expect("round-trip journal");
+            ChunkJournal::create(&dir.journal(), binding).expect("round-trip journal");
         let mut accum = PayloadAccum::new(AccumConfig {
             binding,
             // Raw F32-LE bytes: no PCM conversion exists yet (010 owns DSP),
