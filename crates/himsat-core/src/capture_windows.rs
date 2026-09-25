@@ -873,7 +873,7 @@ mod windows_tests {
     use crate::vault_keys::OwnedKeyMaterial;
     use crate::vault_media_chunk::{
         MEDIA_CHUNK_MAX_PLAINTEXT_BYTES, MEDIA_CHUNK_NONCE_BYTES, MediaChunkContext,
-        MediaChunkError, decrypt_media_chunk, encrypt_media_chunk,
+        decrypt_media_chunk, encrypt_media_chunk,
     };
     use himsat_events::{SessionId, SourceId};
     use std::fs;
@@ -1057,13 +1057,42 @@ mod windows_tests {
             return;
         }
         let strict = std::env::var("HIMSAT_GATE_E_REQUIRE_SIGNAL").is_ok();
-        let seconds: u64 = std::env::var("HIMSAT_LIVE_SUSTAINED_SECS")
-            .ok()
-            .and_then(|value| value.parse().ok())
-            .unwrap_or(60)
-            .clamp(5, 600);
+        let seconds: u64 = match std::env::var("HIMSAT_LIVE_SUSTAINED_SECS") {
+            Err(_) => 60,
+            Ok(value) => value
+                .parse()
+                .expect("HIMSAT_LIVE_SUSTAINED_SECS must be an integer"),
+        }
+        .clamp(5, 600);
         let backend = CpalMicrophoneBackend;
-        let selected = select_input(&backend, None).expect("live test needs an endpoint");
+        let selected = match select_input(&backend, None) {
+            Ok(selected) => selected,
+            Err(error) => {
+                println!(
+                    "HIMSAT_GATE_E_RESULT={{\"path\":\"microphone-sustained\",\"outcome\":\"classified_fault\",\"classifier\":\"{}\"}}",
+                    error.classifier()
+                );
+                assert!(
+                    !strict,
+                    "sustained selection failed with {}",
+                    error.classifier()
+                );
+                assert!(
+                    matches!(
+                        error,
+                        WindowsMicError::NoInputDevices
+                            | WindowsMicError::PermissionDenied
+                            | WindowsMicError::ExclusiveModeConflict
+                            | WindowsMicError::EndpointUnavailable
+                            | WindowsMicError::AudioServiceUnavailable
+                            | WindowsMicError::RouteRerouted
+                            | WindowsMicError::StreamFault(_)
+                    ),
+                    "sustained selection failed with an unexpected classification"
+                );
+                return;
+            }
+        };
         let callbacks = Arc::new(AtomicUsize::new(0));
         let frames_total = Arc::new(AtomicUsize::new(0));
         let non_silent = Arc::new(AtomicUsize::new(0));
@@ -1087,12 +1116,17 @@ mod windows_tests {
                 while start.elapsed() < hold / 2 {
                     std::thread::sleep(Duration::from_millis(50));
                 }
-                assert!(stream.pause().is_ok());
+                if let Err(error) = stream.pause() {
+                    panic!("sustained pause failed: {}", error.classifier());
+                }
                 std::thread::sleep(Duration::from_millis(500));
-                assert!(stream.resume().is_ok());
+                if let Err(error) = stream.resume() {
+                    panic!("sustained resume failed: {}", error.classifier());
+                }
                 while start.elapsed() < hold {
                     std::thread::sleep(Duration::from_millis(50));
                 }
+                drop(stream);
                 let callback_count = callbacks.load(Ordering::Relaxed);
                 let frame_count = frames_total.load(Ordering::Relaxed);
                 let signal_frames = non_silent.load(Ordering::Relaxed);
@@ -1109,7 +1143,6 @@ mod windows_tests {
                 if strict {
                     assert!(signal_frames > 0, "sustained hold observed no signal");
                 }
-                drop(stream);
             }
             Err(error) => {
                 println!(
@@ -1124,6 +1157,9 @@ mod windows_tests {
                             | WindowsMicError::ExclusiveModeConflict
                             | WindowsMicError::EndpointUnavailable
                             | WindowsMicError::AudioServiceUnavailable
+                            // A device-change race during open surfaces here;
+                            // a reroute keeps flowing and is not a fault.
+                            | WindowsMicError::RouteRerouted
                             | WindowsMicError::StreamFault(_)
                     ),
                     "sustained hold failed with an unexpected classification"
@@ -1134,11 +1170,15 @@ mod windows_tests {
 
     /// Gate E live round-trip probe (008F): captures two seconds of real
     /// microphone audio, then moves the bytes through the genuine 008E
-    /// accumulator and 008D commit path under a test-only VRK, replays the
-    /// journal, and decrypts the exact captured bytes. The audio callback
-    /// only copies bounded bytes; sealing, committing, and verification run
-    /// after the stream is dropped, on the test thread. NOT RUN in CI; runs
-    /// only with `HIMSAT_LIVE_ROUNDTRIP_TEST=1`.
+    /// accumulator and 008D commit path under a test-only VRK, closes the
+    /// journal, and decrypts the exact captured bytes. The audio callback is
+    /// test-only scaffolding around a pre-reserved buffer: it never blocks
+    /// (`try_lock`), never grows the buffer past its cap, and accounts every
+    /// skipped byte in a drop counter that must read zero afterwards.
+    /// Production capture uses `PayloadAccum::push`, never this mutex.
+    /// Sealing, committing, and verification run after the stream is dropped,
+    /// on the test thread. NOT RUN in CI; runs only with
+    /// `HIMSAT_LIVE_ROUNDTRIP_TEST=1`.
     #[test]
     fn live_mic_frames_round_trip_into_the_journal() {
         if std::env::var("HIMSAT_LIVE_ROUNDTRIP_TEST").is_err() {
@@ -1157,10 +1197,39 @@ mod windows_tests {
         );
 
         let backend = CpalMicrophoneBackend;
-        let selected = select_input(&backend, None).expect("live test needs an endpoint");
-        let captured = Arc::new(Mutex::new(Vec::<u8>::new()));
+        let selected = match select_input(&backend, None) {
+            Ok(selected) => selected,
+            Err(error) => {
+                println!(
+                    "HIMSAT_GATE_E_RESULT={{\"path\":\"microphone-roundtrip\",\"outcome\":\"classified_fault\",\"classifier\":\"{}\"}}",
+                    error.classifier()
+                );
+                assert!(
+                    !strict,
+                    "round-trip selection failed with {}",
+                    error.classifier()
+                );
+                assert!(
+                    matches!(
+                        error,
+                        WindowsMicError::NoInputDevices
+                            | WindowsMicError::PermissionDenied
+                            | WindowsMicError::ExclusiveModeConflict
+                            | WindowsMicError::EndpointUnavailable
+                            | WindowsMicError::AudioServiceUnavailable
+                            | WindowsMicError::RouteRerouted
+                            | WindowsMicError::StreamFault(_)
+                    ),
+                    "round-trip selection failed with an unexpected classification"
+                );
+                return;
+            }
+        };
+        let captured = Arc::new(Mutex::new(Vec::with_capacity(CAPTURE_BYTE_CAP)));
+        let dropped = Arc::new(AtomicUsize::new(0));
         let signal = Arc::new(AtomicUsize::new(0));
         let on_frames_bytes = Arc::clone(&captured);
+        let on_frames_dropped = Arc::clone(&dropped);
         let on_frames_signal = Arc::clone(&signal);
         let stream = match open_f32_input_stream(
             &selected.info.device_id,
@@ -1168,15 +1237,23 @@ mod windows_tests {
                 if frames.iter().any(|sample| sample.abs() > 0.000_01) {
                     on_frames_signal.fetch_add(frames.len(), Ordering::Relaxed);
                 }
-                if let Ok(mut bytes) = on_frames_bytes.lock() {
-                    if bytes.len() < CAPTURE_BYTE_CAP {
-                        for sample in frames {
-                            if bytes.len() >= CAPTURE_BYTE_CAP {
-                                break;
-                            }
-                            bytes.extend_from_slice(&sample.to_le_bytes());
+                let wanted = frames.len().saturating_mul(4);
+                if let Ok(mut bytes) = on_frames_bytes.try_lock() {
+                    let room = CAPTURE_BYTE_CAP.saturating_sub(bytes.len());
+                    // Whole samples only: the take rounds down so the buffer
+                    // can never exceed its cap by a partial F32 frame.
+                    let take = wanted.min(room) & !3;
+                    let mut taken = 0_usize;
+                    for sample in frames {
+                        if taken >= take {
+                            break;
                         }
+                        bytes.extend_from_slice(&sample.to_le_bytes());
+                        taken += 4;
                     }
+                    on_frames_dropped.fetch_add(wanted - taken, Ordering::Relaxed);
+                } else {
+                    on_frames_dropped.fetch_add(wanted, Ordering::Relaxed);
                 }
             },
             move |_error, _detail| {},
@@ -1199,6 +1276,9 @@ mod windows_tests {
                             | WindowsMicError::ExclusiveModeConflict
                             | WindowsMicError::EndpointUnavailable
                             | WindowsMicError::AudioServiceUnavailable
+                            // A device-change race during open surfaces here;
+                            // a reroute keeps flowing and is not a fault.
+                            | WindowsMicError::RouteRerouted
                             | WindowsMicError::StreamFault(_)
                     ),
                     "round-trip capture failed with an unexpected classification"
@@ -1208,23 +1288,58 @@ mod windows_tests {
         };
         std::thread::sleep(Duration::from_millis(CAPTURE_MILLIS));
         drop(stream);
+        let dropped_bytes = dropped.load(Ordering::Relaxed);
+        assert_eq!(
+            dropped_bytes, 0,
+            "round-trip dropped {dropped_bytes} captured bytes on the audio thread"
+        );
         let captured = captured.lock().expect("capture buffer lock").clone();
         let signal_frames = signal.load(Ordering::Relaxed);
-        assert!(!captured.is_empty(), "round-trip captured no bytes");
+        if captured.is_empty() {
+            println!(
+                "HIMSAT_GATE_E_RESULT={{\"path\":\"microphone-roundtrip\",\"outcome\":\"silence\",\"captured_bytes\":0,\"non_silent_frames\":{signal_frames}}}"
+            );
+            assert!(
+                !strict,
+                "round-trip captured no bytes under a required signal"
+            );
+            return;
+        }
         if strict {
             assert!(signal_frames > 0, "round-trip captured no signal");
         }
 
-        let dir = {
-            static ROUNDTRIP_COUNTER: AtomicU64 = AtomicU64::new(0);
-            let id = ROUNDTRIP_COUNTER.fetch_add(1, Ordering::SeqCst);
-            let path = std::env::temp_dir().join(format!(
-                "himsat-gate-e-roundtrip-{}-{id}",
-                std::process::id()
-            ));
-            fs::create_dir_all(&path).expect("round-trip temp dir");
-            path
-        };
+        struct RoundtripDir {
+            path: PathBuf,
+        }
+
+        impl RoundtripDir {
+            fn new(id: u64) -> Self {
+                let path = std::env::temp_dir().join(format!(
+                    "himsat-gate-e-roundtrip-{}-{id}",
+                    std::process::id()
+                ));
+                if path.exists() {
+                    fs::remove_dir_all(&path).expect("stale round-trip dir clears");
+                }
+                fs::create_dir_all(&path).expect("round-trip temp dir");
+                Self { path }
+            }
+
+            fn journal(&self) -> PathBuf {
+                self.path.join("session.jrn")
+            }
+        }
+
+        impl Drop for RoundtripDir {
+            fn drop(&mut self) {
+                let _ = fs::remove_dir_all(&self.path);
+            }
+        }
+
+        static ROUNDTRIP_COUNTER: AtomicU64 = AtomicU64::new(0);
+        let roundtrip_id = ROUNDTRIP_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = RoundtripDir::new(roundtrip_id);
         let binding = SinkBinding {
             vault_id: VaultId::from_bytes(ROUNDTRIP_VAULT),
             session: SessionId::new(ROUNDTRIP_SESSION),
@@ -1234,7 +1349,10 @@ mod windows_tests {
             ChunkJournal::create(&dir.join("session.jrn"), binding).expect("round-trip journal");
         let mut accum = PayloadAccum::new(AccumConfig {
             binding,
-            codec: ChunkCodec::Pcm16,
+            // Raw F32-LE bytes: no PCM conversion exists yet (010 owns DSP),
+            // so the codec stays honestly unlabelled instead of misfiling
+            // microphone float frames as Pcm16.
+            codec: ChunkCodec::Unknown,
             source: SourceId::new(ROUNDTRIP_SOURCE),
             max_chunk_bytes: MEDIA_CHUNK_MAX_PLAINTEXT_BYTES,
             starting_index: 0,
@@ -1252,8 +1370,13 @@ mod windows_tests {
             .expect("round-trip push");
         assert_eq!(report.accepted_bytes, captured.len());
         let index = accum.next_chunk_index();
+        // Test-only nonce: chunk index plus process identity, so repeated
+        // runs never re-encrypt under one keystream. Production nonces stay
+        // under the B203 lifecycle and are never derived here.
         let mut nonce = [0_u8; MEDIA_CHUNK_NONCE_BYTES];
         nonce[..8].copy_from_slice(&index.to_be_bytes());
+        nonce[8..16].copy_from_slice(&(std::process::id() as u64).to_be_bytes());
+        nonce[16..24].copy_from_slice(&roundtrip_id.to_be_bytes());
         let (chunk, facts) = accum
             .seal_next(
                 nonce,
@@ -1282,7 +1405,8 @@ mod windows_tests {
         assert_eq!(plaintext, captured);
         let summary = accum.close().expect("round-trip close");
         assert_eq!(summary.chunks_sealed, 1);
-        let _ = fs::remove_dir_all(&dir);
+        let closed = journal.close().expect("round-trip journal close");
+        assert_eq!(closed.commits, 1);
         println!(
             "HIMSAT_GATE_E_RESULT={{\"path\":\"microphone-roundtrip\",\"outcome\":\"frames\",\"captured_bytes\":{},\"non_silent_frames\":{signal_frames}}}",
             captured.len()
