@@ -1191,10 +1191,12 @@ mod windows_tests {
         const ROUNDTRIP_SOURCE: u128 = 0x2e2d_2c2b_2a29_2827_2625_2423_2221_201f;
         const CAPTURE_MILLIS: u64 = 2_000;
         const CAPTURE_BYTE_CAP: usize = 512 * 1_024;
-        assert!(
-            CAPTURE_BYTE_CAP <= MEDIA_CHUNK_MAX_PLAINTEXT_BYTES,
-            "round-trip capture must fit one sealed chunk"
-        );
+        const {
+            assert!(
+                CAPTURE_BYTE_CAP <= MEDIA_CHUNK_MAX_PLAINTEXT_BYTES,
+                "round-trip capture must fit one sealed chunk"
+            );
+        }
 
         let backend = CpalMicrophoneBackend;
         let selected = match select_input(&backend, None) {
