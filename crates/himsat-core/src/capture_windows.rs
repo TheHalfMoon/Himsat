@@ -1168,7 +1168,7 @@ mod windows_tests {
         }
     }
 
-    /// Gate E live round-trip probe (008F): captures two seconds of real
+    /// Gate E live round-trip probe (008F): captures one second of real
     /// microphone audio, then moves the bytes through the genuine 008E
     /// accumulator and 008D commit path under a test-only VRK, closes the
     /// journal, and decrypts the exact captured bytes. The audio callback is
@@ -1189,7 +1189,10 @@ mod windows_tests {
         const ROUNDTRIP_VAULT: [u8; 16] = [0x33; 16];
         const ROUNDTRIP_SESSION: u128 = 0x0304_0506_0708_090a_0b0c_0d0e_0f10_1112;
         const ROUNDTRIP_SOURCE: u128 = 0x2e2d_2c2b_2a29_2827_2625_2423_2221_201f;
-        const CAPTURE_MILLIS: u64 = 2_000;
+        // Live device proved stereo F32 at 48 kHz on the qualification host
+        // (768 KiB per two seconds); one second fits the cap with margin
+        // while staying far under the 005A plaintext ceiling.
+        const CAPTURE_MILLIS: u64 = 1_000;
         const CAPTURE_BYTE_CAP: usize = 512 * 1_024;
         const {
             assert!(
