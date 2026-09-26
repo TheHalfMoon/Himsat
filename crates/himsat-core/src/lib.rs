@@ -134,6 +134,10 @@ pub mod capture_windows_lifecycle;
 /// 008C Windows admission policy and checkpoint cadence over caller budgets.
 pub mod capture_windows_pressure;
 
+/// 008G Windows-only env-gated residual Gate E qualification harnesses.
+#[cfg(all(test, target_os = "windows"))]
+mod capture_windows_gate_e_residuals;
+
 /// 008D durable commit path for sealed capture chunks over the closed 005
 /// commit contract.
 pub mod capture_journal_commit;
