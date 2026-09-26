@@ -3,7 +3,7 @@
 ## Current state
 
 ```text
-PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_PORTABLE_HALF_COMPLETE_BLOCKED_ON_REAL_WINDOWS_HARDWARE
+PROGRAM_STATE = SPEC_007_CLOSED_CANONICAL_SPEC_008_LIVE_EVIDENCE_ADVANCED_RESIDUAL_ROWS_BLOCKED_ON_HARDWARE_TIME_ADMIN
 ACTIVE_SPECIFICATION = 008-windows-capture
 SPEC_000_DISPOSITION = CLOSED_CANONICAL
 SPEC_001_DISPOSITION = CLOSED_CANONICAL
@@ -219,7 +219,7 @@ B506R_POSTMERGE_R3 = 35087696903_SUCCESS_PUSH_ATTEMPT_1
 B506R_REVIEW_RECONCILIATION = NO_SUBMITTED_REVIEWS_ZERO_THREADS_QODO_BILLING_BLOCKED_CODERABBIT_SKIPPED_NO_BLOCKING_FINDING
 SPEC_004_DISPOSITION = CLOSED_CANONICAL
 SPEC_004_CLOSEOUT_EVIDENCE = spec-004-closeout-final-evidence.md_CANONICAL_QUALIFIED
-NEXT_IMPLEMENTATION_LEAF = SPEC_008_RUNTIME_EVIDENCE_MATRIX_BLOCKED_ON_REAL_WINDOWS_HARDWARE
+NEXT_IMPLEMENTATION_LEAF = SPEC_008_GATE_E_RESIDUAL_ROWS_BLOCKED_ON_HARDWARE_TIME_ADMIN
 SPEC_004_IMPLEMENTATION_AUTHORITY = NONE_SPEC_004_COMPLETE
 PRODUCT_FEATURE_AUTHORITY = NONE_PENDING_SPEC_008
 SPEC_005_SHAPING_STATUS = SHAPING_QUALIFIED_CANONICAL_MERGE_2D7EC3E
@@ -1957,6 +1957,44 @@ Both PRs are planning overlays only: the implementation-readiness packet freezes
 contract, pack, runtime, resource, qualification, security, test, and grain
 boundaries so a future authorized successor begins at LDF-01, and it creates no
 implementation authority. `ACTIVE_SPECIFICATION` stays `008-windows-capture`,
-`O009` stays CLOSED, `O008` remains the only Spec 008 frontier blocked on real
-Windows hardware, and `SPEC_008_PLATFORM_SCOPE` stays
+`O009` stays CLOSED, and `SPEC_008_PLATFORM_SCOPE` stays
 `WINDOWS_ONLY_PENDING_GATE_E_EVIDENCE`.
+
+## Specification 008F Gate E live harness and live evidence (PR #226 + PR #227)
+
+PR #226 (harness) is `CANONICAL_QUALIFIED` and `CANONICAL_MERGED`: delegate
+adversarial review of the first head `b50d694` returned 3 blocking and 8
+non-blocking findings and every finding was repaired forward (`101df3d`,
+`3612db5`, both preserved with their exact-head CI failures: a Windows-only
+E0599 test defect and a Windows-only clippy `assertions_on_constants`
+finding). Accepted head `43a1c7c` passed pull-request CI `36197802832` and R3
+`36197802628`; canonical merge `1b0d8ff` (parents `c238cdc` + `43a1c7c`,
+merge tree equal to the accepted head tree) passed push CI `36199462901` and
+R3 `36199462890`. Zero submitted reviews, zero review threads, delegate
+ledger on the PR, `MERGEABLE`/`CLEAN` at merge time.
+
+PR #227 (round-trip window sizing) is `CANONICAL_QUALIFIED` and
+`CANONICAL_MERGED`: the first live round-trip run failed honestly because the
+host microphone default is stereo F32 at 48 kHz (about 768 KiB per two
+seconds against the 512 KiB cap; the drop counter refused exactly 239872
+bytes). Accepted head `7e9e59e` (one-second window) passed CI `36201222161`
+and R3 `36201222179`; canonical merge `009f74a` (parents `1b0d8ff` +
+`7e9e59e`, tree-equal) passed push CI `36202725793` and R3 `36202725792`.
+One repair commit briefly landed on local `main`; it was never pushed and
+`main` was restored while the fix continued via cherry-pick, so no shared
+history was rewritten.
+
+Live execution on real Windows hardware against the exact `009f74a` bundle
+(binary SHA-256 `007f338a...3f4bc9838`, founder session consent): 60-second
+sustained hold (`callbacks=5946, frames=5704320, non_silent_frames=4381056`,
+mid-hold pause/resume clean) and live microphone-to-journal round-trip
+(`captured_bytes=380160`, chunk 0 committed, journal closed with `commits=1`,
+decrypted byte-exact), plus the smoke/privacy/suspend/stress/negative-control
+matrix in `008f-gate-e-live-evidence.md`, which is the controlling record.
+
+`O009` stays CLOSED. `O008` stays open on exactly the residuals recorded
+there: USB/Bluetooth attach/detach `UNAVAILABLE` (no hardware,
+founder-confirmed); true physical removal, live exclusive-mode contention,
+live storage-exhaustion refusal, and multi-hour capture `NOT_RUN`.
+Specification 009 shaping and all release/FIPS/compliance claims remain
+unauthorized until Specification 008 is itself `CLOSED_CANONICAL`.
