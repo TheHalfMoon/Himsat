@@ -145,10 +145,16 @@ fn live_multi_hour_capture_reports_continuity() {
     let callback_count = callbacks.load(Ordering::Relaxed);
     let frame_count = frames.load(Ordering::Relaxed);
     let non_silent = signal_frames.load(Ordering::Relaxed);
-    assert!(callback_count > 0, "multi-hour capture delivered no callbacks");
+    assert!(
+        callback_count > 0,
+        "multi-hour capture delivered no callbacks"
+    );
     assert!(frame_count > 0, "multi-hour capture delivered no frames");
     if strict_signal {
-        assert!(non_silent > 0, "multi-hour capture observed no non-silent frames");
+        assert!(
+            non_silent > 0,
+            "multi-hour capture observed no non-silent frames"
+        );
     }
     println!(
         "HIMSAT_GATE_E_RESULT={{\"path\":\"microphone-multi-hour\",\"outcome\":\"continuous\",\"seconds\":{seconds},\"callbacks\":{callback_count},\"frames\":{frame_count},\"non_silent_frames\":{non_silent},\"runtime_errors\":0}}"
@@ -186,7 +192,12 @@ fn live_physical_removal_reports_endpoint_unavailable() {
             let _ = fault_slot.compare_exchange(0, code, Ordering::Relaxed, Ordering::Relaxed);
         },
     )
-    .unwrap_or_else(|error| panic!("physical-removal stream open failed: {}", error.classifier()));
+    .unwrap_or_else(|error| {
+        panic!(
+            "physical-removal stream open failed: {}",
+            error.classifier()
+        )
+    });
 
     println!(
         "HIMSAT_GATE_E_ARMED={{\"path\":\"physical-removal\",\"device_selector\":\"configured\",\"wait_seconds\":{wait_seconds}}}"
