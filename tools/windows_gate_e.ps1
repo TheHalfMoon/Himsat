@@ -110,7 +110,7 @@ $captureRequested = [bool]($RunLiveSmoke -or $RunResidualExclusive -or $RunResid
 $anyExecution = [bool]($captureRequested -or $RunResidualStorage)
 
 $preflight = [ordered]@{
-    schema = "himsat-gate-e-preflight-v2"
+    schema = "himsat-gate-e-preflight-v1"
     source_sha = $manifest.source_sha
     test_binary_sha256 = $actualSha
     os = [System.Environment]::OSVersion.VersionString
